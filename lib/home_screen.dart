@@ -1111,27 +1111,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
       children: [
         _buildFloatingActionButtonExtended(
-          Icons.money_off_rounded,
+          Icons.trending_down_rounded,
           "Gastos",
           Colors.red,
         ),
         _buildFloatingActionButtonExtended(
-          Icons.attach_money_rounded,
+          Icons.trending_up_rounded,
           "Ingresos",
           Colors.green,
         ),
         _buildFloatingActionButtonExtended(
-          Icons.compare_arrows_rounded,
+          Icons.swap_horiz_rounded,
           "Traspasos",
           Colors.blue,
         ),
         _buildFloatingActionButtonExtended(
-          Icons.payment_rounded,
+          Icons.monetization_on_rounded,
           "Pagos",
           Colors.orange,
         ),
         _buildFloatingActionButtonExtended(
-          Icons.undo_rounded,
+          Icons.restore_rounded,
           "Reembolsos",
           Colors.purple,
         ),

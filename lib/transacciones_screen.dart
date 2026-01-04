@@ -427,7 +427,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
   Future<void> _deleteTransaction(String id) async {
     setState(() => _isLoading = true);
     try {
-      await _apiService.eliminarFilaPorIdTransaccion(id);
+      final response = await _apiService.eliminarFilaPorIdTransaccion(id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -439,7 +439,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
                   size: 18.sp,
                 ), // ✅ REDUCIDO de 20
                 SizedBox(width: 10.w),
-                const Text('Transacción eliminada exitosamente'),
+                Text(response.msgE),
               ],
             ),
             backgroundColor: Colors.green,
@@ -494,11 +494,11 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
   // Helpers
   (IconData, Color) _getIconAndColorForType(String type) {
     return switch (type) {
-      'Reembolsos' => (Icons.undo_rounded, Colors.purple),
-      'Pagos' => (Icons.payment_rounded, Colors.orange),
-      'Traspasos' => (Icons.compare_arrows_rounded, Colors.blue),
-      'Ingresos' => (Icons.attach_money_rounded, Colors.green),
-      'Gastos' => (Icons.money_off_rounded, Colors.red),
+      'Reembolsos' => (Icons.restore_rounded, Colors.purple),
+      'Pagos' => (Icons.monetization_on_rounded, Colors.orange),
+      'Traspasos' => (Icons.swap_horiz_rounded, Colors.blue),
+      'Ingresos' => (Icons.trending_up_rounded, Colors.green),
+      'Gastos' => (Icons.trending_down_rounded, Colors.red),
       _ => (Icons.receipt_rounded, Colors.grey),
     };
   }
@@ -1003,22 +1003,22 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
       case 'Gastos':
       case 'Pagos':
       case 'Ingresos':
-        if (transaction.categoria.toLowerCase() != 'semanal') {
+        badges.add(
+          _buildBadge(
+            text: transaction.categoria,
+            backgroundColor: color,
+            textStyle: badgeTextStyle,
+          ),
+        );
+        if (transaction.cuenta.isNotEmpty) {
           badges.add(
             _buildBadge(
-              text: transaction.categoria,
+              text: transaction.cuenta,
               backgroundColor: color,
               textStyle: badgeTextStyle,
             ),
           );
         }
-        badges.add(
-          _buildBadge(
-            text: transaction.cuenta,
-            backgroundColor: color,
-            textStyle: badgeTextStyle,
-          ),
-        );
         break;
     }
 

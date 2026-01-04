@@ -4,235 +4,304 @@ import 'package:notificaciones/models/Account.dart';
 import 'package:notificaciones/models/Categoria.dart';
 import 'package:notificaciones/models/Reporte.dart';
 import 'package:notificaciones/models/Transaccion.dart';
+import 'package:notificaciones/models/api_response.dart';
 
 class ApiService {
   final String baseUrl =
-      "https://script.google.com/macros/s/AKfycbx-ZH2MGDCb_D7YfXwdd9_saoUCJaS8vyIqx60tmzsqRUbiz556KypItqyEEnc9jQOx/exec?action"; // Cambia esta URL por la de tu API
+      "https://script.google.com/macros/s/AKfycbxc2QugLHMIjNK7FWH6VrkDCGx_1sig4M8CmPJodwSg3h1NEebIbpxm_kS3niTPmEWB7Q/exec?action";
 
-  // Método para obtener los saldos desde Google Apps Script
-  Future<Map<String, dynamic>> fetchSaldos() async {
-    final response = await http.get(Uri.parse('$baseUrl=getSaldos'));
+  /// Método auxiliar para manejar respuestas de la API
+  T _handleApiResponse<T>(String responseBody, T Function(dynamic) dataParser) {
+    final json = jsonDecode(responseBody);
+    final apiResponse = ApiResponse<T>.fromJson(json, dataParser);
 
-    if (response.statusCode == 200) {
-      // Parsear el JSON devuelto por la API
-      return json.decode(response.body);
-    } else {
-      throw Exception('Error al cargar los saldos');
-    }
-  }
-
-  Future<Map<String, double>> fetchGastosPorCategoria() async {
-    final response = await http.get(
-      Uri.parse('$baseUrl=getGastosPorCategoria'),
-    );
-
-    if (response.statusCode == 200) {
-      // Parsear el JSON devuelto por la API
-      Map<String, dynamic> jsonResponse = json.decode(response.body);
-      // Convertir los valores a double
-      Map<String, double> gastosPorCategoria = jsonResponse.map((key, value) {
-        return MapEntry(key, (value as num).toDouble());
-      });
-      return gastosPorCategoria;
-    } else {
-      throw Exception('Failed to load data');
-    }
-  }
-
-  Future<Map<String, double>> fetchTransaccionesCategorizadas() async {
-    final response = await http.get(Uri.parse('$baseUrl=getTransacciones'));
-
-    if (response.statusCode == 200) {
-      // Si la respuesta es exitosa (status 200), parseamos el JSON
-      List<dynamic> jsonData = json.decode(response.body);
-
-      // Crear un mapa para almacenar la suma de los montos por categoría
-      Map<String, double> categorySums = {};
-
-      // Iterar por cada transacción
-      for (var transaccion in jsonData) {
-        // Filtrar solo transacciones con tipo "Gasto"
-        if (transaccion['tipoTransaccion'] == 'Gasto') {
-          String categoria = transaccion['categoria'];
-          double monto = transaccion['monto'].toDouble();
-
-          // Si la categoría ya está en el mapa, sumamos el monto
-          if (categorySums.containsKey(categoria)) {
-            categorySums[categoria] = categorySums[categoria]! + monto;
-          } else {
-            // Si no existe la categoría, la agregamos con el monto actual
-            categorySums[categoria] = monto;
-          }
-        }
+    if (apiResponse.isSuccess) {
+      if (apiResponse.data != null) {
+        return apiResponse.data as T;
       }
-
-      // Ordenar las categorías alfabéticamente
-      var sortedEntries =
-          categorySums.entries.toList()..sort(
-            (a, b) => a.key.compareTo(b.key),
-          ); // Ordena por nombre de la categoría
-
-      // Crear un nuevo mapa con las categorías ordenadas
-      Map<String, double> sortedCategorySums = Map.fromEntries(sortedEntries);
-
-      return sortedCategorySums; // Devolvemos el mapa ordenado
+      throw ApiException('Respuesta exitosa pero sin datos');
     } else {
-      // Si ocurre un error
-      throw Exception('Error al obtener los datos de transacciones');
+      throw ApiException(apiResponse.msgE, errorCode: apiResponse.codE);
     }
   }
 
+  /// Método auxiliar para respuestas que solo retornan mensaje (sin data)
+  ApiResponse<void> _handleApiResponseMessage(String responseBody) {
+    final json = jsonDecode(responseBody);
+    final apiResponse = ApiResponse<void>.fromJson(json, null);
+
+    if (!apiResponse.isSuccess) {
+      throw ApiException(apiResponse.msgE, errorCode: apiResponse.codE);
+    }
+
+    return apiResponse;
+  }
+
+  // ==================== MÉTODOS GET ====================
+
+  /// Obtener los saldos desde Google Apps Script
+  Future<Map<String, dynamic>> fetchSaldos() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl=getSaldos'));
+
+      if (response.statusCode == 200) {
+        return _handleApiResponse<Map<String, dynamic>>(
+          response.body,
+          (data) => data as Map<String, dynamic>,
+        );
+      } else {
+        throw ApiException('Error de servidor: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Error al obtener los saldos: $e');
+    }
+  }
+
+  /// Obtener gastos por categoría
+  Future<Map<String, double>> fetchGastosPorCategoria() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl=getGastosPorCategoria'),
+      );
+
+      if (response.statusCode == 200) {
+        return _handleApiResponse<Map<String, double>>(response.body, (data) {
+          Map<String, dynamic> jsonData = data as Map<String, dynamic>;
+          return jsonData.map(
+            (key, value) => MapEntry(key, (value as num).toDouble()),
+          );
+        });
+      } else {
+        throw ApiException('Error de servidor: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Error al obtener gastos por categoría: $e');
+    }
+  }
+
+  /// Obtener transacciones categorizadas
+  Future<Map<String, double>> fetchTransaccionesCategorizadas() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl=getTransacciones'));
+
+      if (response.statusCode == 200) {
+        return _handleApiResponse<Map<String, double>>(response.body, (data) {
+          List<dynamic> jsonData = data as List<dynamic>;
+
+          // Crear un mapa para almacenar la suma de los montos por categoría
+          Map<String, double> transaccionesPorCategoria = {};
+
+          for (var transaction in jsonData) {
+            String categoria = transaction['categoria'] ?? 'Sin Categoría';
+            double monto = (transaction['monto'] as num).toDouble();
+
+            // Sumar el monto a la categoría correspondiente
+            if (transaccionesPorCategoria.containsKey(categoria)) {
+              transaccionesPorCategoria[categoria] =
+                  transaccionesPorCategoria[categoria]! + monto;
+            } else {
+              transaccionesPorCategoria[categoria] = monto;
+            }
+          }
+
+          return transaccionesPorCategoria;
+        });
+      } else {
+        throw ApiException('Error de servidor: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Error al obtener transacciones categorizadas: $e');
+    }
+  }
+
+  /// Obtener reportes
   Future<List<Reporte>> fetchReportes() async {
-    final response = await http.get(Uri.parse('$baseUrl=listReportes'));
+    try {
+      final url = '$baseUrl=listReportes';
+      print('📡 Llamando a: $url'); // Debug
+      final response = await http.get(Uri.parse(url));
 
-    if (response.statusCode == 200) {
-      // Si la respuesta es exitosa, parseamos el JSON
-      final data = json.decode(response.body);
+      print('📥 Status: ${response.statusCode}'); // Debug
+      print('📥 Response body: ${response.body}'); // Debug
 
-      // Convertimos el JSON en una lista de reportes
-      List<dynamic> items = data['items'];
-      return items.map((item) => Reporte.fromJson(item)).toList();
-    } else {
-      // Si ocurre un error
-      throw Exception('Error al obtener los reportes');
+      if (response.statusCode == 200) {
+        return _handleApiResponse<List<Reporte>>(response.body, (data) {
+          // El backend puede devolver directamente una lista o un objeto con 'items'
+          List<dynamic> jsonData;
+          if (data is List) {
+            jsonData = data;
+          } else if (data is Map && data.containsKey('items')) {
+            jsonData = data['items'] as List<dynamic>;
+          } else {
+            throw ApiException('Formato de respuesta inesperado');
+          }
+          return jsonData.map((item) => Reporte.fromJson(item)).toList();
+        });
+      } else {
+        throw ApiException('Error de servidor: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Error al obtener reportes: $e');
     }
   }
 
+  /// Obtener transacciones
   Future<List<Transaction>> fetchTransactions() async {
-    final response = await http.get(Uri.parse('$baseUrl=getTransacciones'));
+    try {
+      final response = await http.get(Uri.parse('$baseUrl=getTransacciones'));
 
-    if (response.statusCode == 200) {
-      // Si la respuesta es exitosa, parseamos el JSON
-      List<dynamic> data = json.decode(response.body);
-
-      // Convertimos el JSON a una lista de objetos Transaction
-      return data
-          .map((transaction) => Transaction.fromJson(transaction))
-          .toList();
-    } else {
-      // Si ocurre un error
-      throw Exception('Error al obtener las transacciones');
+      if (response.statusCode == 200) {
+        return _handleApiResponse<List<Transaction>>(response.body, (data) {
+          List<dynamic> jsonData = data as List<dynamic>;
+          return jsonData
+              .map((transaction) => Transaction.fromJson(transaction))
+              .toList();
+        });
+      } else {
+        throw ApiException('Error de servidor: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Error al obtener las transacciones: $e');
     }
   }
 
+  /// Obtener categorías
   Future<List<Categoria>> fetchCategories() async {
     try {
       final response = await http.get(Uri.parse('$baseUrl=getCategorias'));
 
       if (response.statusCode == 200) {
-        List<dynamic> data = json.decode(response.body);
-        // Convertimos el JSON a una lista de objetos Transaction
-        return data
-            .map((transaction) => Categoria.fromJson(transaction))
-            .toList();
+        return _handleApiResponse<List<Categoria>>(response.body, (data) {
+          List<dynamic> jsonData = data as List<dynamic>;
+          return jsonData
+              .map((categoria) => Categoria.fromJson(categoria))
+              .toList();
+        });
       } else {
-        throw Exception('Error al obtener las categorías');
+        throw ApiException('Error de servidor: ${response.statusCode}');
       }
     } catch (e) {
-      rethrow;
+      if (e is ApiException) rethrow;
+      throw ApiException('Error al obtener las categorías: $e');
     }
   }
 
+  /// Obtener cuentas
   Future<List<Account>> fetchAccounts() async {
     try {
       final response = await http.get(Uri.parse('$baseUrl=getCuentas'));
 
       if (response.statusCode == 200) {
-        List<Account> accounts =
-            (jsonDecode(response.body) as List)
-                .map((data) => Account.fromJson(data))
-                .toList();
-        return accounts;
+        return _handleApiResponse<List<Account>>(response.body, (data) {
+          List<dynamic> jsonData = data as List<dynamic>;
+          return jsonData.map((account) => Account.fromJson(account)).toList();
+        });
       } else {
-        throw Exception('Error al obtener las cuentas');
+        throw ApiException('Error de servidor: ${response.statusCode}');
       }
     } catch (e) {
-      throw Exception('Error al hacer la solicitud: $e');
+      if (e is ApiException) rethrow;
+      throw ApiException('Error al obtener las cuentas: $e');
     }
   }
 
-  Future<String> eliminarFilaPorIdTransaccion(String idTransaccion) async {
+  /// Obtener nuevas cuentas
+  Future<List<Account>> fetchCuentas() async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl=deleteTransaccion'),
-        body: {
-          'idTransaccion': idTransaccion,
-        }, // Envía el idTransaccion como parámetro
-      );
+      final response = await http.get(Uri.parse('$baseUrl=getNuevasCuentas'));
 
-      if (response.statusCode == 302) {
-        var redirectUrl = response.headers['location'];
-        if (redirectUrl != null) {
-          final response = await http.get(Uri.parse(redirectUrl));
-          if (response.statusCode == 200) {
-            return response.body;
-          } else {
-            return "No se pudo eliminar la transaccion";
-          }
-        }
-      } else if (response.statusCode == 200) {
-        return response.body;
+      if (response.statusCode == 200) {
+        return _handleApiResponse<List<Account>>(response.body, (data) {
+          List<dynamic> jsonData = data as List<dynamic>;
+          return jsonData.map((account) => Account.fromJson(account)).toList();
+        });
       } else {
-        return "No se pudo eliminar la transaccion";
+        throw ApiException('Error de servidor: ${response.statusCode}');
       }
     } catch (e) {
-      return e.toString();
+      if (e is ApiException) rethrow;
+      throw ApiException('Error al cargar las cuentas: $e');
     }
-
-    return "";
   }
 
-  Future<String> registerTransaction(
+  // ==================== MÉTODOS POST ====================
+
+  /// Registrar transacción
+  Future<ApiResponse<void>> registerTransaction(
     Map<String, dynamic> transactionData,
   ) async {
     try {
-      // Hacer la petición POST con los datos de la transacción
       var data = json.encode(transactionData);
       final response = await http.post(
         Uri.parse('$baseUrl=addTransacciones'),
         headers: {'Content-Type': 'application/json'},
         body: data,
       );
+
+      // Manejar redirecciones 302
       if (response.statusCode == 302) {
         var redirectUrl = response.headers['location'];
         if (redirectUrl != null) {
-          final response = await http.get(Uri.parse(redirectUrl));
-          if (response.statusCode == 200) {
-            return response.body;
+          final redirectResponse = await http.get(Uri.parse(redirectUrl));
+          if (redirectResponse.statusCode == 200) {
+            return _handleApiResponseMessage(redirectResponse.body);
           } else {
-            return "No se pudo guardar la transaccion";
+            throw ApiException(
+              'Error en redirección: ${redirectResponse.statusCode}',
+            );
           }
+        } else {
+          throw ApiException('Redirección sin URL');
         }
       } else if (response.statusCode == 200) {
-        return response.body;
+        return _handleApiResponseMessage(response.body);
       } else {
-        return "No se pudo guardar la transaccion";
+        throw ApiException('Error de servidor: ${response.statusCode}');
       }
     } catch (e) {
-      return e.toString();
+      if (e is ApiException) rethrow;
+      throw ApiException('Error al guardar la transacción: $e');
     }
-
-    return "";
   }
 
-  Future<List<Account>> fetchCuentas() async {
+  /// Eliminar transacción por ID
+  Future<ApiResponse<void>> eliminarFilaPorIdTransaccion(
+    String idTransaccion,
+  ) async {
     try {
-      // Realizar la solicitud GET a la API
-      final response = await http.get(Uri.parse('$baseUrl=getNuevasCuentas'));
+      final response = await http.post(
+        Uri.parse('$baseUrl=deleteTransaccion'),
+        body: {'idTransaccion': idTransaccion},
+      );
 
-      if (response.statusCode == 200) {
-        // Si la respuesta es exitosa, parsear el JSON
-        List<dynamic> data = json.decode(response.body);
-
-        // Convertir el JSON en una lista de mapas
-        return data.map((account) => Account.fromJson(account)).toList();
+      // Manejar redirecciones 302
+      if (response.statusCode == 302) {
+        var redirectUrl = response.headers['location'];
+        if (redirectUrl != null) {
+          final redirectResponse = await http.get(Uri.parse(redirectUrl));
+          if (redirectResponse.statusCode == 200) {
+            return _handleApiResponseMessage(redirectResponse.body);
+          } else {
+            throw ApiException(
+              'Error en redirección: ${redirectResponse.statusCode}',
+            );
+          }
+        } else {
+          throw ApiException('Redirección sin URL');
+        }
+      } else if (response.statusCode == 200) {
+        return _handleApiResponseMessage(response.body);
       } else {
-        // Si la respuesta es incorrecta, lanzar una excepción
-        throw Exception('Error al cargar las cuentas');
+        throw ApiException('Error de servidor: ${response.statusCode}');
       }
     } catch (e) {
-      // Manejo de errores en caso de que algo salga mal
-      throw Exception('Error al conectar con la API: $e');
+      if (e is ApiException) rethrow;
+      throw ApiException('Error al eliminar la transacción: $e');
     }
   }
 }

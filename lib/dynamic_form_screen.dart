@@ -270,9 +270,9 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
           transactionData['cuenta'] = selectedAccount!.nombre;
         }
 
-        String mensaje = await ApiService().registerTransaction(
-          transactionData,
-        );
+        String mensaje = await ApiService()
+            .registerTransaction(transactionData)
+            .then((response) => response.msgE);
 
         if (!mounted) return;
 
@@ -373,11 +373,8 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
           ],
         ),
         backgroundColor: Colors.red.shade400,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.r),
-        ),
-        margin: EdgeInsets.all(12.r),
+        behavior: SnackBarBehavior.fixed,
+        duration: const Duration(seconds: 3),
       ),
     );
   }
@@ -738,7 +735,6 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
     List<Categoria> categories,
   ) {
     return Column(
-      key: ValueKey('category_${selectedCategory?.categoria ?? 'null'}'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
@@ -770,9 +766,6 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
             ],
           ),
           child: DropdownButtonFormField<Categoria>(
-            key: ValueKey(
-              'dropdown_category_${selectedCategory?.categoria ?? 'null'}',
-            ),
             dropdownColor:
                 themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
             value:
@@ -863,7 +856,6 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
     String? Function(Account?)? validator,
   }) {
     return Column(
-      key: ValueKey('account_${label}_${selectedValue?.nombre ?? 'null'}'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
@@ -895,9 +887,6 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
             ],
           ),
           child: DropdownButtonFormField<Account>(
-            key: ValueKey(
-              'dropdown_${label}_${selectedValue?.nombre ?? 'null'}',
-            ),
             dropdownColor:
                 themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
             value: accounts.contains(selectedValue) ? selectedValue : null,
