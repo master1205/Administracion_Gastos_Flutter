@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:notificaciones/api_service.dart';
 import 'package:notificaciones/models/Reporte.dart';
+import 'package:notificaciones/theme_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -13,23 +17,20 @@ class ReportesScreen extends StatefulWidget {
 
 class ReportesScreenState extends State<ReportesScreen>
     with WidgetsBindingObserver {
+  // Constants
+  static const Duration _animationDuration = Duration(milliseconds: 300);
+
+  // State
   late Future<List<Reporte>> _futureReportes;
-  bool isLoading = false;
+  bool _isLoading = false;
+  final Map<String, bool> _expandedYears = {};
 
   @override
   void initState() {
     super.initState();
-
     WidgetsBinding.instance.addObserver(this);
-    // Asignamos un Future inicial para evitar que el FutureBuilder lea _futureReportes antes de tener un valor.
     _futureReportes = Future.value([]);
-
-    // Inicializamos la localización y cargamos los reportes.
-    initializeDateFormatting('es_ES', null).then((_) {
-      setState(() {
-        _futureReportes = ApiService().fetchReportes();
-      });
-    });
+    _initializeData();
   }
 
   @override
@@ -38,189 +39,471 @@ class ReportesScreenState extends State<ReportesScreen>
     super.dispose();
   }
 
-  // Maneja el estado de carga al reanudar la app.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      setState(() {
-        isLoading = true;
-      });
-      Future.delayed(const Duration(milliseconds: 700), () {
-        setState(() {
-          isLoading = false;
-        });
+      setState(() => _isLoading = true);
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) setState(() => _isLoading = false);
       });
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDarkMode = theme.brightness == Brightness.dark;
-
-    return Container(
-      decoration:
-          !isDarkMode
-              ? BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.white, Colors.blue.shade200],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              )
-              : null,
-      child: Scaffold(
-        backgroundColor:
-            isDarkMode ? theme.scaffoldBackgroundColor : Colors.transparent,
-        body:
-            isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : FutureBuilder<List<Reporte>>(
-                  future: _futureReportes,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    } else if (snapshot.hasError) {
-                      return Center(child: Text('Error: ${snapshot.error}'));
-                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return const Center(
-                        child: Text('No hay reportes disponibles'),
-                      );
-                    } else {
-                      final reportes = snapshot.data!;
-                      final reportesPorAno = _agruparReportesPorAno(reportes);
-
-                      return ListView.builder(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 8,
-                          horizontal: 12,
-                        ),
-                        itemCount: reportesPorAno.keys.length,
-                        itemBuilder: (context, index) {
-                          final ano = reportesPorAno.keys.elementAt(index);
-                          final reportesDelAno = reportesPorAno[ano]!;
-
-                          return Card(
-                            elevation: 4,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            margin: const EdgeInsets.symmetric(vertical: 8),
-                            child: ExpansionTile(
-                              leading: const Icon(
-                                Icons.folder,
-                                color: Colors.blue,
-                              ),
-                              collapsedIconColor: Colors.blue,
-                              iconColor: Colors.blue,
-                              title: Text(
-                                'Año $ano',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: theme.textTheme.bodyLarge?.color,
-                                  fontSize: 18,
-                                ),
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                side: BorderSide.none,
-                              ),
-                              collapsedShape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                side: BorderSide.none,
-                              ),
-                              children:
-                                  reportesDelAno.map((reporte) {
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 4,
-                                      ),
-                                      child: Card(
-                                        elevation: 0,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        child: ListTile(
-                                          contentPadding:
-                                              const EdgeInsets.symmetric(
-                                                horizontal: 16,
-                                                vertical: 10,
-                                              ),
-                                          leading: const Icon(
-                                            Icons.picture_as_pdf,
-                                            color: Colors.red,
-                                          ),
-                                          title: Text(
-                                            reporte.name,
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color:
-                                                  theme
-                                                      .textTheme
-                                                      .bodyMedium
-                                                      ?.color,
-                                            ),
-                                          ),
-                                          subtitle: Text(
-                                            reporte.fechaCorte,
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  theme
-                                                      .textTheme
-                                                      .bodyMedium
-                                                      ?.color,
-                                            ),
-                                          ),
-                                          trailing: const Icon(
-                                            Icons.remove_red_eye_outlined,
-                                            size: 20,
-                                          ),
-                                          onTap: () async {
-                                            final Uri url = Uri.parse(
-                                              reporte.file,
-                                            );
-                                            await launchUrl(
-                                              url,
-                                              mode:
-                                                  LaunchMode
-                                                      .externalApplication,
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
-                            ),
-                          );
-                        },
-                      );
-                    }
-                  },
-                ),
-      ),
-    );
+  // Initialization
+  Future<void> _initializeData() async {
+    setState(() => _isLoading = true);
+    try {
+      await initializeDateFormatting('es_ES', null);
+      _futureReportes = ApiService().fetchReportes();
+      await _futureReportes;
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
+  Future<void> refreshData() async {
+    setState(() => _isLoading = true);
+    _futureReportes = ApiService().fetchReportes();
+    try {
+      await _futureReportes;
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // Helpers
   Map<String, List<Reporte>> _agruparReportesPorAno(List<Reporte> reportes) {
     final Map<String, List<Reporte>> reportesPorAno = {};
 
     for (var reporte in reportes) {
       try {
-        // Se asume que el año está al final de la cadena, por ejemplo: "Febrero 2025"
         final String ano = reporte.fechaCorte.split(' ').last;
         if (!reportesPorAno.containsKey(ano)) {
           reportesPorAno[ano] = [];
         }
         reportesPorAno[ano]!.add(reporte);
       } catch (e) {
-        // Si ocurre un error, se reporta
-        print('Error al extraer el año de la fecha: ${reporte.fechaCorte}');
+        debugPrint('Error al extraer el año: ${reporte.fechaCorte}');
       }
     }
-    return reportesPorAno;
+
+    // Ordenar años de más reciente a más antiguo
+    final sortedKeys =
+        reportesPorAno.keys.toList()
+          ..sort((a, b) => int.parse(b).compareTo(int.parse(a)));
+
+    return {for (var key in sortedKeys) key: reportesPorAno[key]!};
+  }
+
+  Future<void> _openReport(String url) async {
+    try {
+      final Uri uri = Uri.parse(url);
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(
+                  Icons.error,
+                  color: Colors.white,
+                  size: 18.sp,
+                ), // ✅ REDUCIDO de 20
+                SizedBox(width: 10.w), // ✅ REDUCIDO de 12
+                const Expanded(child: Text('Error al abrir el reporte')),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.fixed,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  // UI Builders
+  Widget _buildEmptyState() {
+    final themeManager = Provider.of<ThemeManager>(context);
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: EdgeInsets.all(24.r), // ✅ REDUCIDO de 28
+            decoration: BoxDecoration(
+              color:
+                  themeManager.isDarkMode
+                      ? Colors.grey.shade800.withOpacity(0.3)
+                      : Colors.grey.shade100,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.description_outlined,
+              size: 60.sp, // ✅ REDUCIDO de 70
+              color: Colors.grey.shade400,
+            ),
+          ),
+          SizedBox(height: 16.h), // ✅ REDUCIDO de 20
+          Text(
+            'No hay reportes disponibles',
+            style: GoogleFonts.lato(
+              fontSize: 16.sp, // ✅ REDUCIDO de 18
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          SizedBox(height: 5.h), // ✅ REDUCIDO de 6
+          Text(
+            'Los reportes se generarán automáticamente',
+            style: TextStyle(
+              fontSize: 12.sp,
+              color: Colors.grey.shade500,
+            ), // ✅ REDUCIDO de 13
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildYearCard({
+    required String year,
+    required List<Reporte> reportes,
+    required ThemeManager themeManager,
+  }) {
+    final isExpanded = _expandedYears[year] ?? false;
+
+    return Container(
+      margin: EdgeInsets.symmetric(
+        horizontal: 12.w,
+        vertical: 6.h,
+      ), // ✅ REDUCIDO de 14/7
+      decoration: BoxDecoration(
+        color:
+            themeManager.isDarkMode
+                ? Colors.grey.shade800.withOpacity(0.5)
+                : Colors.white,
+        borderRadius: BorderRadius.circular(16.r), // ✅ REDUCIDO de 18
+        boxShadow: [
+          BoxShadow(
+            color:
+                themeManager.isDarkMode
+                    ? Colors.black.withOpacity(0.2)
+                    : Colors.grey.withOpacity(0.1),
+            blurRadius: 10.r, // ✅ REDUCIDO de 12
+            offset: Offset(0, 3.h), // ✅ REDUCIDO de 4
+          ),
+        ],
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          key: ValueKey('expansion_$year'),
+          initiallyExpanded: isExpanded,
+          tilePadding: EdgeInsets.symmetric(
+            horizontal: 16.w,
+            vertical: 6.h,
+          ), // ✅ REDUCIDO de 18/7
+          childrenPadding: EdgeInsets.only(bottom: 8.h), // ✅ REDUCIDO de 10
+          leading: Container(
+            padding: EdgeInsets.all(10.r), // ✅ REDUCIDO de 11
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+              ),
+              borderRadius: BorderRadius.circular(10.r), // ✅ REDUCIDO de 11
+            ),
+            child: Icon(
+              Icons.folder_rounded,
+              color: Colors.white,
+              size: 20.sp,
+            ), // ✅ REDUCIDO de 22
+          ),
+          title: Text(
+            'Año $year',
+            style: GoogleFonts.lato(
+              fontSize: 15.sp, // ✅ REDUCIDO de 16
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          subtitle: Padding(
+            padding: EdgeInsets.only(top: 2.h), // ✅ REDUCIDO de 3
+            child: Text(
+              '${reportes.length} reporte${reportes.length != 1 ? 's' : ''}',
+              style: TextStyle(
+                fontSize: 11.sp,
+                color: Colors.grey.shade600,
+              ), // ✅ REDUCIDO de 12
+            ),
+          ),
+          trailing: AnimatedRotation(
+            turns: isExpanded ? 0.5 : 0,
+            duration: _animationDuration,
+            child: Container(
+              padding: EdgeInsets.all(6.r), // ✅ REDUCIDO de 7
+              decoration: BoxDecoration(
+                color: const Color(0xFF667eea).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: const Color(0xFF667eea),
+                size: 18.sp, // ✅ REDUCIDO de 20
+              ),
+            ),
+          ),
+          onExpansionChanged: (expanded) {
+            setState(() {
+              _expandedYears[year] = expanded;
+            });
+          },
+          children:
+              reportes.map((reporte) {
+                return _buildReportItem(
+                  reporte: reporte,
+                  themeManager: themeManager,
+                );
+              }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReportItem({
+    required Reporte reporte,
+    required ThemeManager themeManager,
+  }) {
+    return Container(
+      margin: EdgeInsets.symmetric(
+        horizontal: 10.w,
+        vertical: 3.h,
+      ), // ✅ REDUCIDO de 11
+      decoration: BoxDecoration(
+        color:
+            themeManager.isDarkMode
+                ? Colors.grey.shade900.withOpacity(0.3)
+                : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(10.r), // ✅ REDUCIDO de 11
+        border: Border.all(
+          color:
+              themeManager.isDarkMode
+                  ? Colors.grey.shade700
+                  : Colors.grey.shade200,
+          width: 1.w,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _openReport(reporte.file),
+          borderRadius: BorderRadius.circular(10.r),
+          child: Padding(
+            padding: EdgeInsets.all(12.r), // ✅ REDUCIDO de 14
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(10.r), // ✅ REDUCIDO de 11
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFf093fb), Color(0xFFF5576c)],
+                    ),
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
+                  child: Icon(
+                    Icons.picture_as_pdf_rounded,
+                    color: Colors.white,
+                    size: 20.sp, // ✅ REDUCIDO de 22
+                  ),
+                ),
+                SizedBox(width: 12.w), // ✅ REDUCIDO de 14
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        reporte.name,
+                        style: GoogleFonts.lato(
+                          fontSize: 13.sp, // ✅ REDUCIDO de 14
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: 2.h), // ✅ REDUCIDO de 3
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_rounded,
+                            size: 12.sp, // ✅ REDUCIDO de 13
+                            color: Colors.grey.shade600,
+                          ),
+                          SizedBox(width: 4.w), // ✅ REDUCIDO de 5
+                          Text(
+                            reporte.fechaCorte,
+                            style: TextStyle(
+                              fontSize: 11.sp, // ✅ REDUCIDO de 12
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.all(6.r), // ✅ REDUCIDO de 7
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF667eea).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.arrow_forward_rounded,
+                    color: const Color(0xFF667eea),
+                    size: 16.sp, // ✅ REDUCIDO de 18
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingIndicator(ThemeManager themeManager) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(
+              themeManager.isDarkMode ? Colors.white : const Color(0xFF667eea),
+            ),
+            strokeWidth: 2.5.w, // ✅ REDUCIDO de 3
+          ),
+          SizedBox(height: 12.h), // ✅ REDUCIDO de 14
+          Text(
+            'Cargando reportes...',
+            style: TextStyle(
+              color:
+                  themeManager.isDarkMode
+                      ? Colors.white70
+                      : Colors.grey.shade600,
+              fontSize: 12.sp, // ✅ REDUCIDO de 13
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(dynamic error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: EdgeInsets.all(24.r), // ✅ REDUCIDO de 28
+            decoration: BoxDecoration(
+              color: Colors.red.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.error_outline_rounded,
+              size: 60.sp, // ✅ REDUCIDO de 70
+              color: Colors.red.shade400,
+            ),
+          ),
+          SizedBox(height: 16.h), // ✅ REDUCIDO de 20
+          Text(
+            'Error al cargar reportes',
+            style: GoogleFonts.lato(
+              fontSize: 16.sp, // ✅ REDUCIDO de 18
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          SizedBox(height: 5.h), // ✅ REDUCIDO de 6
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 32.w), // ✅ REDUCIDO de 35
+            child: Text(
+              error.toString(),
+              style: TextStyle(
+                fontSize: 12.sp,
+                color: Colors.grey.shade500,
+              ), // ✅ REDUCIDO de 13
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final themeManager = Provider.of<ThemeManager>(context);
+    final bgColor =
+        themeManager.isDarkMode
+            ? themeManager.themeData.scaffoldBackgroundColor
+            : const Color(0xFFF5F7FA);
+
+    return Scaffold(
+      backgroundColor: bgColor,
+      body:
+          _isLoading
+              ? _buildLoadingIndicator(themeManager)
+              : RefreshIndicator(
+                onRefresh: refreshData,
+                color: const Color(0xFF667eea),
+                strokeWidth: 2.3.w, // ✅ REDUCIDO de 2.5
+                child: FutureBuilder<List<Reporte>>(
+                  future: _futureReportes,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return _buildLoadingIndicator(themeManager);
+                    }
+
+                    if (snapshot.hasError) {
+                      return _buildErrorState(snapshot.error);
+                    }
+
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return _buildEmptyState();
+                    }
+
+                    final reportes = snapshot.data!;
+                    final reportesPorAno = _agruparReportesPorAno(reportes);
+
+                    // Inicializar _expandedYears si es necesario
+                    for (var ano in reportesPorAno.keys) {
+                      _expandedYears.putIfAbsent(ano, () => false);
+                    }
+
+                    return ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: EdgeInsets.symmetric(
+                        vertical: 12.h,
+                      ), // ✅ REDUCIDO de 14
+                      itemCount: reportesPorAno.keys.length,
+                      itemBuilder: (context, index) {
+                        final year = reportesPorAno.keys.elementAt(index);
+                        final reportesDelAno = reportesPorAno[year]!;
+
+                        return _buildYearCard(
+                          year: year,
+                          reportes: reportesDelAno,
+                          themeManager: themeManager,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+    );
   }
 }

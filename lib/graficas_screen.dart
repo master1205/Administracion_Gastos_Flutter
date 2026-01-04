@@ -1,10 +1,13 @@
-import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:notificaciones/api_service.dart';
 import 'package:intl/intl.dart';
 import 'package:notificaciones/models/Account.dart';
+import 'package:notificaciones/theme_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
@@ -17,32 +20,45 @@ class GraficasScreen extends StatefulWidget {
 
 class GraficasScreenState extends State<GraficasScreen>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+  static const String _tutorialKey = 'tutorial_graficas_shown';
+  static const Duration _animationDuration = Duration(milliseconds: 800);
+
   late TabController _tabController;
   late Future<List<dynamic>> _futureData;
   bool _isLoading = false;
 
-  // Keys para el tutorial
-  final GlobalKey _tabBarKeyGastosPorCategoria = GlobalKey();
-  final GlobalKey _tabBarKeyCuentasYSaldos = GlobalKey();
-  // Variables para el tutorial
-  late TutorialCoachMark tutorialCoachMark;
-  List<TargetFocus> targets = [];
+  final NumberFormat _currencyFormat = NumberFormat.currency(
+    locale: 'en_US',
+    symbol: '\$',
+  );
+
+  late TutorialCoachMark _tutorialCoachMark;
+  final List<TargetFocus> _targets = [];
+  final GlobalKey _tabBarKeyGastos = GlobalKey();
+  final GlobalKey _tabBarKeyCuentas = GlobalKey();
+  final GlobalKey _chartKey = GlobalKey();
+
+  final List<Color> _chartColors = [
+    const Color(0xFF667eea),
+    const Color(0xFFf093fb),
+    const Color(0xFF4facfe),
+    const Color(0xFFfa709a),
+    const Color(0xFF30cfd0),
+    const Color(0xFFfeca57),
+    const Color(0xFFff6348),
+    const Color(0xFF5f27cd),
+    const Color(0xFF48dbfb),
+    const Color(0xFFff9ff3),
+  ];
+
+  int _colorIndex = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 2, vsync: this);
-    _futureData = Future.wait([
-      ApiService().fetchGastosPorCategoria(),
-      ApiService().fetchCuentas(),
-    ]);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(seconds: 2), () {
-        showTutorial();
-      });
-    });
+    _loadData();
   }
 
   @override
@@ -55,165 +71,999 @@ class GraficasScreenState extends State<GraficasScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      if (mounted) {
-        setState(() => _isLoading = true);
-      }
-      Future.delayed(const Duration(milliseconds: 700), () {
+      setState(() => _isLoading = true);
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) setState(() => _isLoading = false);
+      });
+    }
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    _futureData = Future.wait([
+      ApiService().fetchGastosPorCategoria(),
+      ApiService().fetchCuentas(),
+    ]);
+    try {
+      await _futureData;
+      await _maybeShowTutorial();
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> refreshData() async {
+    await _loadData();
+  }
+
+  Color _getNextColor() {
+    final color = _chartColors[_colorIndex % _chartColors.length];
+    _colorIndex++;
+    return color;
+  }
+
+  void _resetColors() {
+    _colorIndex = 0;
+  }
+
+  Future<void> _maybeShowTutorial() async {
+    final prefs = await SharedPreferences.getInstance();
+    final transaccionesTutorialShown =
+        prefs.getBool('tutorial_transacciones_shown') ?? false;
+    final graficasTutorialShown = prefs.getBool(_tutorialKey) ?? false;
+
+    if (transaccionesTutorialShown && !graficasTutorialShown) {
+      Future.delayed(const Duration(milliseconds: 800), () {
         if (mounted) {
-          setState(() => _isLoading = false);
+          _createTutorial();
+          _tutorialCoachMark.show(context: context);
         }
       });
     }
   }
 
-  Future<void> refreshData() async {
-    setState(() {
-      _futureData = Future.wait([
-        ApiService().fetchGastosPorCategoria(),
-        ApiService().fetchCuentas(),
-      ]);
-    });
-  }
-
-  Future<void> showTutorial() async {
-    final prefs = await SharedPreferences.getInstance();
-    // Usamos una clave única para GraficasScreen, por ejemplo "tutorial_graficas_shown"
-    if (!(prefs.getBool('tutorial_graficas_shown') ?? false)) {
-      createTutorial();
-      tutorialCoachMark.show(context: context);
-    }
-  }
-
-  Future<void> createTutorial() async {
-    _initTutorialTargets();
-    tutorialCoachMark = TutorialCoachMark(
-      targets: targets,
-      colorShadow: Colors.red,
-      textSkip: "Omitir",
+  void _createTutorial() {
+    _initTargets();
+    _tutorialCoachMark = TutorialCoachMark(
+      targets: _targets,
+      colorShadow: Colors.black,
+      textSkip: "",
       paddingFocus: 10,
-      opacityShadow: 0.5,
+      opacityShadow: 0.8,
       imageFilter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
       onFinish: () async {
-        await (await SharedPreferences.getInstance()).setBool(
-          'tutorial_graficas_shown',
-          true,
-        );
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool(_tutorialKey, true);
       },
       onSkip: () {
         SharedPreferences.getInstance().then((prefs) {
-          prefs.setBool('tutorial_graficas_shown', true);
+          prefs.setBool(_tutorialKey, true);
         });
         return true;
       },
     );
   }
 
-  void _initTutorialTargets() {
-    targets.clear();
+  void _initTargets() {
+    _targets.clear();
+    _targets.addAll([
+      _createGastosTabTarget(),
+      _createCuentasTabTarget(),
+      _createChartTarget(),
+    ]);
+  }
 
-    targets.add(
-      TargetFocus(
-        identify: "GastosPorCategoriaTab",
-        keyTarget: _tabBarKeyGastosPorCategoria,
-        color: Colors.deepPurple,
-        shape: ShapeLightFocus.RRect,
-        radius: 10,
-        contents: [
-          TargetContent(
-            align: ContentAlign.bottom,
-            builder: (context, controller) {
-              return Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Colors.deepPurple, Colors.purple],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+  TargetFocus _createGastosTabTarget() {
+    return TargetFocus(
+      identify: "GastosTab",
+      keyTarget: _tabBarKeyGastos,
+      color: Colors.transparent,
+      enableOverlayTab: true,
+      shape: ShapeLightFocus.RRect,
+      radius: 12,
+      contents: [
+        TargetContent(
+          align: ContentAlign.bottom,
+          padding: EdgeInsets.all(16.r),
+          builder:
+              (context, controller) => _buildModernTutorialCard(
+                title: "📊 Gastos por Categoría",
+                description:
+                    "Visualiza cómo se distribuyen tus gastos entre diferentes categorías.",
+                icon: Icons.bar_chart_rounded,
+                gradientColors: const [Color(0xFF667eea), Color(0xFF764ba2)],
+                currentStep: 1,
+                totalSteps: 3,
+                onNext: controller.next,
+                onSkip: controller.skip,
+              ),
+        ),
+      ],
+    );
+  }
+
+  TargetFocus _createCuentasTabTarget() {
+    return TargetFocus(
+      identify: "CuentasTab",
+      keyTarget: _tabBarKeyCuentas,
+      color: Colors.transparent,
+      enableOverlayTab: true,
+      shape: ShapeLightFocus.RRect,
+      radius: 12,
+      contents: [
+        TargetContent(
+          align: ContentAlign.bottom,
+          padding: EdgeInsets.all(16.r),
+          builder:
+              (context, controller) => _buildModernTutorialCard(
+                title: "💳 Distribución de Cuentas",
+                description:
+                    "Compara los saldos de tus diferentes cuentas de forma visual.",
+                icon: Icons.account_balance_wallet_rounded,
+                gradientColors: const [Color(0xFFf093fb), Color(0xFFF5576c)],
+                currentStep: 2,
+                totalSteps: 3,
+                onNext: controller.next,
+                onBack: controller.previous,
+                onSkip: controller.skip,
+              ),
+        ),
+      ],
+    );
+  }
+
+  TargetFocus _createChartTarget() {
+    return TargetFocus(
+      identify: "ChartArea",
+      keyTarget: _chartKey,
+      color: Colors.transparent,
+      enableOverlayTab: true,
+      shape: ShapeLightFocus.RRect,
+      radius: 20,
+      contents: [
+        TargetContent(
+          align: ContentAlign.bottom,
+          padding: EdgeInsets.all(16.r),
+          builder:
+              (context, controller) => _buildModernTutorialCard(
+                title: "📈 Gráficos Interactivos",
+                description:
+                    "Toca cualquier barra para ver detalles específicos y porcentajes.",
+                icon: Icons.touch_app_rounded,
+                gradientColors: const [Color(0xFF4facfe), Color(0xFF00f2fe)],
+                currentStep: 3,
+                totalSteps: 3,
+                onNext: controller.next,
+                onBack: controller.previous,
+                isLastStep: true,
+              ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModernTutorialCard({
+    required String title,
+    required String description,
+    required IconData icon,
+    required List<Color> gradientColors,
+    required int currentStep,
+    required int totalSteps,
+    VoidCallback? onNext,
+    VoidCallback? onBack,
+    VoidCallback? onSkip,
+    bool isLastStep = false,
+  }) {
+    return Container(
+      constraints: BoxConstraints(maxWidth: 280.w), // ✅ REDUCIDO de 350w
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r), // ✅ REDUCIDO de 24r
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 15.r,
+            offset: Offset(0, 8.h),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(14.r), // ✅ REDUCIDO de 20r
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: gradientColors,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(16.r),
+                topRight: Radius.circular(16.r),
+              ),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(10.r), // ✅ REDUCIDO de 12r
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.3),
+                    shape: BoxShape.circle,
                   ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 6,
-                      offset: const Offset(2, 2),
+                  child: Icon(
+                    icon,
+                    size: 26.sp,
+                    color: Colors.white,
+                  ), // ✅ REDUCIDO de 32sp
+                ),
+                SizedBox(height: 8.h), // ✅ REDUCIDO de 12h
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16.sp, // ✅ REDUCIDO de 20sp
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    letterSpacing: 0.3,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.all(14.r), // ✅ REDUCIDO de 20r
+            child: Column(
+              children: [
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 12.sp, // ✅ REDUCIDO de 14sp
+                    height: 1.3,
+                    color: Colors.grey.shade700,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 12.h), // ✅ REDUCIDO de 16h
+                _buildProgressIndicator(
+                  currentStep,
+                  totalSteps,
+                  gradientColors,
+                ),
+                SizedBox(height: 12.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    if (!isLastStep && onSkip != null)
+                      TextButton(
+                        onPressed: onSkip,
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8.w,
+                            vertical: 4.h,
+                          ),
+                          minimumSize: Size(50.w, 32.h),
+                        ),
+                        child: Text(
+                          'Omitir',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 12.sp, // ✅ REDUCIDO de 14sp
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      )
+                    else
+                      const SizedBox.shrink(),
+                    Row(
+                      children: [
+                        if (onBack != null)
+                          Container(
+                            margin: EdgeInsets.only(right: 6.w),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              onPressed: onBack,
+                              icon: Icon(Icons.arrow_back_rounded, size: 16.sp),
+                              color: Colors.grey.shade700,
+                              padding: EdgeInsets.all(6.r),
+                              constraints: BoxConstraints(
+                                minWidth: 30.w,
+                                minHeight: 30.h,
+                              ),
+                            ),
+                          ),
+                        if (onNext != null)
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(colors: gradientColors),
+                              borderRadius: BorderRadius.circular(18.r),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: gradientColors.first.withOpacity(0.4),
+                                  blurRadius: 6.r,
+                                  offset: Offset(0, 3.h),
+                                ),
+                              ],
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: onNext,
+                                borderRadius: BorderRadius.circular(18.r),
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 14.w, // ✅ REDUCIDO de 20w
+                                    vertical: 8.h, // ✅ REDUCIDO de 10h
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        isLastStep
+                                            ? '¡Entendido!'
+                                            : 'Siguiente',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12.sp, // ✅ REDUCIDO de 14sp
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      SizedBox(width: 4.w),
+                                      Icon(
+                                        isLastStep
+                                            ? Icons.check_rounded
+                                            : Icons.arrow_forward_rounded,
+                                        color: Colors.white,
+                                        size: 14.sp, // ✅ REDUCIDO de 18sp
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      "Gastos por Categoría",
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      "Explora el gráfico de barras para ver tus gastos distribuidos por categoría.",
-                      style: TextStyle(fontSize: 16, color: Colors.white),
-                    ),
-                  ],
-                ),
-              );
-            },
+              ],
+            ),
           ),
         ],
       ),
     );
+  }
 
-    targets.add(
-      TargetFocus(
-        identify: "CuentasYSaldosTab",
-        keyTarget: _tabBarKeyCuentasYSaldos,
-        color: Colors.deepOrange,
-        shape: ShapeLightFocus.RRect,
-        radius: 10,
-        contents: [
-          TargetContent(
-            align: ContentAlign.bottom,
-            builder: (context, controller) {
-              return Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Colors.deepOrange, Colors.orange],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+  Widget _buildProgressIndicator(
+    int currentStep,
+    int totalSteps,
+    List<Color> gradientColors,
+  ) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(totalSteps, (index) {
+        final isActive = index < currentStep;
+        final isCurrent = index == currentStep - 1;
+
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          margin: EdgeInsets.symmetric(horizontal: 2.w),
+          width: isCurrent ? 20.w : 5.w, // ✅ REDUCIDO de 28w/6w
+          height: 5.h, // ✅ REDUCIDO de 6h
+          decoration: BoxDecoration(
+            gradient:
+                isActive || isCurrent
+                    ? LinearGradient(colors: gradientColors)
+                    : null,
+            color: !isActive && !isCurrent ? Colors.grey.shade300 : null,
+            borderRadius: BorderRadius.circular(2.5.r),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildEmptyState({required String message, required IconData icon}) {
+    final themeManager = Provider.of<ThemeManager>(context);
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: EdgeInsets.all(24.r),
+            decoration: BoxDecoration(
+              color:
+                  themeManager.isDarkMode
+                      ? Colors.grey.shade800.withOpacity(0.3)
+                      : Colors.grey.shade100,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 60.sp, color: Colors.grey.shade400),
+          ),
+          SizedBox(height: 16.h),
+          Text(
+            message,
+            style: GoogleFonts.lato(
+              fontSize: 15.sp,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader({
+    required String title,
+    required String total,
+    required IconData icon,
+    required List<Color> gradientColors,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(14.r),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradientColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14.r),
+        boxShadow: [
+          BoxShadow(
+            color: gradientColors.first.withOpacity(0.3),
+            blurRadius: 10.r,
+            offset: Offset(0, 5.h),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(12.r),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            child: Icon(icon, color: Colors.white, size: 24.sp),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 11.sp,
+                    color: Colors.white.withOpacity(0.9),
+                    fontWeight: FontWeight.w500,
                   ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 6,
-                      offset: const Offset(2, 2),
-                    ),
-                  ],
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      "Cuentas y Saldos",
-                      style: TextStyle(
-                        fontSize: 22,
+                SizedBox(height: 2.h),
+                TweenAnimationBuilder<double>(
+                  tween: Tween<double>(
+                    begin: 0,
+                    end: double.parse(total.replaceAll(RegExp(r'[^\d.]'), '')),
+                  ),
+                  duration: _animationDuration,
+                  builder: (context, value, _) {
+                    return Text(
+                      _currencyFormat.format(value),
+                      style: GoogleFonts.lato(
+                        fontSize: 20.sp,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGastosPorCategoria(Map<String, double> data) {
+    final themeManager = Provider.of<ThemeManager>(context);
+    _resetColors();
+
+    final List<BarChartGroupData> barGroups = [];
+    final List<Widget> legendItems = [];
+    double totalGastos = 0;
+    int index = 0;
+
+    data.forEach((category, amount) {
+      final color = _getNextColor();
+      totalGastos += amount;
+
+      barGroups.add(
+        BarChartGroupData(
+          x: index,
+          barRods: [
+            BarChartRodData(
+              fromY: 0,
+              toY: amount,
+              gradient: LinearGradient(
+                colors: [color, color.withOpacity(0.7)],
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+              ),
+              width: 18.w,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(6.r)),
+            ),
+          ],
+        ),
+      );
+
+      final percentage = (amount / totalGastos * 100).toStringAsFixed(1);
+      legendItems.add(
+        _buildLegendItem(
+          color: color,
+          category: category,
+          amount: amount,
+          percentage: percentage,
+          themeManager: themeManager,
+        ),
+      );
+
+      index++;
+    });
+
+    return RefreshIndicator(
+      onRefresh: refreshData,
+      color: const Color(0xFF667eea),
+      strokeWidth: 2.5.w,
+      child: ListView(
+        padding: EdgeInsets.all(14.r),
+        children: [
+          _buildSectionHeader(
+            title: 'Total de Gastos',
+            total: _currencyFormat.format(totalGastos),
+            icon: Icons.trending_down_rounded,
+            gradientColors: const [Color(0xFFfa709a), Color(0xFFfee140)],
+          ),
+          SizedBox(height: 16.h),
+          Container(
+            key: _chartKey,
+            padding: EdgeInsets.all(14.r),
+            decoration: BoxDecoration(
+              color:
+                  themeManager.isDarkMode
+                      ? Colors.grey.shade800.withOpacity(0.5)
+                      : Colors.white,
+              borderRadius: BorderRadius.circular(14.r),
+              boxShadow: [
+                BoxShadow(
+                  color:
+                      themeManager.isDarkMode
+                          ? Colors.black.withOpacity(0.2)
+                          : Colors.grey.withOpacity(0.1),
+                  blurRadius: 10.r,
+                  offset: Offset(0, 3.h),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(6.r),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                        ),
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                      child: Icon(
+                        Icons.bar_chart_rounded,
+                        color: Colors.white,
+                        size: 16.sp,
+                      ),
                     ),
-                    SizedBox(height: 10),
+                    SizedBox(width: 8.w),
                     Text(
-                      "Consulta el balance de tus cuentas de forma clara y organizada.",
-                      style: TextStyle(fontSize: 16, color: Colors.white),
+                      'Distribución por Categoría',
+                      style: GoogleFonts.lato(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
-              );
-            },
+                SizedBox(height: 14.h),
+                SizedBox(
+                  height: 200.h, // ✅ REDUCIDO de 240h
+                  child: BarChart(
+                    BarChartData(
+                      minY: 0,
+                      barGroups: barGroups,
+                      borderData: FlBorderData(show: false),
+                      titlesData: FlTitlesData(show: false),
+                      barTouchData: BarTouchData(
+                        enabled: true,
+                        touchTooltipData: BarTouchTooltipData(
+                          getTooltipColor: (group) => Colors.black87,
+                          tooltipRoundedRadius: 8,
+                          getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                            return BarTooltipItem(
+                              _currencyFormat.format(rod.toY),
+                              TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11.sp,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      gridData: FlGridData(show: false),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 16.h),
+          Container(
+            padding: EdgeInsets.all(14.r),
+            decoration: BoxDecoration(
+              color:
+                  themeManager.isDarkMode
+                      ? Colors.grey.shade800.withOpacity(0.5)
+                      : Colors.white,
+              borderRadius: BorderRadius.circular(14.r),
+              boxShadow: [
+                BoxShadow(
+                  color:
+                      themeManager.isDarkMode
+                          ? Colors.black.withOpacity(0.2)
+                          : Colors.grey.withOpacity(0.1),
+                  blurRadius: 10.r,
+                  offset: Offset(0, 3.h),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(6.r),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                        ),
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                      child: Icon(
+                        Icons.list_rounded,
+                        color: Colors.white,
+                        size: 16.sp,
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Desglose Detallado',
+                      style: GoogleFonts.lato(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 10.h),
+                ...legendItems,
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCuentasYSaldos(List<Account> data) {
+    final themeManager = Provider.of<ThemeManager>(context);
+    _resetColors();
+
+    final List<BarChartGroupData> barGroups = [];
+    final List<Widget> legendItems = [];
+    double totalSaldo = 0;
+    int index = 0;
+
+    for (var account in data) {
+      final color = _getNextColor();
+      final saldo = account.saldo ?? 0;
+      totalSaldo += saldo;
+
+      barGroups.add(
+        BarChartGroupData(
+          x: index,
+          barRods: [
+            BarChartRodData(
+              fromY: 0,
+              toY: saldo,
+              gradient: LinearGradient(
+                colors: [color, color.withOpacity(0.7)],
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+              ),
+              width: 18.w,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(6.r)),
+            ),
+          ],
+        ),
+      );
+
+      final percentage =
+          totalSaldo > 0
+              ? (saldo / totalSaldo * 100).toStringAsFixed(1)
+              : '0.0';
+
+      legendItems.add(
+        _buildLegendItem(
+          color: color,
+          category: account.nombre,
+          amount: saldo,
+          percentage: percentage,
+          themeManager: themeManager,
+          subtitle: account.numeroTarjeta,
+        ),
+      );
+
+      index++;
+    }
+
+    return RefreshIndicator(
+      onRefresh: refreshData,
+      color: const Color(0xFF667eea),
+      strokeWidth: 2.5.w,
+      child: ListView(
+        padding: EdgeInsets.all(14.r),
+        children: [
+          _buildSectionHeader(
+            title: 'Balance Total',
+            total: _currencyFormat.format(totalSaldo),
+            icon: Icons.account_balance_wallet_rounded,
+            gradientColors: const [Color(0xFF4facfe), Color(0xFF00f2fe)],
+          ),
+          SizedBox(height: 16.h),
+          Container(
+            padding: EdgeInsets.all(14.r),
+            decoration: BoxDecoration(
+              color:
+                  themeManager.isDarkMode
+                      ? Colors.grey.shade800.withOpacity(0.5)
+                      : Colors.white,
+              borderRadius: BorderRadius.circular(14.r),
+              boxShadow: [
+                BoxShadow(
+                  color:
+                      themeManager.isDarkMode
+                          ? Colors.black.withOpacity(0.2)
+                          : Colors.grey.withOpacity(0.1),
+                  blurRadius: 10.r,
+                  offset: Offset(0, 3.h),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(6.r),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF4facfe), Color(0xFF00f2fe)],
+                        ),
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                      child: Icon(
+                        Icons.pie_chart_rounded,
+                        color: Colors.white,
+                        size: 16.sp,
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Distribución por Cuenta',
+                      style: GoogleFonts.lato(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 14.h),
+                SizedBox(
+                  height: 200.h,
+                  child: BarChart(
+                    BarChartData(
+                      minY: 0,
+                      barGroups: barGroups,
+                      borderData: FlBorderData(show: false),
+                      titlesData: FlTitlesData(show: false),
+                      barTouchData: BarTouchData(
+                        enabled: true,
+                        touchTooltipData: BarTouchTooltipData(
+                          getTooltipColor: (group) => Colors.black87,
+                          tooltipRoundedRadius: 8,
+                          getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                            return BarTooltipItem(
+                              _currencyFormat.format(rod.toY),
+                              TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11.sp,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      gridData: FlGridData(show: false),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 16.h),
+          Container(
+            padding: EdgeInsets.all(14.r),
+            decoration: BoxDecoration(
+              color:
+                  themeManager.isDarkMode
+                      ? Colors.grey.shade800.withOpacity(0.5)
+                      : Colors.white,
+              borderRadius: BorderRadius.circular(14.r),
+              boxShadow: [
+                BoxShadow(
+                  color:
+                      themeManager.isDarkMode
+                          ? Colors.black.withOpacity(0.2)
+                          : Colors.grey.withOpacity(0.1),
+                  blurRadius: 10.r,
+                  offset: Offset(0, 3.h),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(6.r),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF4facfe), Color(0xFF00f2fe)],
+                        ),
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                      child: Icon(
+                        Icons.credit_card_rounded,
+                        color: Colors.white,
+                        size: 16.sp,
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Detalle de Cuentas',
+                      style: GoogleFonts.lato(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 10.h),
+                ...legendItems,
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem({
+    required Color color,
+    required String category,
+    required double amount,
+    required String percentage,
+    required ThemeManager themeManager,
+    String? subtitle,
+  }) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 8.h),
+      padding: EdgeInsets.all(12.r),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(color: color.withOpacity(0.3), width: 1.w),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 8.w,
+            height: 8.h,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [color, color.withOpacity(0.7)]),
+              shape: BoxShape.circle,
+            ),
+          ),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  category,
+                  style: GoogleFonts.lato(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (subtitle != null) ...[
+                  SizedBox(height: 2.h),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 10.sp,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          SizedBox(width: 8.w),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                _currencyFormat.format(amount),
+                style: GoogleFonts.lato(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              SizedBox(height: 2.h),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(6.r),
+                ),
+                child: Text(
+                  '$percentage%',
+                  style: TextStyle(
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -222,337 +1072,160 @@ class GraficasScreenState extends State<GraficasScreen>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDarkMode = theme.brightness == Brightness.dark;
+    final themeManager = Provider.of<ThemeManager>(context);
+    final bgColor =
+        themeManager.isDarkMode
+            ? themeManager.themeData.scaffoldBackgroundColor
+            : const Color(0xFFF5F7FA);
 
-    return Container(
-      decoration:
-          isDarkMode
-              ? null
-              : BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.white, Colors.blue.shade200],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
+    return Scaffold(
+      backgroundColor: bgColor,
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(50.h),
+        child: Container(
+          decoration: BoxDecoration(
+            color:
+                themeManager.isDarkMode ? Colors.grey.shade900 : Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 6.r,
+                offset: Offset(0, 2.h),
               ),
-      child: Scaffold(
-        backgroundColor:
-            isDarkMode ? theme.scaffoldBackgroundColor : Colors.transparent,
-        appBar: AppBar(
-          automaticallyImplyLeading: true,
-          toolbarHeight: 0,
-          elevation: 0,
-          backgroundColor: theme.scaffoldBackgroundColor,
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(60),
-            child: Container(
-              //key: _tabBarKey,
-              child: TabBar(
-                controller: _tabController,
-                labelColor:
-                    isDarkMode ? Colors.white : theme.colorScheme.primary,
-                unselectedLabelColor:
-                    isDarkMode
-                        ? Colors.white70
-                        : theme.colorScheme.primary.withOpacity(0.6),
-                indicatorColor:
-                    isDarkMode ? Colors.white : theme.colorScheme.primary,
-                indicatorWeight: 3,
-                tabs: [
-                  Tab(
-                    key: _tabBarKeyGastosPorCategoria,
-                    text: 'Gastos por Categoría',
+            ],
+          ),
+          child: SafeArea(
+            child: TabBar(
+              controller: _tabController,
+              labelColor: const Color(0xFF667eea),
+              unselectedLabelColor:
+                  themeManager.isDarkMode
+                      ? Colors.grey.shade500
+                      : Colors.grey.shade600,
+              labelStyle: GoogleFonts.lato(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.bold,
+              ),
+              unselectedLabelStyle: GoogleFonts.lato(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w500,
+              ),
+              indicatorColor: const Color(0xFF667eea),
+              indicatorWeight: 2.h,
+              indicatorSize: TabBarIndicatorSize.label,
+              tabs: [
+                Tab(
+                  child: Container(
+                    key: _tabBarKeyGastos,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.bar_chart_rounded, size: 16.sp),
+                        SizedBox(width: 6.w),
+                        const Text('Gastos'),
+                      ],
+                    ),
                   ),
-                  Tab(key: _tabBarKeyCuentasYSaldos, text: 'Cuentas y Saldos'),
-                ],
-              ),
+                ),
+                Tab(
+                  child: Container(
+                    key: _tabBarKeyCuentas,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.account_balance_wallet_rounded, size: 16.sp),
+                        SizedBox(width: 6.w),
+                        const Text('Cuentas'),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
-        body:
-            _isLoading
-                ? Center(
-                  child: CircularProgressIndicator(
-                    color: theme.colorScheme.primary,
-                  ),
-                )
-                : FutureBuilder<List<dynamic>>(
-                  future: _futureData,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return Center(
-                        child: CircularProgressIndicator(
-                          color: theme.colorScheme.primary,
-                        ),
-                      );
-                    } else if (snapshot.hasError) {
-                      return Center(
-                        child: Text(
-                          'Error: ${snapshot.error}',
-                          style: theme.textTheme.bodyLarge,
-                        ),
-                      );
-                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return Center(
-                        child: Text(
-                          'No hay datos disponibles',
-                          style: theme.textTheme.bodyLarge,
-                        ),
-                      );
-                    } else {
-                      final gastosPorCategoria =
-                          snapshot.data![0] as Map<String, double>;
-                      final cuentas = snapshot.data![1] as List<Account>;
-                      return TabBarView(
-                        controller: _tabController,
-                        children: [
-                          RefreshIndicator(
-                            onRefresh: refreshData,
-                            child:
-                                gastosPorCategoria.isEmpty
-                                    ? Center(
-                                      child: Text(
-                                        'No hay datos disponibles',
-                                        style: theme.textTheme.bodyLarge,
-                                      ),
-                                    )
-                                    : _buildGastosPorCategoria(
-                                      gastosPorCategoria,
-                                    ),
-                          ),
-                          RefreshIndicator(
-                            onRefresh: refreshData,
-                            child:
-                                cuentas.isEmpty
-                                    ? Center(
-                                      child: Text(
-                                        'No hay datos disponibles',
-                                        style: theme.textTheme.bodyLarge,
-                                      ),
-                                    )
-                                    : _buildCuentasYSaldos(cuentas),
-                          ),
-                        ],
-                      );
-                    }
-                  },
-                ),
       ),
-    );
-  }
-
-  Widget _buildGastosPorCategoria(Map<String, double> data) {
-    final theme = Theme.of(context);
-    final List<BarChartGroupData> barGroups = [];
-    double totalGastos = 0;
-    final List<Widget> rows = [];
-    int index = 0;
-    data.forEach((category, amount) {
-      final color = _getRandomColor();
-      barGroups.add(
-        BarChartGroupData(
-          x: index,
-          barRods: [
-            BarChartRodData(
-              fromY: 0,
-              toY: amount,
-              color: color,
-              width: 20,
-              borderRadius: BorderRadius.circular(4),
-              backDrawRodData: BackgroundBarChartRodData(
-                show: false,
-                toY: 0,
-                color: Colors.grey.shade200,
-              ),
-            ),
-          ],
-        ),
-      );
-      totalGastos += amount;
-      rows.add(
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              Container(
-                width: 20,
-                height: 20,
-                margin: const EdgeInsets.only(right: 10),
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
-              Expanded(
-                child: Text(
-                  category,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              Text(
-                NumberFormat.currency(symbol: '\$ ').format(amount),
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-      index++;
-    });
-
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                Text(
-                  'Total: ${NumberFormat.currency(symbol: '\$ ').format(totalGastos)}',
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 280,
-                  child: BarChart(
-                    BarChartData(
-                      minY: 0,
-                      barGroups: barGroups,
-                      borderData: FlBorderData(show: false),
-                      titlesData: FlTitlesData(show: false),
-                      barTouchData: BarTouchData(enabled: false),
-                      gridData: FlGridData(show: false),
+      body:
+          _isLoading
+              ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        themeManager.isDarkMode
+                            ? Colors.white
+                            : const Color(0xFF667eea),
+                      ),
+                      strokeWidth: 3.w,
                     ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Divider(),
-                const SizedBox(height: 10),
-                Column(children: rows),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCuentasYSaldos(List<Account> data) {
-    final theme = Theme.of(context);
-    final List<BarChartGroupData> barGroups = [];
-    double totalSaldo = 0;
-    final List<Widget> rows = [];
-    int index = 0;
-    for (var account in data) {
-      final color = _getRandomColor();
-      double saldo = account.saldo ?? 0;
-      totalSaldo += saldo;
-      barGroups.add(
-        BarChartGroupData(
-          x: index,
-          barRods: [
-            BarChartRodData(
-              fromY: 0,
-              toY: saldo,
-              color: color,
-              width: 20,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ],
-        ),
-      );
-      rows.add(
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              Container(
-                width: 20,
-                height: 20,
-                margin: const EdgeInsets.only(right: 10),
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
-              Expanded(
-                child: Text(
-                  account.nombre,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              Text(
-                NumberFormat.currency(symbol: '\$ ').format(saldo),
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-      index++;
-    }
-
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                Text(
-                  'Total: ${NumberFormat.currency(symbol: '\$ ').format(totalSaldo)}',
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 280,
-                  child: BarChart(
-                    BarChartData(
-                      minY: 0,
-                      barGroups: barGroups,
-                      borderData: FlBorderData(show: false),
-                      titlesData: FlTitlesData(show: false),
-                      barTouchData: BarTouchData(enabled: false),
-                      gridData: FlGridData(show: false),
+                    SizedBox(height: 12.h),
+                    Text(
+                      'Cargando gráficas...',
+                      style: TextStyle(
+                        color:
+                            themeManager.isDarkMode
+                                ? Colors.white70
+                                : Colors.grey.shade600,
+                        fontSize: 12.sp,
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(height: 20),
-                const Divider(),
-                const SizedBox(height: 10),
-                Column(children: rows),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+              )
+              : FutureBuilder<List<dynamic>>(
+                future: _futureData,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          themeManager.isDarkMode
+                              ? Colors.white
+                              : const Color(0xFF667eea),
+                        ),
+                        strokeWidth: 3.w,
+                      ),
+                    );
+                  }
 
-  Color _getRandomColor() {
-    final Random random = Random();
-    return Color.fromARGB(
-      255,
-      random.nextInt(256),
-      random.nextInt(256),
-      random.nextInt(256),
+                  if (snapshot.hasError) {
+                    return _buildEmptyState(
+                      message: 'Error al cargar datos',
+                      icon: Icons.error_outline_rounded,
+                    );
+                  }
+
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return _buildEmptyState(
+                      message: 'No hay datos disponibles',
+                      icon: Icons.insert_chart_outlined_rounded,
+                    );
+                  }
+
+                  final gastosPorCategoria =
+                      snapshot.data![0] as Map<String, double>;
+                  final cuentas = snapshot.data![1] as List<Account>;
+
+                  return TabBarView(
+                    controller: _tabController,
+                    children: [
+                      gastosPorCategoria.isEmpty
+                          ? _buildEmptyState(
+                            message: 'No hay gastos registrados',
+                            icon: Icons.money_off_rounded,
+                          )
+                          : _buildGastosPorCategoria(gastosPorCategoria),
+                      cuentas.isEmpty
+                          ? _buildEmptyState(
+                            message: 'No hay cuentas disponibles',
+                            icon: Icons.account_balance_wallet_outlined,
+                          )
+                          : _buildCuentasYSaldos(cuentas),
+                    ],
+                  );
+                },
+              ),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart'; // ✅ AGREGADO
 import 'package:notificaciones/data_provider.dart';
 import 'package:notificaciones/loading_screen.dart';
 import 'package:notificaciones/local_notifications.dart';
@@ -28,36 +29,46 @@ class MyApp extends StatelessWidget {
 
   Future<bool> _checkOnboardingStatus() async {
     final prefs = await SharedPreferences.getInstance();
-    // Si no existe la clave, asumimos que es la primera vez (onboarding no completado)
     return prefs.getBool('onboarding_complete') ?? false;
   }
 
   @override
   Widget build(BuildContext context) {
-    validarUnicode();
     final themeProvider = Provider.of<ThemeManager>(context);
-    return MaterialApp(
-      title: 'Administración de Gastos',
-      theme: themeProvider.themeData,
-      home: FutureBuilder<bool>(
-        future: _checkOnboardingStatus(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-          final onboardingComplete = snapshot.data ?? false;
-          // Si ya completó el onboarding mostramos LoadingScreen, de lo contrario OnboardingScreen.
-          return onboardingComplete
-              ? const LoadingScreen()
-              : const OnboardingScreen();
-        },
-      ),
-    );
-  }
 
-  void validarUnicode() {
-    print(Icons.restaurant_outlined.codePoint);
+    // ✅ CONFIGURACIÓN OPTIMIZADA PARA PANTALLA GRANDE (6.67")
+    return ScreenUtilInit(
+      designSize: const Size(
+        412,
+        915,
+      ), // ✅ Tamaño típico de pantallas grandes Android
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Administración de Gastos',
+          theme: themeProvider.themeData,
+          home: FutureBuilder<bool>(
+            future: _checkOnboardingStatus(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Scaffold(
+                  body: Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3.w, // ✅ Ancho responsivo
+                    ),
+                  ),
+                );
+              }
+              final onboardingComplete = snapshot.data ?? false;
+              return onboardingComplete
+                  ? const LoadingScreen()
+                  : const OnboardingScreen();
+            },
+          ),
+        );
+      },
+    );
   }
 }
