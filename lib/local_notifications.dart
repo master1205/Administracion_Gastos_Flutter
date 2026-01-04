@@ -125,13 +125,43 @@ class LocalNotifications {
   }
 
   // ============================================================================
+  // UPDATE USERNAME IN NOTIFICATIONS
+  // ============================================================================
+
+  /// ✅ AGREGAR ESTE MÉTODO AQUÍ
+  static Future<void> updateUsername(String newUsername) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Guardar el nuevo nombre
+    await prefs.setString('username', newUsername);
+
+    // Obtener qué notificaciones están habilitadas
+    final morningEnabled = await isMorningNotificationEnabled();
+    final afternoonEnabled = await isAfternoonNotificationEnabled();
+    final nightEnabled = await isNightNotificationEnabled();
+
+    // Cancelar todas las notificaciones actuales
+    await _flutterLocalNotificationsPlugin.cancelAll();
+
+    // Reprogramar solo las que estaban habilitadas
+    if (morningEnabled) {
+      await scheduleDailyMorningNotification(username: newUsername);
+    }
+    if (afternoonEnabled) {
+      await scheduleDailyAfternoonNotification(username: newUsername);
+    }
+    if (nightEnabled) {
+      await scheduleDailyNightNotification(username: newUsername);
+    }
+  }
+
+  // ============================================================================
   // MORNING NOTIFICATION (10:00 AM)
   // ============================================================================
 
-  static Future<void> scheduleDailyMorningNotification() async {
-    final prefs = await SharedPreferences.getInstance();
-    final username = prefs.getString('username') ?? 'Usuario';
-
+  static Future<void> scheduleDailyMorningNotification({
+    String? username,
+  }) async {
     final AndroidNotificationDetails
     androidDetails = AndroidNotificationDetails(
       _morningChannelId,
@@ -178,7 +208,9 @@ class LocalNotifications {
   // AFTERNOON NOTIFICATION (3:00 PM)
   // ============================================================================
 
-  static Future<void> scheduleDailyAfternoonNotification() async {
+  static Future<void> scheduleDailyAfternoonNotification({
+    String? username,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final username = prefs.getString('username') ?? 'Usuario';
 
@@ -228,7 +260,7 @@ class LocalNotifications {
   // NIGHT NOTIFICATION (9:30 PM)
   // ============================================================================
 
-  static Future<void> scheduleDailyNightNotification() async {
+  static Future<void> scheduleDailyNightNotification({String? username}) async {
     final prefs = await SharedPreferences.getInstance();
     final username = prefs.getString('username') ?? 'Usuario';
 

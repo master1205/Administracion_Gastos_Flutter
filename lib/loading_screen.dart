@@ -328,7 +328,7 @@ class _LoadingScreenState extends State<LoadingScreen>
             SizedBox(height: 40.h), // ✅ REDUCIDO de 48
             // Título
             Text(
-              'FinanceApp',
+              'Administración de Gastos',
               style: GoogleFonts.lato(
                 fontSize: 28.sp, // ✅ REDUCIDO de 32
                 fontWeight: FontWeight.bold,

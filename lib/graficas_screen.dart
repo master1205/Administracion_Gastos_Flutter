@@ -584,9 +584,14 @@ class GraficasScreenState extends State<GraficasScreen>
     double totalGastos = 0;
     int index = 0;
 
+    // ✅ PRIMERO: Calcular el TOTAL de todos los gastos
+    data.forEach((category, amount) {
+      totalGastos += amount;
+    });
+
+    // ✅ SEGUNDO: Crear las barras y leyendas con el porcentaje correcto
     data.forEach((category, amount) {
       final color = _getNextColor();
-      totalGastos += amount;
 
       barGroups.add(
         BarChartGroupData(
@@ -607,7 +612,12 @@ class GraficasScreenState extends State<GraficasScreen>
         ),
       );
 
-      final percentage = (amount / totalGastos * 100).toStringAsFixed(1);
+      // ✅ CALCULAR porcentaje basado en el TOTAL
+      final percentage =
+          totalGastos > 0
+              ? (amount / totalGastos * 100).toStringAsFixed(1)
+              : '0.0';
+
       legendItems.add(
         _buildLegendItem(
           color: color,
@@ -686,7 +696,7 @@ class GraficasScreenState extends State<GraficasScreen>
                 ),
                 SizedBox(height: 14.h),
                 SizedBox(
-                  height: 200.h, // ✅ REDUCIDO de 240h
+                  height: 200.h,
                   child: BarChart(
                     BarChartData(
                       minY: 0,
@@ -785,10 +795,16 @@ class GraficasScreenState extends State<GraficasScreen>
     double totalSaldo = 0;
     int index = 0;
 
+    // ✅ PRIMERO: Calcular el TOTAL de todos los saldos
+    for (var account in data) {
+      final saldo = account.saldo ?? 0;
+      totalSaldo += saldo;
+    }
+
+    // ✅ SEGUNDO: Crear las barras y leyendas con el porcentaje correcto
     for (var account in data) {
       final color = _getNextColor();
       final saldo = account.saldo ?? 0;
-      totalSaldo += saldo;
 
       barGroups.add(
         BarChartGroupData(
@@ -809,6 +825,7 @@ class GraficasScreenState extends State<GraficasScreen>
         ),
       );
 
+      // ✅ CALCULAR porcentaje basado en el TOTAL
       final percentage =
           totalSaldo > 0
               ? (saldo / totalSaldo * 100).toStringAsFixed(1)
