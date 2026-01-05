@@ -535,4 +535,122 @@ class LocalNotifications {
       payload: payload,
     );
   }
+
+  // ============================================================================
+  // NOTIFICACIONES PERSONALIZADAS CON DÍAS ESPECÍFICOS
+  // ============================================================================
+
+  /// Programar notificación personalizada con días de la semana específicos
+  static Future<void> scheduleCustomNotificationWithDays({
+    required String notificationId,
+    required String title,
+    required String body,
+    required int hour,
+    required int minute,
+    required List<int> weekdays, // 1=Lunes, 7=Domingo
+  }) async {
+    // Cancelar notificaciones anteriores de este ID
+    await cancelCustomNotification(notificationId);
+
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+          'custom_notification',
+          'Notificación Personalizada',
+          channelDescription: 'Notificaciones con hora personalizada',
+          importance: Importance.high,
+          priority: Priority.high,
+          sound: RawResourceAndroidNotificationSound('moneda'),
+          enableVibration: true,
+          playSound: true,
+          icon: 'ic_notificacion',
+        );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const NotificationDetails notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    // Programar una notificación por cada día seleccionado
+    for (int day in weekdays) {
+      final int notifId = _getNotificationIdForDay(notificationId, day);
+      final tz.TZDateTime scheduledDate = _nextInstanceOfWeekday(
+        hour,
+        minute,
+        day,
+      );
+
+      await _flutterLocalNotificationsPlugin.zonedSchedule(
+        notifId,
+        title,
+        body,
+        scheduledDate,
+        notificationDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        payload: 'custom_$notificationId',
+      );
+    }
+  }
+
+  /// Calcular la próxima instancia de un día de la semana específico
+  static tz.TZDateTime _nextInstanceOfWeekday(
+    int hour,
+    int minute,
+    int weekday,
+  ) {
+    tz.TZDateTime now = tz.TZDateTime.now(tz.local);
+    tz.TZDateTime scheduledDate = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      hour,
+      minute,
+    );
+
+    // Ajustar al día de la semana correcto
+    while (scheduledDate.weekday != weekday) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
+    // Si ya pasó hoy, programar para la próxima semana
+    if (scheduledDate.isBefore(now) && scheduledDate.weekday == now.weekday) {
+      scheduledDate = scheduledDate.add(const Duration(days: 7));
+    }
+
+    return scheduledDate;
+  }
+
+  /// Generar ID único para cada día de la semana
+  static int _getNotificationIdForDay(String baseId, int day) {
+    // Convertir el ID de texto a un número usando hash
+    final baseHash = baseId.hashCode.abs() % 100000;
+    return baseHash * 10 + day; // ID único por día
+  }
+
+  /// Cancelar notificación personalizada (todos los días)
+  static Future<void> cancelCustomNotification(String notificationId) async {
+    // Cancelar notificaciones de todos los días (1-7)
+    for (int day = 1; day <= 7; day++) {
+      final int notifId = _getNotificationIdForDay(notificationId, day);
+      await _flutterLocalNotificationsPlugin.cancel(notifId);
+    }
+  }
+
+  /// Cancelar una notificación específica de un día
+  static Future<void> cancelCustomNotificationDay(
+    String notificationId,
+    int day,
+  ) async {
+    final int notifId = _getNotificationIdForDay(notificationId, day);
+    await _flutterLocalNotificationsPlugin.cancel(notifId);
+  }
 }

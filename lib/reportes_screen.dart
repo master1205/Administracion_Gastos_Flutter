@@ -7,6 +7,8 @@ import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'utils/animation_utils.dart';
+import 'componentes/empty_states.dart';
 
 class ReportesScreen extends StatefulWidget {
   const ReportesScreen({Key? key}) : super(key: key);
@@ -127,47 +129,7 @@ class ReportesScreenState extends State<ReportesScreen>
 
   // UI Builders
   Widget _buildEmptyState() {
-    final themeManager = Provider.of<ThemeManager>(context);
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: EdgeInsets.all(24.r), // ✅ REDUCIDO de 28
-            decoration: BoxDecoration(
-              color:
-                  themeManager.isDarkMode
-                      ? Colors.grey.shade800.withOpacity(0.3)
-                      : Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.description_outlined,
-              size: 60.sp, // ✅ REDUCIDO de 70
-              color: Colors.grey.shade400,
-            ),
-          ),
-          SizedBox(height: 16.h), // ✅ REDUCIDO de 20
-          Text(
-            'No hay reportes disponibles',
-            style: GoogleFonts.lato(
-              fontSize: 16.sp, // ✅ REDUCIDO de 18
-              fontWeight: FontWeight.bold,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          SizedBox(height: 5.h), // ✅ REDUCIDO de 6
-          Text(
-            'Los reportes se generarán automáticamente',
-            style: TextStyle(
-              fontSize: 12.sp,
-              color: Colors.grey.shade500,
-            ), // ✅ REDUCIDO de 13
-          ),
-        ],
-      ),
-    );
+    return const EmptyReportsState();
   }
 
   Widget _buildYearCard({
@@ -277,96 +239,99 @@ class ReportesScreenState extends State<ReportesScreen>
     required Reporte reporte,
     required ThemeManager themeManager,
   }) {
-    return Container(
-      margin: EdgeInsets.symmetric(
-        horizontal: 10.w,
-        vertical: 3.h,
-      ), // ✅ REDUCIDO de 11
-      decoration: BoxDecoration(
-        color:
-            themeManager.isDarkMode
-                ? Colors.grey.shade900.withOpacity(0.3)
-                : Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(10.r), // ✅ REDUCIDO de 11
-        border: Border.all(
+    return BounceTapButton(
+      onTap: () => _openReport(reporte.file),
+      child: Container(
+        margin: EdgeInsets.symmetric(
+          horizontal: 10.w,
+          vertical: 3.h,
+        ), // ✅ REDUCIDO de 11
+        decoration: BoxDecoration(
           color:
               themeManager.isDarkMode
-                  ? Colors.grey.shade700
-                  : Colors.grey.shade200,
-          width: 1.w,
+                  ? Colors.grey.shade900.withOpacity(0.3)
+                  : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(10.r), // ✅ REDUCIDO de 11
+          border: Border.all(
+            color:
+                themeManager.isDarkMode
+                    ? Colors.grey.shade700
+                    : Colors.grey.shade200,
+            width: 1.w,
+          ),
         ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _openReport(reporte.file),
-          borderRadius: BorderRadius.circular(10.r),
-          child: Padding(
-            padding: EdgeInsets.all(12.r), // ✅ REDUCIDO de 14
-            child: Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(10.r), // ✅ REDUCIDO de 11
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFf093fb), Color(0xFFF5576c)],
-                    ),
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                  child: Icon(
-                    Icons.picture_as_pdf_rounded,
-                    color: Colors.white,
-                    size: 20.sp, // ✅ REDUCIDO de 22
-                  ),
-                ),
-                SizedBox(width: 12.w), // ✅ REDUCIDO de 14
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        reporte.name,
-                        style: GoogleFonts.lato(
-                          fontSize: 13.sp, // ✅ REDUCIDO de 14
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _openReport(reporte.file),
+            borderRadius: BorderRadius.circular(10.r),
+            child: Padding(
+              padding: EdgeInsets.all(12.r), // ✅ REDUCIDO de 14
+              child: Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(10.r), // ✅ REDUCIDO de 11
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFf093fb), Color(0xFFF5576c)],
                       ),
-                      SizedBox(height: 2.h), // ✅ REDUCIDO de 3
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today_rounded,
-                            size: 12.sp, // ✅ REDUCIDO de 13
-                            color: Colors.grey.shade600,
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
+                    child: Icon(
+                      Icons.picture_as_pdf_rounded,
+                      color: Colors.white,
+                      size: 20.sp, // ✅ REDUCIDO de 22
+                    ),
+                  ),
+                  SizedBox(width: 12.w), // ✅ REDUCIDO de 14
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          reporte.name,
+                          style: GoogleFonts.lato(
+                            fontSize: 13.sp, // ✅ REDUCIDO de 14
+                            fontWeight: FontWeight.bold,
                           ),
-                          SizedBox(width: 4.w), // ✅ REDUCIDO de 5
-                          Text(
-                            reporte.fechaCorte,
-                            style: TextStyle(
-                              fontSize: 11.sp, // ✅ REDUCIDO de 12
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(height: 2.h), // ✅ REDUCIDO de 3
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_today_rounded,
+                              size: 12.sp, // ✅ REDUCIDO de 13
                               color: Colors.grey.shade600,
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                            SizedBox(width: 4.w), // ✅ REDUCIDO de 5
+                            Text(
+                              reporte.fechaCorte,
+                              style: TextStyle(
+                                fontSize: 11.sp, // ✅ REDUCIDO de 12
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Container(
-                  padding: EdgeInsets.all(6.r), // ✅ REDUCIDO de 7
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF667eea).withOpacity(0.1),
-                    shape: BoxShape.circle,
+                  Container(
+                    padding: EdgeInsets.all(6.r), // ✅ REDUCIDO de 7
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF667eea).withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.arrow_forward_rounded,
+                      color: const Color(0xFF667eea),
+                      size: 16.sp, // ✅ REDUCIDO de 18
+                    ),
                   ),
-                  child: Icon(
-                    Icons.arrow_forward_rounded,
-                    color: const Color(0xFF667eea),
-                    size: 16.sp, // ✅ REDUCIDO de 18
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

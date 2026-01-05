@@ -6,6 +6,9 @@ import 'package:lottie/lottie.dart';
 import 'package:notificaciones/home_screen.dart';
 import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'api_service.dart';
 import 'data_provider.dart';
 
 class LoadingScreen extends StatefulWidget {
@@ -33,6 +36,7 @@ class _LoadingScreenState extends State<LoadingScreen>
     'Inicializando...',
     'Cargando cuentas...',
     'Obteniendo transacciones...',
+    'Sincronizando metas...',
     'Preparando dashboard...',
     'Casi listo...',
   ];
@@ -128,8 +132,14 @@ class _LoadingScreenState extends State<LoadingScreen>
 
       if (!mounted) return;
 
+      // Paso 1: Cargar datos principales
       final dataProvider = Provider.of<DataProvider>(context, listen: false);
       await dataProvider.loadData();
+
+      if (!mounted) return;
+
+      // Paso 2: Sincronizar metas de ahorro
+      await _sincronizarMetas();
 
       if (!mounted) return;
 
@@ -169,6 +179,28 @@ class _LoadingScreenState extends State<LoadingScreen>
       });
 
       _showErrorDialog(e.toString());
+    }
+  }
+
+  Future<void> _sincronizarMetas() async {
+    try {
+      print('🔄 Sincronizando metas de ahorro...');
+
+      // 1. Obtener metas del servidor
+      final apiService = ApiService();
+      final metasServidor = await apiService.getMetas();
+
+      // 2. Guardar localmente
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        'metas_ahorro',
+        json.encode(metasServidor.map((m) => m.toJson()).toList()),
+      );
+
+      print('✅ Metas sincronizadas: ${metasServidor.length} metas');
+    } catch (e) {
+      print('⚠️ Error al sincronizar metas: $e');
+      // No detenemos la carga si falla la sincronización
     }
   }
 

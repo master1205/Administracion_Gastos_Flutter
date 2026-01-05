@@ -2,13 +2,14 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:notificaciones/models/Account.dart';
 import 'package:notificaciones/models/Categoria.dart';
+import 'package:notificaciones/models/Meta.dart';
 import 'package:notificaciones/models/Reporte.dart';
 import 'package:notificaciones/models/Transaccion.dart';
 import 'package:notificaciones/models/api_response.dart';
 
 class ApiService {
   final String baseUrl =
-      "https://script.google.com/macros/s/AKfycbxc2QugLHMIjNK7FWH6VrkDCGx_1sig4M8CmPJodwSg3h1NEebIbpxm_kS3niTPmEWB7Q/exec?action";
+      "https://script.google.com/macros/s/AKfycbx0iMDZBgxKatERNGpHMmKuLJVEtrj4EBcyDcNez_rw2_u0Rh6C4Nx8VGWQuABxwG4P/exec?action";
 
   /// Método auxiliar para manejar respuestas de la API
   T _handleApiResponse<T>(String responseBody, T Function(dynamic) dataParser) {
@@ -302,6 +303,264 @@ class ApiService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Error al eliminar la transacción: $e');
+    }
+  }
+
+  /// Actualizar saldo de cuenta
+  Future<ApiResponse<void>> updateAccountBalance({
+    required int idCuenta,
+    required double nuevoSaldo,
+  }) async {
+    try {
+      print("IdCuenta: $idCuenta, NuevoSaldo: $nuevoSaldo"); // Debug
+      final response = await http.post(
+        Uri.parse('$baseUrl=updateAccountBalance'),
+        body: {
+          'idCuenta': idCuenta.toString(),
+          'nuevoSaldo': nuevoSaldo.toString(),
+        },
+      );
+
+      // Manejar redirecciones 302
+      if (response.statusCode == 302) {
+        var redirectUrl = response.headers['location'];
+        if (redirectUrl != null) {
+          final redirectResponse = await http.get(Uri.parse(redirectUrl));
+          if (redirectResponse.statusCode == 200) {
+            return _handleApiResponseMessage(redirectResponse.body);
+          } else {
+            throw ApiException(
+              'Error en redirección: ${redirectResponse.statusCode}',
+            );
+          }
+        } else {
+          throw ApiException('Redirección sin URL');
+        }
+      } else if (response.statusCode == 200) {
+        return _handleApiResponseMessage(response.body);
+      } else {
+        throw ApiException('Error de servidor: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Error al actualizar el saldo: $e');
+    }
+  }
+
+  /// Crear una nueva cuenta
+  Future<Map<String, dynamic>> crearCuenta({
+    required String nombre,
+    String imagen = '',
+    String beneficiario = '',
+    double saldoInicial = 0,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl=crearCuenta'),
+        body: {
+          'nombre': nombre,
+          'imagen': imagen,
+          'beneficiario': beneficiario,
+          'saldo': saldoInicial.toString(),
+        },
+      );
+
+      if (response.statusCode == 302) {
+        var redirectUrl = response.headers['location'];
+        if (redirectUrl != null) {
+          final redirectResponse = await http.get(Uri.parse(redirectUrl));
+          if (redirectResponse.statusCode == 200) {
+            return _handleApiResponse<Map<String, dynamic>>(
+              redirectResponse.body,
+              (data) => data as Map<String, dynamic>,
+            );
+          } else {
+            throw ApiException(
+              'Error en redirección: ${redirectResponse.statusCode}',
+            );
+          }
+        } else {
+          throw ApiException('Redirección sin URL');
+        }
+      } else if (response.statusCode == 200) {
+        return _handleApiResponse<Map<String, dynamic>>(
+          response.body,
+          (data) => data as Map<String, dynamic>,
+        );
+      } else {
+        throw ApiException('Error de servidor: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Error al crear la cuenta: $e');
+    }
+  }
+
+  /// Eliminar cuenta
+  Future<ApiResponse<void>> eliminarCuenta(String numeroCuenta) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl=eliminarCuenta'),
+        body: {'numeroCuenta': numeroCuenta},
+      );
+
+      if (response.statusCode == 302) {
+        var redirectUrl = response.headers['location'];
+        if (redirectUrl != null) {
+          final redirectResponse = await http.get(Uri.parse(redirectUrl));
+          if (redirectResponse.statusCode == 200) {
+            return _handleApiResponseMessage(redirectResponse.body);
+          } else {
+            throw ApiException(
+              'Error en redirección: ${redirectResponse.statusCode}',
+            );
+          }
+        } else {
+          throw ApiException('Redirección sin URL');
+        }
+      } else if (response.statusCode == 200) {
+        return _handleApiResponseMessage(response.body);
+      } else {
+        throw ApiException('Error de servidor: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Error al eliminar la cuenta: $e');
+    }
+  }
+
+  // ==================== METAS DE AHORRO ====================
+
+  /// Obtener todas las metas
+  Future<List<Meta>> getMetas() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl=getMetas'));
+
+      if (response.statusCode == 200) {
+        return _handleApiResponse<List<Meta>>(response.body, (data) {
+          List<dynamic> jsonData = data as List<dynamic>;
+          return jsonData.map((json) => Meta.fromJson(json)).toList();
+        });
+      } else {
+        throw ApiException('Error de servidor: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Error al obtener las metas: $e');
+    }
+  }
+
+  /// Guardar o actualizar meta
+  Future<ApiResponse<void>> saveMeta(Meta meta) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl=saveMeta'),
+        body: {
+          'id': meta.id,
+          'nombre': meta.nombre,
+          'descripcion': meta.descripcion,
+          'montoObjetivo': meta.montoObjetivo.toString(),
+          'montoActual': meta.montoActual.toString(),
+          'fechaInicio': meta.fechaInicio,
+          'fechaObjetivo': meta.fechaObjetivo,
+          'icono': meta.icono,
+          'color': meta.color,
+          'completada': meta.completada.toString(),
+          'numeroCuenta': meta.numeroCuenta ?? '',
+        },
+      );
+
+      if (response.statusCode == 302) {
+        var redirectUrl = response.headers['location'];
+        if (redirectUrl != null) {
+          final redirectResponse = await http.get(Uri.parse(redirectUrl));
+          if (redirectResponse.statusCode == 200) {
+            return _handleApiResponseMessage(redirectResponse.body);
+          } else {
+            throw ApiException(
+              'Error en redirección: ${redirectResponse.statusCode}',
+            );
+          }
+        } else {
+          throw ApiException('Redirección sin URL');
+        }
+      } else if (response.statusCode == 200) {
+        return _handleApiResponseMessage(response.body);
+      } else {
+        throw ApiException('Error de servidor: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Error al guardar la meta: $e');
+    }
+  }
+
+  /// Eliminar meta
+  Future<ApiResponse<void>> deleteMeta(String id) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl=deleteMeta'),
+        body: {'id': id},
+      );
+
+      if (response.statusCode == 302) {
+        var redirectUrl = response.headers['location'];
+        if (redirectUrl != null) {
+          final redirectResponse = await http.get(Uri.parse(redirectUrl));
+          if (redirectResponse.statusCode == 200) {
+            return _handleApiResponseMessage(redirectResponse.body);
+          } else {
+            throw ApiException(
+              'Error en redirección: ${redirectResponse.statusCode}',
+            );
+          }
+        } else {
+          throw ApiException('Redirección sin URL');
+        }
+      } else if (response.statusCode == 200) {
+        return _handleApiResponseMessage(response.body);
+      } else {
+        throw ApiException('Error de servidor: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Error al eliminar la meta: $e');
+    }
+  }
+
+  /// Actualizar progreso de meta
+  Future<ApiResponse<void>> updateMetaProgress(
+    String id,
+    double montoActual,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl=updateMetaProgress'),
+        body: {'id': id, 'montoActual': montoActual.toString()},
+      );
+
+      if (response.statusCode == 302) {
+        var redirectUrl = response.headers['location'];
+        if (redirectUrl != null) {
+          final redirectResponse = await http.get(Uri.parse(redirectUrl));
+          if (redirectResponse.statusCode == 200) {
+            return _handleApiResponseMessage(redirectResponse.body);
+          } else {
+            throw ApiException(
+              'Error en redirección: ${redirectResponse.statusCode}',
+            );
+          }
+        } else {
+          throw ApiException('Redirección sin URL');
+        }
+      } else if (response.statusCode == 200) {
+        return _handleApiResponseMessage(response.body);
+      } else {
+        throw ApiException('Error de servidor: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Error al actualizar el progreso: $e');
     }
   }
 }

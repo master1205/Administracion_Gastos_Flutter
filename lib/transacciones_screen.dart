@@ -14,6 +14,9 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
+import 'utils/animation_utils.dart';
+import 'componentes/empty_states.dart';
+import 'componentes/shimmer_widgets.dart';
 
 class TransaccionesScreen extends StatefulWidget {
   const TransaccionesScreen({Key? key}) : super(key: key);
@@ -62,7 +65,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       setState(() => _isLoading = true);
-      Future.delayed(const Duration(milliseconds: 800), () {
+      Future.delayed(const Duration(milliseconds: 400), () {
         if (mounted) setState(() => _isLoading = false);
       });
     }
@@ -99,7 +102,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
     final transaccionesTutorialShown = prefs.getBool(_tutorialKey) ?? false;
 
     if (dashboardTutorialShown && !transaccionesTutorialShown) {
-      Future.delayed(const Duration(milliseconds: 800), () {
+      Future.delayed(const Duration(milliseconds: 400), () {
         if (mounted) {
           _createTutorial();
           _tutorialCoachMark.show(context: context);
@@ -406,7 +409,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
         final isCurrent = index == currentStep - 1;
 
         return AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 150),
           margin: EdgeInsets.symmetric(horizontal: 2.w),
           width: isCurrent ? 20.w : 5.w,
           height: 5.h,
@@ -443,11 +446,10 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
               ],
             ),
             backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
+            behavior: SnackBarBehavior.fixed,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12.r),
-            ),
-            margin: EdgeInsets.all(14.r), // ✅ REDUCIDO de 16
+            ), // ✅ REDUCIDO de 16
           ),
         );
       }
@@ -464,11 +466,10 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
               ],
             ),
             backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
+            behavior: SnackBarBehavior.fixed,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12.r),
             ),
-            margin: EdgeInsets.all(14.r),
           ),
         );
       }
@@ -722,46 +723,14 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
   }
 
   Widget _buildEmptyState() {
-    final themeManager = Provider.of<ThemeManager>(context);
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: EdgeInsets.all(24.r), // ✅ REDUCIDO de 28
-            decoration: BoxDecoration(
-              color:
-                  themeManager.isDarkMode
-                      ? Colors.grey.shade800.withOpacity(0.3)
-                      : Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.receipt_long_outlined,
-              size: 60.sp,
-              color: Colors.grey.shade400,
-            ), // ✅ REDUCIDO de 70
-          ),
-          SizedBox(height: 16.h), // ✅ REDUCIDO de 20
-          Text(
-            'No hay transacciones',
-            style: GoogleFonts.lato(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey.shade600,
-            ), // ✅ REDUCIDO de 18
-          ),
-          SizedBox(height: 5.h), // ✅ REDUCIDO de 6
-          Text(
-            'Comienza agregando tu primera transacción',
-            style: TextStyle(
-              fontSize: 12.sp,
-              color: Colors.grey.shade500,
-            ), // ✅ REDUCIDO de 13
-          ),
-        ],
-      ),
+    return EmptyTransactionsState(
+      onAddTransaction: () {
+        // Navegar al formulario de nueva transacción
+        // Nota: Implementar navegación correcta según tu app
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Navegar a agregar transacción')),
+        );
+      },
     );
   }
 
@@ -893,69 +862,73 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
           ),
         ],
       ),
-      child: Container(
-        key: isFirst ? _firstTransactionKey : null,
-        margin: EdgeInsets.symmetric(
-          horizontal: 12.w,
-          vertical: 4.h,
-        ), // ✅ REDUCIDO de 14/5
-        decoration: BoxDecoration(
-          color:
-              themeManager.isDarkMode
-                  ? Colors.grey.shade800.withOpacity(0.5)
-                  : Colors.white,
-          borderRadius: BorderRadius.circular(14.r),
-          boxShadow: [
-            BoxShadow(
-              color:
-                  themeManager.isDarkMode
-                      ? Colors.black.withOpacity(0.2)
-                      : color.withOpacity(0.1),
-              blurRadius: 8.r,
-              offset: Offset(0, 3.h),
-            ),
-          ],
-        ),
-        child: ListTile(
-          contentPadding: EdgeInsets.symmetric(
+      child: BounceTapButton(
+        child: Container(
+          key: isFirst ? _firstTransactionKey : null,
+          margin: EdgeInsets.symmetric(
             horizontal: 12.w,
-            vertical: 8.h,
-          ), // ✅ REDUCIDO de 14/10
-          leading: Container(
-            padding: EdgeInsets.all(9.r), // ✅ REDUCIDO de 11
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [color, color.withOpacity(0.7)]),
-              borderRadius: BorderRadius.circular(10.r),
-            ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 20.sp,
-            ), // ✅ REDUCIDO de 22
+            vertical: 4.h,
+          ), // ✅ REDUCIDO de 14/5
+          decoration: BoxDecoration(
+            color:
+                themeManager.isDarkMode
+                    ? Colors.grey.shade800.withOpacity(0.5)
+                    : Colors.white,
+            borderRadius: BorderRadius.circular(14.r),
+            boxShadow: [
+              BoxShadow(
+                color:
+                    themeManager.isDarkMode
+                        ? Colors.black.withOpacity(0.2)
+                        : color.withOpacity(0.1),
+                blurRadius: 8.r,
+                offset: Offset(0, 3.h),
+              ),
+            ],
           ),
-          title: Text(
-            transaction.descripcion,
-            style: GoogleFonts.lato(
-              fontWeight: FontWeight.bold,
-              fontSize: 13.sp, // ✅ REDUCIDO de 14
+          child: ListTile(
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 12.w,
+              vertical: 8.h,
+            ), // ✅ REDUCIDO de 14/10
+            leading: Container(
+              padding: EdgeInsets.all(9.r), // ✅ REDUCIDO de 11
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [color, color.withOpacity(0.7)],
+                ),
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: 20.sp,
+              ), // ✅ REDUCIDO de 22
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          subtitle: Padding(
-            padding: EdgeInsets.only(top: 6.h), // ✅ REDUCIDO de 7
-            child: Wrap(
-              spacing: 4.w, // ✅ REDUCIDO de 5
-              runSpacing: 2.h, // ✅ REDUCIDO de 3
-              children: _buildTransactionBadges(transaction, color),
+            title: Text(
+              transaction.descripcion,
+              style: GoogleFonts.lato(
+                fontWeight: FontWeight.bold,
+                fontSize: 13.sp, // ✅ REDUCIDO de 14
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
-          trailing: Text(
-            _currencyFormat.format(transaction.monto.abs()),
-            style: GoogleFonts.lato(
-              fontSize: 13.sp, // ✅ REDUCIDO de 14
-              fontWeight: FontWeight.bold,
-              color: color,
+            subtitle: Padding(
+              padding: EdgeInsets.only(top: 6.h), // ✅ REDUCIDO de 7
+              child: Wrap(
+                spacing: 4.w, // ✅ REDUCIDO de 5
+                runSpacing: 2.h, // ✅ REDUCIDO de 3
+                children: _buildTransactionBadges(transaction, color),
+              ),
+            ),
+            trailing: Text(
+              _currencyFormat.format(transaction.monto.abs()),
+              style: GoogleFonts.lato(
+                fontSize: 13.sp, // ✅ REDUCIDO de 14
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
           ),
         ),
@@ -1187,32 +1160,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
                 if (snapshot.connectionState == ConnectionState.waiting &&
                     !snapshot.hasData &&
                     !_isLoading) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            themeManager.isDarkMode
-                                ? Colors.white
-                                : const Color(0xFF667eea),
-                          ),
-                          strokeWidth: 2.5.w,
-                        ),
-                        SizedBox(height: 12.h),
-                        Text(
-                          'Cargando transacciones...',
-                          style: TextStyle(
-                            color:
-                                themeManager.isDarkMode
-                                    ? Colors.white70
-                                    : Colors.grey.shade600,
-                            fontSize: 12.sp,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
+                  return const TransactionListShimmer(itemCount: 8);
                 }
 
                 if (snapshot.hasError) {
@@ -1264,7 +1212,10 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
                     for (var date in groupedTransactions.keys) {
                       if (index == transactionIndex) {
                         final dailyTransactions = groupedTransactions[date]!;
-                        return _buildDateHeader(date, dailyTransactions);
+                        return AnimationUtils.slideFromBottom(
+                          _buildDateHeader(date, dailyTransactions),
+                          delay: dateHeaderCount * 50,
+                        );
                       }
                       transactionIndex++;
 
@@ -1273,10 +1224,14 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
                         final localIndex = index - transactionIndex;
                         final transaction = transactions[localIndex];
                         final isFirst = dateHeaderCount == 0 && localIndex == 0;
-                        return _buildTransactionCard(
-                          transaction,
-                          isFirst,
-                          themeManager,
+                        return AnimationUtils.staggeredAnimation(
+                          index: index,
+                          type: AnimationType.slideFromBottom,
+                          child: _buildTransactionCard(
+                            transaction,
+                            isFirst,
+                            themeManager,
+                          ),
                         );
                       }
                       transactionIndex += transactions.length;

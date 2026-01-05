@@ -4,15 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:notificaciones/ajustes_screen.dart';
+import 'package:notificaciones/cuentas_screen.dart';
 import 'package:notificaciones/dynamic_form_screen.dart';
 import 'package:notificaciones/graficas_screen.dart';
+import 'package:notificaciones/metas_screen.dart';
 import 'package:notificaciones/new_dashboard_screen.dart';
+import 'package:notificaciones/notificaciones_screen.dart';
 import 'package:notificaciones/reportes_screen.dart';
 import 'package:notificaciones/theme_provider.dart';
 import 'package:notificaciones/transacciones_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
+import 'dart:convert';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,6 +34,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _selectedIndex = 0;
   bool _isScrollingDown = false;
   String _userName = '';
+  int _cantidadMetas = 0;
 
   late TutorialCoachMark _tutorialCoachMark;
   final List<TargetFocus> _targets = [];
@@ -55,6 +61,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _initializeWidgets();
     _checkUserName();
+    _cargarCantidadMetas();
     _maybeShowTutorial();
   }
 
@@ -83,6 +90,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       });
     } else {
       setState(() => _userName = storedName);
+    }
+  }
+
+  Future<void> _cargarCantidadMetas() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? metasJson = prefs.getString('metas_ahorro');
+
+      if (metasJson != null) {
+        final List<dynamic> decoded = json.decode(metasJson);
+        if (mounted) {
+          setState(() {
+            _cantidadMetas = decoded.length;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error al cargar metas: $e');
     }
   }
 
@@ -729,21 +754,56 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         title: "Cuentas",
         subtitle: "Administra tus cuentas",
         color: const Color(0xFF4facfe),
-        onTap: () => Navigator.pop(context),
+        onTap: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const CuentasScreen()),
+          );
+        },
+      ),
+      _DrawerItem(
+        icon: Icons.savings_outlined,
+        title: "Metas de Ahorro",
+        subtitle: "Alcanza tus objetivos",
+        color: const Color(0xFF4CAF50),
+        badge: _cantidadMetas > 0 ? _cantidadMetas.toString() : null,
+        onTap: () async {
+          Navigator.pop(context);
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const MetasScreen()),
+          );
+          _cargarCantidadMetas(); // Recargar al volver
+        },
       ),
       _DrawerItem(
         icon: Icons.notifications_rounded,
         title: "Notificaciones",
         subtitle: "Mantente informado",
         color: const Color(0xFFf093fb),
-        onTap: () => Navigator.pop(context),
+        onTap: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const NotificacionesScreen(),
+            ),
+          );
+        },
       ),
       _DrawerItem(
         icon: Icons.settings_rounded,
         title: "Ajustes",
         subtitle: "Configura tu app",
         color: const Color(0xFF30cfd0),
-        onTap: () => Navigator.pop(context),
+        onTap: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AjustesScreen()),
+          );
+        },
       ),
     ];
 
@@ -933,14 +993,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   ],
                                 ),
                               ),
-                              Icon(
-                                Icons.chevron_right_rounded,
-                                color:
-                                    themeManager.isDarkMode
-                                        ? Colors.grey.shade600
-                                        : Colors.grey.shade400,
-                                size: 18.sp,
-                              ),
+                              if (item.badge != null)
+                                Container(
+                                  padding: EdgeInsets.all(6.r),
+                                  decoration: BoxDecoration(
+                                    color: item.color,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Text(
+                                    item.badge!,
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10.sp,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                )
+                              else
+                                Icon(
+                                  Icons.chevron_right_rounded,
+                                  color:
+                                      themeManager.isDarkMode
+                                          ? Colors.grey.shade600
+                                          : Colors.grey.shade400,
+                                  size: 18.sp,
+                                ),
                             ],
                           ),
                         ),
@@ -1305,7 +1382,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         ),
       ),
-      floatingActionButton: _isScrollingDown ? null : _buildExpandableFab(),
+      floatingActionButton: AnimatedSlide(
+        duration: const Duration(milliseconds: 300),
+        offset: _isScrollingDown ? Offset(0, 2) : Offset.zero,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 300),
+          opacity: _isScrollingDown ? 0.0 : 1.0,
+          child: _buildExpandableFab(),
+        ),
+      ),
       floatingActionButtonLocation: ExpandableFab.location,
     );
   }
@@ -1349,6 +1434,7 @@ class _DrawerItem {
   final String subtitle;
   final Color color;
   final VoidCallback onTap;
+  final String? badge;
 
   const _DrawerItem({
     required this.icon,
@@ -1356,5 +1442,6 @@ class _DrawerItem {
     required this.subtitle,
     required this.color,
     required this.onTap,
+    this.badge,
   });
 }

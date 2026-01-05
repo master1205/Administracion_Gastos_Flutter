@@ -11,6 +11,8 @@ import 'package:notificaciones/models/Categoria.dart';
 import 'package:notificaciones/models/Transaccion.dart';
 import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
+import 'utils/animation_utils.dart';
+import 'componentes/success_animation.dart';
 
 class TrasaccionScreen extends StatefulWidget {
   final String transactionType;
@@ -46,31 +48,85 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
   Account? selectedAccountFrom;
   Account? selectedAccountTo;
 
+  String? amountError;
+  String? descriptionError;
+  String? categoryError;
+  String? accountError;
+  String? accountFromError;
+  String? accountToError;
+
   final Map<String, IconData> categoryIconsMap = {
-    'airplanemode_active_outlined': Icons.airplanemode_active_outlined,
+    'airplanemode_active_outlined': Icons.flight_outlined,
     'checkroom_outlined': Icons.checkroom_outlined,
     'pets_outlined': Icons.pets_outlined,
     'account_balance_wallet_outlined': Icons.account_balance_wallet_outlined,
     'credit_card_outlined': Icons.credit_card_outlined,
     'home_outlined': Icons.home_outlined,
-    'location_city_outlined': Icons.location_city_outlined,
-    'electrical_services_outlined': Icons.electrical_services_outlined,
-    'security_outlined': Icons.security_outlined,
+    'location_city_outlined': Icons.apartment_outlined,
+    'electrical_services_outlined': Icons.bolt_outlined,
+    'security_outlined': Icons.shield_outlined,
     'receipt_long_outlined': Icons.receipt_long_outlined,
     'subscriptions_outlined': Icons.subscriptions_outlined,
-    'attach_money_outlined': Icons.attach_money_outlined,
+    'attach_money_outlined': Icons.payments_outlined,
     'card_giftcard_outlined': Icons.card_giftcard_outlined,
-    'trending_up_outlined': Icons.trending_up_outlined,
+    'trending_up_outlined': Icons.show_chart_outlined,
     'sell_outlined': Icons.sell_outlined,
-    'monetization_on_outlined': Icons.monetization_on_outlined,
+    'monetization_on_outlined': Icons.account_balance_outlined,
     'redeem_outlined': Icons.redeem_outlined,
     'savings_outlined': Icons.savings_outlined,
     'restaurant_outlined': Icons.restaurant_outlined,
     'directions_car_outlined': Icons.directions_car_outlined,
-    'movie_outlined': Icons.movie_outlined,
+    'movie_outlined': Icons.theaters_outlined,
     'school_outlined': Icons.school_outlined,
-    'help_outline': Icons.help_outline,
+    'help_outline': Icons.category_outlined,
     'local_hospital_outlined': Icons.local_hospital_outlined,
+    'shopping_cart': Icons.shopping_cart_outlined,
+    'fastfood': Icons.fastfood_outlined,
+    'local_grocery_store': Icons.local_grocery_store_outlined,
+    'fitness_center': Icons.fitness_center_outlined,
+    'sports_soccer': Icons.sports_soccer_outlined,
+    'phone_android': Icons.phone_android_outlined,
+    'laptop': Icons.laptop_outlined,
+    'coffee': Icons.coffee_outlined,
+    'local_gas_station': Icons.local_gas_station_outlined,
+    'beach_access': Icons.beach_access_outlined,
+    'hotel': Icons.hotel_outlined,
+    'music_note': Icons.music_note_outlined,
+    'palette': Icons.palette_outlined,
+    'book': Icons.menu_book_outlined,
+    'train': Icons.train_outlined,
+    'directions_bus': Icons.directions_bus_outlined,
+    'sports': Icons.sports_basketball_outlined,
+    'celebration': Icons.celebration_outlined,
+    'spa': Icons.spa_outlined,
+    'local_pharmacy': Icons.local_pharmacy_outlined,
+    'local_laundry_service': Icons.local_laundry_service_outlined,
+    'self_improvement': Icons.self_improvement_outlined,
+    'volunteer_activism': Icons.volunteer_activism_outlined,
+    // Iconos adicionales sugeridos
+    'medical_services_outlined': Icons.medical_services_outlined,
+    'house_outlined': Icons.house_outlined,
+    'water_drop_outlined': Icons.water_drop_outlined,
+    'wifi_outlined': Icons.wifi_outlined,
+    'tv_outlined': Icons.tv_outlined,
+    'phone_outlined': Icons.phone_outlined,
+    'groups_outlined': Icons.groups_outlined,
+    'child_care_outlined': Icons.child_care_outlined,
+    'elderly_outlined': Icons.elderly_outlined,
+    'business_outlined': Icons.business_outlined,
+    'work_outlined': Icons.work_outlined,
+    'precision_manufacturing_outlined': Icons.precision_manufacturing_outlined,
+    'agriculture_outlined': Icons.agriculture_outlined,
+    'handyman_outlined': Icons.handyman_outlined,
+    'currency_bitcoin_outlined': Icons.currency_bitcoin_outlined,
+    'currency_exchange_outlined': Icons.currency_exchange_outlined,
+    'account_balance': Icons.account_balance_outlined,
+    'workspace_premium_outlined': Icons.workspace_premium_outlined,
+    'casino_outlined': Icons.casino_outlined,
+    'real_estate_outlined': Icons.real_estate_agent_outlined,
+    'propane_tank': Icons.propane_tank_outlined,
+    'emergency_outlined': Icons.emergency_outlined,
+    'more_horiz': Icons.more_horiz,
   };
 
   @override
@@ -158,7 +214,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       setState(() => isLoading = true);
-      Future.delayed(const Duration(milliseconds: 500), () {
+      Future.delayed(const Duration(milliseconds: 250), () {
         if (mounted) setState(() => isLoading = false);
       });
     }
@@ -166,7 +222,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
 
   void _setupAnimations() {
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 400),
       vsync: this,
     );
 
@@ -233,6 +289,12 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
             ),
             dialogBackgroundColor:
                 themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+              ),
+            ),
           ),
           child: child!,
         );
@@ -243,8 +305,88 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
     }
   }
 
+  bool _validateForm() {
+    setState(() {
+      amountError = null;
+      descriptionError = null;
+      categoryError = null;
+      accountError = null;
+      accountFromError = null;
+      accountToError = null;
+    });
+
+    bool isValid = true;
+
+    // Validar monto
+    if (_amountController.text.trim().isEmpty) {
+      setState(() => amountError = 'Por favor ingresa un monto');
+      isValid = false;
+    } else {
+      final amount = double.tryParse(
+        _amountController.text.replaceAll(',', ''),
+      );
+      if (amount == null || amount <= 0) {
+        setState(() => amountError = 'Ingresa un monto válido');
+        isValid = false;
+      }
+    }
+
+    // Validar descripción
+    if (_descriptionController.text.trim().isEmpty) {
+      setState(() => descriptionError = 'Por favor ingresa una descripción');
+      isValid = false;
+    } else if (_descriptionController.text.trim().length < 3) {
+      setState(
+        () =>
+            descriptionError =
+                'La descripción debe tener al menos 3 caracteres',
+      );
+      isValid = false;
+    }
+
+    // Validar categoría (solo para Gastos, Ingresos, Pagos)
+    if (widget.transactionType != 'Traspasos' &&
+        widget.transactionType != 'Reembolsos') {
+      if (selectedCategory == null) {
+        setState(() => categoryError = 'Por favor selecciona una categoría');
+        isValid = false;
+      }
+    }
+
+    // Validar cuentas
+    if (widget.transactionType != 'Traspasos') {
+      if (selectedAccount == null) {
+        setState(() => accountError = 'Por favor selecciona una cuenta');
+        isValid = false;
+      }
+    } else {
+      if (selectedAccountFrom == null) {
+        setState(
+          () => accountFromError = 'Por favor selecciona la cuenta origen',
+        );
+        isValid = false;
+      }
+      if (selectedAccountTo == null) {
+        setState(
+          () => accountToError = 'Por favor selecciona la cuenta destino',
+        );
+        isValid = false;
+      } else if (selectedAccountFrom != null &&
+          selectedAccountTo == selectedAccountFrom) {
+        setState(
+          () =>
+              accountToError =
+                  'La cuenta origen y destino no pueden ser iguales',
+        );
+        isValid = false;
+      }
+    }
+
+    return isValid;
+  }
+
   void _registerTransaction() async {
-    if (_formKey.currentState!.validate()) {
+    if (_validateForm()) {
       setState(() => isRegistering = true);
 
       try {
@@ -276,11 +418,16 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
 
         if (!mounted) return;
 
-        _showSuccessDialog(mensaje);
+        // Mostrar animación de éxito según el tipo de transacción
+        await showSuccessAnimation(
+          context,
+          message: mensaje,
+          type: getAnimationType(widget.transactionType),
+        );
+
         _resetForm();
 
         if (widget.transaction != null) {
-          await Future.delayed(const Duration(seconds: 2));
           if (mounted) Navigator.of(context).pop();
         }
       } catch (e) {
@@ -301,64 +448,6 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
       selectedAccount = null;
       selectedAccountFrom = null;
       selectedAccountTo = null;
-    });
-  }
-
-  void _showSuccessDialog(String message) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (context) => Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16.r),
-            ),
-            child: Container(
-              padding: EdgeInsets.all(16.r),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16.r),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(12.r),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade50,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.check_circle_outline_rounded,
-                      size: 40.sp,
-                      color: Colors.green.shade400,
-                    ),
-                  ),
-                  SizedBox(height: 12.h),
-                  Text(
-                    '¡Éxito!',
-                    style: GoogleFonts.lato(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF2D3436),
-                    ),
-                  ),
-                  SizedBox(height: 6.h),
-                  Text(
-                    message,
-                    style: GoogleFonts.openSans(
-                      fontSize: 13.sp,
-                      color: Colors.grey.shade600,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ),
-    );
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) Navigator.of(context).pop();
     });
   }
 
@@ -569,16 +658,6 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
             vertical: 16.h,
           ),
         ),
-        validator: (value) {
-          if (value == null || value.trim().isEmpty) {
-            return 'Por favor ingresa un monto';
-          }
-          final amount = double.tryParse(value.replaceAll(',', ''));
-          if (amount == null || amount <= 0) {
-            return 'Ingresa un monto válido';
-          }
-          return null;
-        },
       ),
     );
   }
@@ -619,12 +698,21 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
             margin: EdgeInsets.all(10.r),
             padding: EdgeInsets.all(6.r),
             decoration: BoxDecoration(
-              color: widget.color.withOpacity(0.1),
+              gradient: LinearGradient(
+                colors: [widget.color, widget.color.withOpacity(0.7)],
+              ),
               borderRadius: BorderRadius.circular(10.r),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.color.withOpacity(0.3),
+                  blurRadius: 4.r,
+                  offset: Offset(0, 2.h),
+                ),
+              ],
             ),
             child: Icon(
               Icons.description_rounded,
-              color: widget.color,
+              color: Colors.white,
               size: 20.sp,
             ),
           ),
@@ -640,15 +728,6 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
             vertical: 16.h,
           ),
         ),
-        validator: (value) {
-          if (value == null || value.trim().isEmpty) {
-            return 'Por favor ingresa una descripción';
-          }
-          if (value.trim().length < 3) {
-            return 'La descripción debe tener al menos 3 caracteres';
-          }
-          return null;
-        },
       ),
     );
   }
@@ -712,13 +791,22 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
           ),
           Container(
             decoration: BoxDecoration(
-              color: widget.color.withOpacity(0.1),
+              gradient: LinearGradient(
+                colors: [widget.color, widget.color.withOpacity(0.7)],
+              ),
               borderRadius: BorderRadius.circular(10.r),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.color.withOpacity(0.3),
+                  blurRadius: 4.r,
+                  offset: Offset(0, 2.h),
+                ),
+              ],
             ),
             child: IconButton(
               icon: Icon(
                 Icons.edit_calendar_rounded,
-                color: widget.color,
+                color: Colors.white,
                 size: 18.sp,
               ),
               onPressed: () => _selectDate(context),
@@ -780,7 +868,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                   themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
               contentPadding: EdgeInsets.symmetric(
                 horizontal: 16.w,
-                vertical: 12.h,
+                vertical: 14.h,
               ),
             ),
             hint: Text(
@@ -806,16 +894,28 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          padding: EdgeInsets.all(6.r),
+                          padding: EdgeInsets.all(4.r),
                           decoration: BoxDecoration(
-                            color: widget.color.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8.r),
+                            gradient: LinearGradient(
+                              colors: [
+                                widget.color,
+                                widget.color.withOpacity(0.7),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(6.r),
+                            boxShadow: [
+                              BoxShadow(
+                                color: widget.color.withOpacity(0.3),
+                                blurRadius: 4.r,
+                                offset: Offset(0, 2.h),
+                              ),
+                            ],
                           ),
                           child: Icon(
                             categoryIconsMap[category.imagen] ??
                                 Icons.help_outline,
-                            size: 18.sp,
-                            color: widget.color,
+                            size: 14.sp,
+                            color: Colors.white,
                           ),
                         ),
                         SizedBox(width: 10.w),
@@ -837,10 +937,6 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                     ),
                   );
                 }).toList(),
-            validator: (value) {
-              if (value == null) return 'Por favor selecciona una categoría';
-              return null;
-            },
           ),
         ),
       ],
@@ -852,9 +948,8 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
     List<Account> accounts,
     String label,
     Account? selectedValue,
-    Function(Account?) onChanged, {
-    String? Function(Account?)? validator,
-  }) {
+    Function(Account?) onChanged,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -966,12 +1061,6 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                     ),
                   );
                 }).toList(),
-            validator:
-                validator ??
-                (value) {
-                  if (value == null) return 'Por favor selecciona una cuenta';
-                  return null;
-                },
           ),
         ),
       ],
@@ -979,60 +1068,63 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
   }
 
   Widget _buildSubmitButton() {
-    return Container(
-      width: double.infinity,
-      height: 46.h,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [widget.color, widget.color.withOpacity(0.8)],
-        ),
-        borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: widget.color.withOpacity(0.4),
-            blurRadius: 10.r,
-            offset: Offset(0, 4.h),
+    return BounceTapButton(
+      onTap: isRegistering ? null : _registerTransaction,
+      child: Container(
+        width: double.infinity,
+        height: 46.h,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [widget.color, widget.color.withOpacity(0.8)],
           ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: isRegistering ? null : _registerTransaction,
           borderRadius: BorderRadius.circular(12.r),
-          child: Center(
-            child:
-                isRegistering
-                    ? SizedBox(
-                      width: 20.w,
-                      height: 20.h,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2.5.w,
-                      ),
-                    )
-                    : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.check_circle_outline,
+          boxShadow: [
+            BoxShadow(
+              color: widget.color.withOpacity(0.4),
+              blurRadius: 10.r,
+              offset: Offset(0, 4.h),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: isRegistering ? null : _registerTransaction,
+            borderRadius: BorderRadius.circular(12.r),
+            child: Center(
+              child:
+                  isRegistering
+                      ? SizedBox(
+                        width: 20.w,
+                        height: 20.h,
+                        child: CircularProgressIndicator(
                           color: Colors.white,
-                          size: 20.sp,
+                          strokeWidth: 2.5.w,
                         ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          widget.transaction != null
-                              ? 'Actualizar'
-                              : 'Registrar',
-                          style: GoogleFonts.lato(
+                      )
+                      : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.check_circle_outline,
                             color: Colors.white,
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
+                            size: 20.sp,
                           ),
-                        ),
-                      ],
-                    ),
+                          SizedBox(width: 8.w),
+                          Text(
+                            widget.transaction != null
+                                ? 'Actualizar'
+                                : 'Registrar',
+                            style: GoogleFonts.lato(
+                              color: Colors.white,
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+            ),
           ),
         ),
       ),
@@ -1099,8 +1191,64 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 _buildAmountField(themeManager),
+                                if (amountError != null) ...[
+                                  SizedBox(height: 6.h),
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 4.w,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.error_outline,
+                                          color: Colors.red.shade400,
+                                          size: 16.sp,
+                                        ),
+                                        SizedBox(width: 6.w),
+                                        Expanded(
+                                          child: Text(
+                                            amountError!,
+                                            style: GoogleFonts.openSans(
+                                              fontSize: 11.sp,
+                                              color: Colors.red.shade400,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                                 SizedBox(height: 12.h),
                                 _buildDescriptionField(themeManager),
+                                if (descriptionError != null) ...[
+                                  SizedBox(height: 6.h),
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 4.w,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.error_outline,
+                                          color: Colors.red.shade400,
+                                          size: 16.sp,
+                                        ),
+                                        SizedBox(width: 6.w),
+                                        Expanded(
+                                          child: Text(
+                                            descriptionError!,
+                                            style: GoogleFonts.openSans(
+                                              fontSize: 11.sp,
+                                              color: Colors.red.shade400,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                                 SizedBox(height: 12.h),
                                 _buildDateSelector(themeManager),
                                 SizedBox(height: 16.h),
@@ -1111,6 +1259,34 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                     themeManager,
                                     filteredCategories,
                                   ),
+                                  if (categoryError != null) ...[
+                                    SizedBox(height: 6.h),
+                                    Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 4.w,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.error_outline,
+                                            color: Colors.red.shade400,
+                                            size: 16.sp,
+                                          ),
+                                          SizedBox(width: 6.w),
+                                          Expanded(
+                                            child: Text(
+                                              categoryError!,
+                                              style: GoogleFonts.openSans(
+                                                fontSize: 11.sp,
+                                                color: Colors.red.shade400,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                   SizedBox(height: 12.h),
                                 ],
 
@@ -1124,6 +1300,34 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                       () => selectedAccount = account,
                                     ),
                                   ),
+                                  if (accountError != null) ...[
+                                    SizedBox(height: 6.h),
+                                    Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 4.w,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.error_outline,
+                                            color: Colors.red.shade400,
+                                            size: 16.sp,
+                                          ),
+                                          SizedBox(width: 6.w),
+                                          Expanded(
+                                            child: Text(
+                                              accountError!,
+                                              style: GoogleFonts.openSans(
+                                                fontSize: 11.sp,
+                                                color: Colors.red.shade400,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ],
 
                                 if (widget.transactionType == 'Traspasos') ...[
@@ -1136,6 +1340,34 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                       () => selectedAccountFrom = account,
                                     ),
                                   ),
+                                  if (accountFromError != null) ...[
+                                    SizedBox(height: 6.h),
+                                    Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 4.w,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.error_outline,
+                                            color: Colors.red.shade400,
+                                            size: 16.sp,
+                                          ),
+                                          SizedBox(width: 6.w),
+                                          Expanded(
+                                            child: Text(
+                                              accountFromError!,
+                                              style: GoogleFonts.openSans(
+                                                fontSize: 11.sp,
+                                                color: Colors.red.shade400,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                   SizedBox(height: 12.h),
                                   _buildAccountSelector(
                                     themeManager,
@@ -1145,17 +1377,35 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                     (account) => setState(
                                       () => selectedAccountTo = account,
                                     ),
-                                    validator: (value) {
-                                      if (value == null) {
-                                        return 'Por favor selecciona la cuenta destino';
-                                      }
-                                      if (selectedAccountFrom != null &&
-                                          value == selectedAccountFrom) {
-                                        return 'La cuenta origen y destino no pueden ser iguales';
-                                      }
-                                      return null;
-                                    },
                                   ),
+                                  if (accountToError != null) ...[
+                                    SizedBox(height: 6.h),
+                                    Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 4.w,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.error_outline,
+                                            color: Colors.red.shade400,
+                                            size: 16.sp,
+                                          ),
+                                          SizedBox(width: 6.w),
+                                          Expanded(
+                                            child: Text(
+                                              accountToError!,
+                                              style: GoogleFonts.openSans(
+                                                fontSize: 11.sp,
+                                                color: Colors.red.shade400,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ],
 
                                 SizedBox(height: 20.h),

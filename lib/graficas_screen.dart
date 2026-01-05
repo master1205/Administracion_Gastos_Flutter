@@ -10,6 +10,8 @@ import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
+import 'utils/animation_utils.dart';
+import 'componentes/empty_states.dart';
 
 class GraficasScreen extends StatefulWidget {
   const GraficasScreen({Key? key}) : super(key: key);
@@ -472,34 +474,11 @@ class GraficasScreenState extends State<GraficasScreen>
   }
 
   Widget _buildEmptyState({required String message, required IconData icon}) {
-    final themeManager = Provider.of<ThemeManager>(context);
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: EdgeInsets.all(24.r),
-            decoration: BoxDecoration(
-              color:
-                  themeManager.isDarkMode
-                      ? Colors.grey.shade800.withOpacity(0.3)
-                      : Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, size: 60.sp, color: Colors.grey.shade400),
-          ),
-          SizedBox(height: 16.h),
-          Text(
-            message,
-            style: GoogleFonts.lato(
-              fontSize: 15.sp,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
-            ),
-          ),
-        ],
-      ),
+    return EmptyState(
+      icon: icon,
+      title: 'Sin datos',
+      message: message,
+      iconColor: Colors.blue,
     );
   }
 
@@ -645,141 +624,152 @@ class GraficasScreenState extends State<GraficasScreen>
             gradientColors: const [Color(0xFFfa709a), Color(0xFFfee140)],
           ),
           SizedBox(height: 16.h),
-          Container(
-            key: _chartKey,
-            padding: EdgeInsets.all(14.r),
-            decoration: BoxDecoration(
-              color:
-                  themeManager.isDarkMode
-                      ? Colors.grey.shade800.withOpacity(0.5)
-                      : Colors.white,
-              borderRadius: BorderRadius.circular(14.r),
-              boxShadow: [
-                BoxShadow(
-                  color:
-                      themeManager.isDarkMode
-                          ? Colors.black.withOpacity(0.2)
-                          : Colors.grey.withOpacity(0.1),
-                  blurRadius: 10.r,
-                  offset: Offset(0, 3.h),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(6.r),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+          AnimationUtils.slideFromBottom(
+            Container(
+              key: _chartKey,
+              padding: EdgeInsets.all(14.r),
+              decoration: BoxDecoration(
+                color:
+                    themeManager.isDarkMode
+                        ? Colors.grey.shade800.withOpacity(0.5)
+                        : Colors.white,
+                borderRadius: BorderRadius.circular(14.r),
+                boxShadow: [
+                  BoxShadow(
+                    color:
+                        themeManager.isDarkMode
+                            ? Colors.black.withOpacity(0.2)
+                            : Colors.grey.withOpacity(0.1),
+                    blurRadius: 10.r,
+                    offset: Offset(0, 3.h),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(6.r),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                          ),
+                          borderRadius: BorderRadius.circular(8.r),
                         ),
-                        borderRadius: BorderRadius.circular(8.r),
-                      ),
-                      child: Icon(
-                        Icons.bar_chart_rounded,
-                        color: Colors.white,
-                        size: 16.sp,
-                      ),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Distribución por Categoría',
-                      style: GoogleFonts.lato(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 14.h),
-                SizedBox(
-                  height: 200.h,
-                  child: BarChart(
-                    BarChartData(
-                      minY: 0,
-                      barGroups: barGroups,
-                      borderData: FlBorderData(show: false),
-                      titlesData: FlTitlesData(show: false),
-                      barTouchData: BarTouchData(
-                        enabled: true,
-                        touchTooltipData: BarTouchTooltipData(
-                          getTooltipColor: (group) => Colors.black87,
-                          tooltipRoundedRadius: 8,
-                          getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                            return BarTooltipItem(
-                              _currencyFormat.format(rod.toY),
-                              TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11.sp,
-                              ),
-                            );
-                          },
+                        child: Icon(
+                          Icons.bar_chart_rounded,
+                          color: Colors.white,
+                          size: 16.sp,
                         ),
                       ),
-                      gridData: FlGridData(show: false),
+                      SizedBox(width: 8.w),
+                      Text(
+                        'Distribución por Categoría',
+                        style: GoogleFonts.lato(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 14.h),
+                  SizedBox(
+                    height: 200.h,
+                    child: BarChart(
+                      BarChartData(
+                        minY: 0,
+                        barGroups: barGroups,
+                        borderData: FlBorderData(show: false),
+                        titlesData: FlTitlesData(show: false),
+                        barTouchData: BarTouchData(
+                          enabled: true,
+                          touchTooltipData: BarTouchTooltipData(
+                            getTooltipColor: (group) => Colors.black87,
+                            tooltipRoundedRadius: 8,
+                            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                              return BarTooltipItem(
+                                _currencyFormat.format(rod.toY),
+                                TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11.sp,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        gridData: FlGridData(show: false),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           SizedBox(height: 16.h),
-          Container(
-            padding: EdgeInsets.all(14.r),
-            decoration: BoxDecoration(
-              color:
-                  themeManager.isDarkMode
-                      ? Colors.grey.shade800.withOpacity(0.5)
-                      : Colors.white,
-              borderRadius: BorderRadius.circular(14.r),
-              boxShadow: [
-                BoxShadow(
-                  color:
-                      themeManager.isDarkMode
-                          ? Colors.black.withOpacity(0.2)
-                          : Colors.grey.withOpacity(0.1),
-                  blurRadius: 10.r,
-                  offset: Offset(0, 3.h),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(6.r),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+          AnimationUtils.slideFromBottom(
+            Container(
+              padding: EdgeInsets.all(14.r),
+              decoration: BoxDecoration(
+                color:
+                    themeManager.isDarkMode
+                        ? Colors.grey.shade800.withOpacity(0.5)
+                        : Colors.white,
+                borderRadius: BorderRadius.circular(14.r),
+                boxShadow: [
+                  BoxShadow(
+                    color:
+                        themeManager.isDarkMode
+                            ? Colors.black.withOpacity(0.2)
+                            : Colors.grey.withOpacity(0.1),
+                    blurRadius: 10.r,
+                    offset: Offset(0, 3.h),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(6.r),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                          ),
+                          borderRadius: BorderRadius.circular(8.r),
                         ),
-                        borderRadius: BorderRadius.circular(8.r),
+                        child: Icon(
+                          Icons.list_rounded,
+                          color: Colors.white,
+                          size: 16.sp,
+                        ),
                       ),
-                      child: Icon(
-                        Icons.list_rounded,
-                        color: Colors.white,
-                        size: 16.sp,
+                      SizedBox(width: 8.w),
+                      Text(
+                        'Desglose Detallado',
+                        style: GoogleFonts.lato(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Desglose Detallado',
-                      style: GoogleFonts.lato(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 10.h),
-                ...legendItems,
-              ],
+                    ],
+                  ),
+                  SizedBox(height: 10.h),
+                  ...legendItems.asMap().entries.map((entry) {
+                    return AnimationUtils.staggeredAnimation(
+                      index: entry.key,
+                      type: AnimationType.fadeIn,
+                      child: entry.value,
+                    );
+                  }).toList(),
+                ],
+              ),
             ),
+            delay: 100,
           ),
         ],
       ),
@@ -990,7 +980,13 @@ class GraficasScreenState extends State<GraficasScreen>
                   ],
                 ),
                 SizedBox(height: 10.h),
-                ...legendItems,
+                ...legendItems.asMap().entries.map((entry) {
+                  return AnimationUtils.staggeredAnimation(
+                    index: entry.key,
+                    type: AnimationType.fadeIn,
+                    child: entry.value,
+                  );
+                }).toList(),
               ],
             ),
           ),

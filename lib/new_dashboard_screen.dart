@@ -5,13 +5,19 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:card_swiper/card_swiper.dart';
+import 'package:notificaciones/api_service.dart';
 import 'package:notificaciones/data_provider.dart';
 import 'package:notificaciones/models/Account.dart';
+import 'package:notificaciones/models/Meta.dart';
 import 'package:notificaciones/models/Transaccion.dart';
 import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
+import 'dart:convert';
+import 'utils/animation_utils.dart';
+import 'componentes/empty_states.dart';
+import 'metas_screen.dart';
 
 class NewDashboardScreen extends StatefulWidget {
   final void Function(int)? onTabChange;
@@ -44,7 +50,9 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
   List<Account> _accounts = [];
   Map<String, dynamic>? _balanceData;
   List<Transaction> _transactions = [];
+  List<Meta> _metas = [];
   bool _isLoading = false;
+  bool _metasExpanded = false;
 
   // Tutorial
   late TutorialCoachMark _tutorialCoachMark;
@@ -82,6 +90,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
         _fetchSaldos(),
         _fetchTransactions(),
       ]);
+      await _fetchMetas(); // Ejecutar después para sincronizar con cuentas
       await _maybeShowDashboardTutorial();
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -507,9 +516,100 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
     }
   }
 
+  Future<void> _fetchMetas() async {
+    try {
+      // Recargar desde el servidor
+      final apiService = ApiService();
+      final metasServidor = await apiService.getMetas();
+
+      // Guardar en SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        'metas_ahorro',
+        json.encode(metasServidor.map((m) => m.toJson()).toList()),
+      );
+
+      if (mounted) {
+        setState(() {
+          _metas = metasServidor;
+        });
+        // Sincronizar progreso con cuentas (por si acaso)
+        await _syncMetasWithAccounts();
+      }
+    } catch (e) {
+      debugPrint('Error al cargar metas: $e');
+      // Si falla, intentar cargar desde caché
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final String? metasJson = prefs.getString('metas_ahorro');
+
+        if (metasJson != null) {
+          final List<dynamic> decoded = json.decode(metasJson);
+          if (mounted) {
+            setState(() {
+              _metas = decoded.map((json) => Meta.fromJson(json)).toList();
+            });
+            await _syncMetasWithAccounts();
+          }
+        }
+      } catch (e2) {
+        debugPrint('Error al cargar metas desde caché: $e2');
+      }
+    }
+  }
+
+  Future<void> _syncMetasWithAccounts() async {
+    try {
+      bool metasUpdated = false;
+
+      for (int i = 0; i < _metas.length; i++) {
+        final meta = _metas[i];
+
+        // Si la meta tiene cuenta asociada
+        if (meta.numeroCuenta != null && meta.numeroCuenta!.isNotEmpty) {
+          // Buscar la cuenta correspondiente
+          final cuenta = _accounts.firstWhere(
+            (acc) => acc.numeroTarjeta == meta.numeroCuenta,
+            orElse: () => Account(nombre: ''),
+          );
+
+          // Si encontramos la cuenta y el saldo es diferente
+          if (cuenta.numeroTarjeta != null &&
+              cuenta.numeroTarjeta!.isNotEmpty &&
+              cuenta.saldo != meta.montoActual) {
+            final nuevoProgreso = (cuenta.saldo! / meta.montoObjetivo * 100)
+                .clamp(0.0, 100.0);
+
+            _metas[i] = meta.copyWith(
+              montoActual: cuenta.saldo,
+              completada: nuevoProgreso >= 100.0,
+            );
+            metasUpdated = true;
+          }
+        }
+      }
+
+      // Guardar metas actualizadas en SharedPreferences
+      if (metasUpdated) {
+        final prefs = await SharedPreferences.getInstance();
+        final metasJson = json.encode(
+          _metas.map((meta) => meta.toJson()).toList(),
+        );
+        await prefs.setString('metas_ahorro', metasJson);
+
+        if (mounted) {
+          setState(() {}); // Refrescar UI con nuevos valores
+        }
+      }
+    } catch (e) {
+      debugPrint('Error al sincronizar metas con cuentas: $e');
+    }
+  }
+
   Future<void> refreshData() async {
     setState(() => _isLoading = true);
     await Future.wait([_fetchAccounts(), _fetchSaldos(), _fetchTransactions()]);
+    await _fetchMetas(); // Ejecutar después para que las cuentas ya estén cargadas
     if (mounted) setState(() => _isLoading = false);
   }
 
@@ -527,96 +627,98 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
       (_balanceData?['gastos'] ?? 0.0).toString(),
     );
 
-    return Container(
-      key: _balanceCardKey,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20.r), // ✅ REDUCIDO de 24
-        gradient: LinearGradient(
-          colors:
-              themeManager.isDarkMode
-                  ? [Colors.grey.shade800, Colors.grey.shade900]
-                  : [const Color(0xFF667eea), const Color(0xFF764ba2)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color:
+    return AnimationUtils.slideFromBottom(
+      Container(
+        key: _balanceCardKey,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20.r), // ✅ REDUCIDO de 24
+          gradient: LinearGradient(
+            colors:
                 themeManager.isDarkMode
-                    ? Colors.black.withOpacity(0.3)
-                    : const Color(0xFF667eea).withOpacity(0.3),
-            blurRadius: 15.r, // ✅ REDUCIDO de 20
-            offset: Offset(0, 8.h), // ✅ REDUCIDO de 10
+                    ? [Colors.grey.shade800, Colors.grey.shade900]
+                    : [const Color(0xFF667eea), const Color(0xFF764ba2)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-        ],
-      ),
-      padding: EdgeInsets.all(18.r), // ✅ REDUCIDO de 20
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Balance Total',
-                    style: TextStyle(
-                      fontSize: 12.sp, // ✅ REDUCIDO de 13
-                      color: Colors.white.withOpacity(0.8),
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.5,
+          boxShadow: [
+            BoxShadow(
+              color:
+                  themeManager.isDarkMode
+                      ? Colors.black.withOpacity(0.3)
+                      : const Color(0xFF667eea).withOpacity(0.3),
+              blurRadius: 15.r, // ✅ REDUCIDO de 20
+              offset: Offset(0, 8.h), // ✅ REDUCIDO de 10
+            ),
+          ],
+        ),
+        padding: EdgeInsets.all(18.r), // ✅ REDUCIDO de 20
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Balance Total',
+                      style: TextStyle(
+                        fontSize: 12.sp, // ✅ REDUCIDO de 13
+                        color: Colors.white.withOpacity(0.8),
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.5,
+                      ),
                     ),
+                    SizedBox(height: 5.h), // ✅ REDUCIDO de 6
+                    _buildAnimatedBalance(saldoTotal),
+                  ],
+                ),
+                Container(
+                  padding: EdgeInsets.all(12.r), // ✅ REDUCIDO de 14
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
                   ),
-                  SizedBox(height: 5.h), // ✅ REDUCIDO de 6
-                  _buildAnimatedBalance(saldoTotal),
-                ],
-              ),
-              Container(
-                padding: EdgeInsets.all(12.r), // ✅ REDUCIDO de 14
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
+                  child: Icon(
+                    Icons.account_balance_wallet_rounded,
+                    color: Colors.white,
+                    size: 24.sp, // ✅ REDUCIDO de 28
+                  ),
                 ),
-                child: Icon(
-                  Icons.account_balance_wallet_rounded,
-                  color: Colors.white,
-                  size: 24.sp, // ✅ REDUCIDO de 28
+              ],
+            ),
+            SizedBox(height: 20.h), // ✅ REDUCIDO de 24
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatColumn(
+                    'Ingresos',
+                    ingresos,
+                    Icons.trending_up_rounded,
+                    Colors.greenAccent,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          SizedBox(height: 20.h), // ✅ REDUCIDO de 24
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatColumn(
-                  'Ingresos',
-                  ingresos,
-                  Icons.trending_up_rounded,
-                  Colors.greenAccent,
+                Container(
+                  width: 1.w,
+                  height: 40.h, // ✅ REDUCIDO de 45
+                  color: Colors.white.withOpacity(0.3),
+                  margin: EdgeInsets.symmetric(
+                    horizontal: 10.w,
+                  ), // ✅ REDUCIDO de 12
                 ),
-              ),
-              Container(
-                width: 1.w,
-                height: 40.h, // ✅ REDUCIDO de 45
-                color: Colors.white.withOpacity(0.3),
-                margin: EdgeInsets.symmetric(
-                  horizontal: 10.w,
-                ), // ✅ REDUCIDO de 12
-              ),
-              Expanded(
-                child: _buildStatColumn(
-                  'Gastos',
-                  gastos,
-                  Icons.trending_down_rounded,
-                  Colors.redAccent,
+                Expanded(
+                  child: _buildStatColumn(
+                    'Gastos',
+                    gastos,
+                    Icons.trending_down_rounded,
+                    Colors.redAccent,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -686,6 +788,373 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
         ),
       ],
     );
+  }
+
+  // UI Builders - Metas Card
+  Widget _buildMetasCard() {
+    final themeManager = Provider.of<ThemeManager>(context);
+
+    if (_metas.isEmpty) {
+      // Invitación sutil para crear primera meta
+      return GestureDetector(
+        onTap: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const MetasScreen()),
+          );
+          _fetchMetas(); // Recargar después de volver
+        },
+        child: Container(
+          margin: EdgeInsets.symmetric(horizontal: 2.w),
+          padding: EdgeInsets.all(16.r),
+          decoration: BoxDecoration(
+            color:
+                themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(
+              color: Colors.green.shade200.withOpacity(0.3),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(12.r),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Icon(
+                  Icons.savings_outlined,
+                  color: Colors.green,
+                  size: 24.sp,
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '¿Tienes una meta de ahorro?',
+                      style: GoogleFonts.lato(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      'Crea tu primera meta y haz seguimiento',
+                      style: GoogleFonts.openSans(
+                        fontSize: 11.sp,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios, size: 16.sp, color: Colors.grey),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Mostrar meta principal (la primera o la más cercana a completar)
+    final metaPrincipal = _metas.reduce(
+      (a, b) => a.progreso > b.progreso ? a : b,
+    );
+    final colorHex = int.parse('FF${metaPrincipal.color}', radix: 16);
+    final color = Color(colorHex);
+
+    return Column(
+      children: [
+        // Meta principal
+        GestureDetector(
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const MetasScreen()),
+            );
+            _fetchMetas();
+          },
+          child: Container(
+            margin: EdgeInsets.symmetric(horizontal: 2.w),
+            padding: EdgeInsets.all(16.r),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [color.withOpacity(0.85), color],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16.r),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.savings, color: Colors.white, size: 20.sp),
+                    SizedBox(width: 8.w),
+                    Expanded(
+                      child: Text(
+                        metaPrincipal.nombre,
+                        style: GoogleFonts.lato(
+                          color: Colors.white,
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 8.w,
+                        vertical: 4.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Text(
+                        '${metaPrincipal.progreso.toStringAsFixed(0)}%',
+                        style: GoogleFonts.lato(
+                          color: Colors.white,
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 12.h),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10.r),
+                  child: LinearProgressIndicator(
+                    value: metaPrincipal.progreso / 100,
+                    backgroundColor: Colors.white.withOpacity(0.3),
+                    valueColor: const AlwaysStoppedAnimation(Colors.white),
+                    minHeight: 6.h,
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '\$${_currencyFormat.format(metaPrincipal.montoActual).replaceAll('\$', '')} de \$${_currencyFormat.format(metaPrincipal.montoObjetivo).replaceAll('\$', '')}',
+                        style: GoogleFonts.openSans(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 11.sp,
+                        ),
+                      ),
+                    ),
+                    if (_metas.length > 1)
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _metasExpanded = !_metasExpanded;
+                          });
+                        },
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8.w,
+                            vertical: 4.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '+${_metas.length - 1} más',
+                                style: GoogleFonts.openSans(
+                                  color: Colors.white,
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              SizedBox(width: 4.w),
+                              Icon(
+                                _metasExpanded
+                                    ? Icons.keyboard_arrow_up
+                                    : Icons.keyboard_arrow_down,
+                                color: Colors.white,
+                                size: 16.sp,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Metas adicionales (expandible con animación)
+        if (_metas.length > 1)
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child:
+                _metasExpanded
+                    ? Column(
+                      children: [
+                        SizedBox(height: 8.h),
+                        ..._metas
+                            .where((meta) => meta.id != metaPrincipal.id)
+                            .map(
+                              (meta) => Padding(
+                                padding: EdgeInsets.only(bottom: 8.h),
+                                child: _buildMetaCompacta(meta, themeManager),
+                              ),
+                            )
+                            .toList(),
+                      ],
+                    )
+                    : const SizedBox.shrink(),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildMetaCompacta(Meta meta, ThemeManager themeManager) {
+    final colorHex = int.parse('FF${meta.color}', radix: 16);
+    final color = Color(colorHex);
+
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const MetasScreen()),
+        );
+        _fetchMetas();
+      },
+      child: Container(
+        margin: EdgeInsets.symmetric(horizontal: 2.w),
+        padding: EdgeInsets.all(12.r),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [color.withOpacity(0.85), color],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12.r),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(6.r),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Icon(
+                    _getIconData(meta.icono),
+                    color: Colors.white,
+                    size: 16.sp,
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: Text(
+                    meta.nombre,
+                    style: GoogleFonts.lato(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Text(
+                    '${meta.progreso.toStringAsFixed(0)}%',
+                    style: GoogleFonts.lato(
+                      color: Colors.white,
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 8.h),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8.r),
+              child: LinearProgressIndicator(
+                value: meta.progreso / 100,
+                backgroundColor: Colors.white.withOpacity(0.3),
+                valueColor: AlwaysStoppedAnimation(Colors.white),
+                minHeight: 4.h,
+              ),
+            ),
+            SizedBox(height: 6.h),
+            Text(
+              '\$${_currencyFormat.format(meta.montoActual).replaceAll('\$', '')} / \$${_currencyFormat.format(meta.montoObjetivo).replaceAll('\$', '')}',
+              style: GoogleFonts.openSans(
+                fontSize: 10.sp,
+                color: Colors.white.withOpacity(0.9),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _getIconData(String iconName) {
+    switch (iconName) {
+      case 'home':
+        return Icons.home;
+      case 'car':
+        return Icons.directions_car;
+      case 'travel':
+        return Icons.flight;
+      case 'education':
+        return Icons.school;
+      case 'emergency':
+        return Icons.local_hospital;
+      case 'gift':
+        return Icons.card_giftcard;
+      default:
+        return Icons.savings;
+    }
   }
 
   // UI Builders - Accounts Carousel
@@ -780,117 +1249,122 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
             ? [Colors.grey.shade800, Colors.grey.shade900]
             : [const Color(0xFF4facfe), const Color(0xFF00f2fe)];
 
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 8.w),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18.r),
-        gradient: LinearGradient(
-          colors: gradientColors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: gradientColors.first.withOpacity(0.3),
-            blurRadius: 12.r,
-            offset: Offset(0, 6.h),
+    return BounceTapButton(
+      child: Container(
+        margin: EdgeInsets.symmetric(horizontal: 8.w),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18.r),
+          gradient: LinearGradient(
+            colors: gradientColors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-        ],
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(16.r), // ✅ REDUCIDO de 18
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    account.nombre,
-                    style: TextStyle(
-                      fontSize: 15.sp,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Container(
-                  padding: EdgeInsets.all(8.r),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.credit_card_rounded,
-                    color: Colors.white,
-                    size: 20.sp,
-                  ),
-                ),
-              ],
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Saldo disponible',
-                  style: TextStyle(
-                    fontSize: 10.sp, // ✅ REDUCIDO de 11
-                    color: Colors.white.withOpacity(0.8),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                TweenAnimationBuilder<double>(
-                  tween: Tween<double>(begin: 0, end: account.saldo ?? 0.0),
-                  duration: _animationDuration,
-                  builder: (context, animatedValue, _) {
-                    return Text(
-                      _currencyFormat.format(animatedValue),
-                      style: GoogleFonts.lato(
-                        fontSize: 24.sp, // ✅ REDUCIDO de 28
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 1,
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-            Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 9.w, vertical: 4.h),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(18.r),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.credit_card_rounded,
-                        size: 12.sp,
-                        color: Colors.white.withOpacity(0.9),
-                      ),
-                      SizedBox(width: 4.w),
-                      Text(
-                        account.numeroTarjeta ?? "****-****",
-                        style: TextStyle(
-                          fontSize: 10.sp,
-                          color: Colors.white.withOpacity(0.9),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+          boxShadow: [
+            BoxShadow(
+              color: gradientColors.first.withOpacity(0.3),
+              blurRadius: 12.r,
+              offset: Offset(0, 6.h),
             ),
           ],
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(16.r), // ✅ REDUCIDO de 18
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      account.nombre,
+                      style: TextStyle(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Container(
+                    padding: EdgeInsets.all(8.r),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.credit_card_rounded,
+                      color: Colors.white,
+                      size: 20.sp,
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Saldo disponible',
+                    style: TextStyle(
+                      fontSize: 10.sp, // ✅ REDUCIDO de 11
+                      color: Colors.white.withOpacity(0.8),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0, end: account.saldo ?? 0.0),
+                    duration: _animationDuration,
+                    builder: (context, animatedValue, _) {
+                      return Text(
+                        _currencyFormat.format(animatedValue),
+                        style: GoogleFonts.lato(
+                          fontSize: 24.sp, // ✅ REDUCIDO de 28
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 1,
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 9.w,
+                      vertical: 4.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(18.r),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.credit_card_rounded,
+                          size: 12.sp,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                        SizedBox(width: 4.w),
+                        Text(
+                          account.numeroTarjeta ?? "****-****",
+                          style: TextStyle(
+                            fontSize: 10.sp,
+                            color: Colors.white.withOpacity(0.9),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -923,9 +1397,13 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
           separatorBuilder:
               (context, index) => SizedBox(height: 8.h), // ✅ REDUCIDO de 10
           itemBuilder:
-              (context, index) => _buildTransactionItem(
-                sortedTransactions[index],
-                index > 0 ? sortedTransactions[index - 1] : null,
+              (context, index) => AnimationUtils.staggeredAnimation(
+                index: index,
+                type: AnimationType.slideFromRight,
+                child: _buildTransactionItem(
+                  sortedTransactions[index],
+                  index > 0 ? sortedTransactions[index - 1] : null,
+                ),
               ),
         ),
       ],
@@ -933,38 +1411,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
   }
 
   Widget _buildEmptyTransactions() {
-    final themeManager = Provider.of<ThemeManager>(context);
-
-    return Container(
-      padding: EdgeInsets.all(28.r), // ✅ REDUCIDO de 32
-      decoration: BoxDecoration(
-        color:
-            themeManager.isDarkMode
-                ? Colors.grey.shade800.withOpacity(0.3)
-                : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(18.r),
-      ),
-      child: Center(
-        child: Column(
-          children: [
-            Icon(
-              Icons.receipt_long_outlined,
-              size: 50.sp,
-              color: Colors.grey.shade400,
-            ),
-            SizedBox(height: 10.h),
-            Text(
-              'No hay transacciones recientes',
-              style: TextStyle(
-                fontSize: 14.sp,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    return EmptyTransactionsState();
   }
 
   Widget _buildTransactionsHeader(ThemeData theme) {
@@ -978,46 +1425,52 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
             fontWeight: FontWeight.bold,
           ), // ✅ REDUCIDO de 18
         ),
-        Container(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-            ),
-            borderRadius: BorderRadius.circular(18.r),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF667eea).withOpacity(0.3),
-                blurRadius: 6.r,
-                offset: Offset(0, 3.h),
+        BounceTapButton(
+          onTap: () => widget.onTabChange?.call(1),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF667eea), Color(0xFF764ba2)],
               ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              key: _verTodoKey,
-              onTap: () => widget.onTabChange?.call(1),
               borderRadius: BorderRadius.circular(18.r),
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Ver todo',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.bold,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF667eea).withOpacity(0.3),
+                  blurRadius: 6.r,
+                  offset: Offset(0, 3.h),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                key: _verTodoKey,
+                onTap: () => widget.onTabChange?.call(1),
+                borderRadius: BorderRadius.circular(18.r),
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 6.h,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Ver todo',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    SizedBox(width: 3.w),
-                    Icon(
-                      Icons.arrow_forward_rounded,
-                      color: Colors.white,
-                      size: 14.sp,
-                    ),
-                  ],
+                      SizedBox(width: 3.w),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        color: Colors.white,
+                        size: 14.sp,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1246,6 +1699,8 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                     children: [
                       _buildBalanceCard(),
                       SizedBox(height: 18.h), // ✅ REDUCIDO de 20
+                      _buildMetasCard(),
+                      SizedBox(height: 18.h),
                       _buildAccountsCarousel(),
                       SizedBox(height: 18.h),
                       _buildTransactionsList(),

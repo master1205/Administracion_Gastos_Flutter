@@ -1,0 +1,10 @@
+# Ignorar todo excepto archivos .gs y appsscript.json
+**/**
+!*.gs
+!appsscript.json
+
+# Ignorar archivos de sistema
+.git/
+.vscode/
+node_modules/
+.DS_Store
