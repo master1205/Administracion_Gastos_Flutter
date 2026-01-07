@@ -1,13 +1,12 @@
 function getMetas(params) {
   try {
-    const sheet = SheetManager.getMetas();
+    // Usar caché si está disponible
+    const data = CachedSheetManager.getMetas();
     
-    if (!sheet) {
-      Logger.error('getMetas', 'Hoja Metas no encontrada');
-      return ResponseBuilder.error('Hoja Metas no encontrada');
+    if (!data || data.length === 0) {
+      Logger.error('getMetas', 'No se pudieron cargar las metas');
+      return ResponseBuilder.error('No se pudieron cargar las metas');
     }
-
-    const data = sheet.getDataRange().getValues();
     
     if (data.length <= 1) {
       return ResponseBuilder.success([]);
@@ -120,6 +119,10 @@ function saveMeta(params) {
       ]]);
 
       Logger.info('saveMeta', 'Meta actualizada', { id, nombre });
+      
+      // Invalidar caché después de actualizar
+      CachedSheetManager.invalidateMetas();
+      
       return ResponseBuilder.success({ id: id });
     } else {
       // Crear nueva
@@ -139,6 +142,10 @@ function saveMeta(params) {
       ]);
 
       Logger.info('saveMeta', 'Meta creada', { id, nombre });
+      
+      // Invalidar caché después de crear
+      CachedSheetManager.invalidateMetas();
+      
       return ResponseBuilder.success({ id: id });
     }
 
@@ -207,6 +214,11 @@ function deleteMeta(params) {
         // Eliminar la meta
         sheet.deleteRow(i + 1);
         Logger.info('deleteMeta', 'Meta eliminada', { id: idNum });
+        
+        // Invalidar caché después de eliminar
+        CachedSheetManager.invalidateMetas();
+        CachedSheetManager.invalidateCuentas();
+        
         return ResponseBuilder.success({ message: 'Meta eliminada correctamente' });
       }
     }

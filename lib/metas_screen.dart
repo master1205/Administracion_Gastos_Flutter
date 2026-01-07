@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_multi_formatter/formatters/money_input_enums.dart';
+import 'package:flutter_multi_formatter/formatters/money_input_formatter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -19,9 +21,12 @@ class MetasScreen extends StatefulWidget {
 }
 
 class _MetasScreenState extends State<MetasScreen> {
-  List<Meta> metas = [];
+  final ValueNotifier<List<Meta>> _metasNotifier = ValueNotifier<List<Meta>>(
+    [],
+  );
+  final ValueNotifier<bool> _isLoadingNotifier = ValueNotifier<bool>(true);
+  bool _isManualRefresh = false;
   List<Account> cuentas = [];
-  bool isLoading = true;
 
   @override
   void initState() {
@@ -29,39 +34,62 @@ class _MetasScreenState extends State<MetasScreen> {
     _cargarDatos();
   }
 
+  @override
+  void dispose() {
+    _metasNotifier.dispose();
+    _isLoadingNotifier.dispose();
+    super.dispose();
+  }
+
   Future<void> _cargarDatos() async {
-    setState(() => isLoading = true);
+    final startTime = DateTime.now();
+    final shouldShowProgress = _isManualRefresh;
+
+    if (!_isManualRefresh) {
+      _isLoadingNotifier.value = true;
+    }
     try {
       // Solo cargar metas (ya vienen sincronizadas del backend)
       await _cargarMetas();
+
+      if (shouldShowProgress) {
+        final elapsed = DateTime.now().difference(startTime).inMilliseconds;
+        if (elapsed < 800) {
+          await Future.delayed(Duration(milliseconds: 800 - elapsed));
+        }
+        if (mounted && _isManualRefresh) {
+          setState(() => _isManualRefresh = false);
+        }
+      }
     } catch (e) {
       print('Error al cargar datos: $e');
       await _cargarMetasLocales();
     } finally {
-      if (mounted) {
-        setState(() => isLoading = false);
+      if (!shouldShowProgress) {
+        _isLoadingNotifier.value = false;
       }
     }
   }
 
+  Future<void> refreshData() async {
+    setState(() => _isManualRefresh = true);
+    await _cargarDatos();
+  }
+
   Future<void> _cargarMetas() async {
     try {
-      // Cargar del servidor (ya vienen sincronizadas por el backend)
+      // Cargar del servidor con caché (ya vienen sincronizadas por el backend)
       final apiService = ApiService();
       final metasServidor = await apiService.getMetas();
 
-      // Guardar localmente
+      // Guardar localmente como fallback
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(
         'metas_ahorro',
         json.encode(metasServidor.map((m) => m.toJson()).toList()),
       );
 
-      if (mounted) {
-        setState(() {
-          metas = metasServidor;
-        });
-      }
+      _metasNotifier.value = metasServidor;
     } catch (e) {
       print('Error al cargar metas: $e');
       // Cargar desde local si falla el servidor
@@ -76,9 +104,8 @@ class _MetasScreenState extends State<MetasScreen> {
 
       if (metasJson != null) {
         final List<dynamic> decoded = json.decode(metasJson);
-        setState(() {
-          metas = decoded.map((json) => Meta.fromJson(json)).toList();
-        });
+        _metasNotifier.value =
+            decoded.map((json) => Meta.fromJson(json)).toList();
       }
     } catch (e) {
       print('Error al cargar metas locales: $e');
@@ -88,7 +115,7 @@ class _MetasScreenState extends State<MetasScreen> {
   Future<void> _guardarMetasLocalmente() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final jsonList = metas.map((m) => m.toJson()).toList();
+      final jsonList = _metasNotifier.value.map((m) => m.toJson()).toList();
       await prefs.setString('metas_ahorro', json.encode(jsonList));
     } catch (e) {
       print('Error al guardar metas localmente: $e');
@@ -134,24 +161,26 @@ class _MetasScreenState extends State<MetasScreen> {
         final apiService = ApiService();
 
         // 1. Crear cuenta de ahorro asociada
-        final cuentaResponse = await apiService.crearCuenta(
+        final cuentaId = await apiService.crearCuenta(
           nombre: 'Ahorro ${resultado.nombre}',
           imagen: "ahorro",
           beneficiario: 'Meta de ahorro',
           saldoInicial: resultado.montoActual,
         );
 
-        final numeroCuenta = cuentaResponse['numeroCuenta']?.toString() ?? '';
-
-        if (numeroCuenta.isEmpty) {
-          throw ApiException('No se pudo obtener el número de cuenta');
+        if (cuentaId.isEmpty) {
+          throw ApiException('No se pudo crear la cuenta');
         }
 
-        // 2. Crear meta con el número de cuenta
-        final metaConCuenta = resultado.copyWith(numeroCuenta: numeroCuenta);
+        // 2. Crear meta con la cuenta asociada
+        final metaConCuenta = resultado.copyWith(cuentaId: cuentaId);
         await apiService.saveMeta(metaConCuenta);
 
-        setState(() => metas.add(metaConCuenta));
+        // Actualizar lista de metas
+        final metasActuales = List<Meta>.from(_metasNotifier.value);
+        metasActuales.add(metaConCuenta);
+        _metasNotifier.value = metasActuales;
+
         await _guardarMetasLocalmente();
 
         if (mounted) {
@@ -160,6 +189,7 @@ class _MetasScreenState extends State<MetasScreen> {
             SnackBar(
               content: Text('Meta y cuenta creadas exitosamente'),
               backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.fixed,
             ),
           );
         }
@@ -170,6 +200,7 @@ class _MetasScreenState extends State<MetasScreen> {
             SnackBar(
               content: Text('Error: ${e.message}'),
               backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.fixed,
             ),
           );
         }
@@ -180,7 +211,7 @@ class _MetasScreenState extends State<MetasScreen> {
   Future<void> _editarMeta(int index) async {
     final resultado = await showDialog<Meta>(
       context: context,
-      builder: (context) => _CrearMetaDialog(meta: metas[index]),
+      builder: (context) => _CrearMetaDialog(meta: _metasNotifier.value[index]),
     );
 
     if (resultado != null) {
@@ -216,7 +247,11 @@ class _MetasScreenState extends State<MetasScreen> {
         final apiService = ApiService();
         await apiService.saveMeta(resultado);
 
-        setState(() => metas[index] = resultado);
+        // Actualizar lista
+        final metasActuales = List<Meta>.from(_metasNotifier.value);
+        metasActuales[index] = resultado;
+        _metasNotifier.value = metasActuales;
+
         await _guardarMetasLocalmente();
 
         if (mounted) {
@@ -225,6 +260,7 @@ class _MetasScreenState extends State<MetasScreen> {
             SnackBar(
               content: Text('Meta actualizada'),
               backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.fixed,
             ),
           );
         }
@@ -235,6 +271,7 @@ class _MetasScreenState extends State<MetasScreen> {
             SnackBar(
               content: Text('Error: ${e.message}'),
               backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.fixed,
             ),
           );
         }
@@ -252,7 +289,7 @@ class _MetasScreenState extends State<MetasScreen> {
               style: GoogleFonts.lato(fontWeight: FontWeight.bold),
             ),
             content: Text(
-              'Se eliminará la meta "${metas[index].nombre}" y su cuenta de ahorro asociada. Esta acción no se puede deshacer.',
+              'Se eliminará la meta "${_metasNotifier.value[index].nombre}" y su cuenta de ahorro asociada. Esta acción no se puede deshacer.',
               style: GoogleFonts.openSans(),
             ),
             actions: [
@@ -299,9 +336,13 @@ class _MetasScreenState extends State<MetasScreen> {
 
       try {
         final apiService = ApiService();
-        await apiService.deleteMeta(metas[index].id);
+        await apiService.deleteMeta(_metasNotifier.value[index].id);
 
-        setState(() => metas.removeAt(index));
+        // Eliminar de la lista
+        final metasActuales = List<Meta>.from(_metasNotifier.value);
+        metasActuales.removeAt(index);
+        _metasNotifier.value = metasActuales;
+
         await _guardarMetasLocalmente();
 
         // Cerrar diálogo de carga
@@ -312,6 +353,7 @@ class _MetasScreenState extends State<MetasScreen> {
             SnackBar(
               content: Text('Meta y cuenta eliminadas correctamente'),
               backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.fixed,
             ),
           );
         }
@@ -324,6 +366,7 @@ class _MetasScreenState extends State<MetasScreen> {
             SnackBar(
               content: Text('Error: ${e.message}'),
               backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.fixed,
             ),
           );
         }
@@ -349,22 +392,74 @@ class _MetasScreenState extends State<MetasScreen> {
             themeManager.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
         elevation: 0,
       ),
-      body:
-          isLoading
-              ? Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation(Color(0xFF667eea)),
-                ),
-              )
-              : metas.isEmpty
-              ? _buildEmptyState(themeManager)
-              : ListView.builder(
-                padding: EdgeInsets.all(16.r),
-                itemCount: metas.length,
-                itemBuilder:
-                    (context, index) =>
-                        _buildMetaCard(metas[index], index, themeManager),
+      body: Stack(
+        children: [
+          ValueListenableBuilder<bool>(
+            valueListenable: _isLoadingNotifier,
+            builder: (context, isLoading, child) {
+              if (isLoading) {
+                return Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation(Color(0xFF667eea)),
+                  ),
+                );
+              }
+
+              return ValueListenableBuilder<List<Meta>>(
+                valueListenable: _metasNotifier,
+                builder: (context, metas, child) {
+                  if (metas.isEmpty) {
+                    return _buildEmptyState(themeManager);
+                  }
+
+                  return ListView.builder(
+                    padding: EdgeInsets.all(16.r),
+                    itemCount: metas.length,
+                    itemBuilder:
+                        (context, index) =>
+                            _buildMetaCard(metas[index], index, themeManager),
+                  );
+                },
+              );
+            },
+          ),
+          // Indicador sutil de recarga (solo refresh manual)
+          if (_isManualRefresh)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 300),
+                builder: (context, value, child) {
+                  return Opacity(
+                    opacity: value,
+                    child: Container(
+                      height: 3.h,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFF667eea).withOpacity(0.0),
+                            const Color(0xFF667eea),
+                            const Color(0xFF764ba2),
+                            const Color(0xFF764ba2).withOpacity(0.0),
+                          ],
+                        ),
+                      ),
+                      child: LinearProgressIndicator(
+                        backgroundColor: Colors.transparent,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Colors.white.withOpacity(0.5),
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
+            ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _crearMeta,
         backgroundColor: const Color(0xFF667eea),
@@ -989,16 +1084,24 @@ class _CrearMetaDialogState extends State<_CrearMetaDialog> {
                             ),
                           ),
                         ),
-                        keyboardType: TextInputType.numberWithOptions(
+                        keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),
+                        inputFormatters: [
+                          MoneyInputFormatter(
+                            leadingSymbol: '',
+                            thousandSeparator: ThousandSeparator.Comma,
+                            mantissaLength: 2,
+                          ),
+                        ],
                         style: GoogleFonts.lato(
                           fontSize: 18.sp,
                           fontWeight: FontWeight.w600,
                         ),
                         validator: (v) {
                           if (v?.isEmpty == true) return 'Campo requerido';
-                          if (double.tryParse(v!) == null)
+                          final cleanValue = v!.replaceAll(',', '');
+                          if (double.tryParse(cleanValue) == null)
                             return 'Monto inválido';
                           return null;
                         },
@@ -1233,6 +1336,10 @@ class _CrearMetaDialogState extends State<_CrearMetaDialog> {
                     child: ElevatedButton(
                       onPressed: () {
                         if (_formKey.currentState!.validate()) {
+                          final cleanMonto = _montoController.text.replaceAll(
+                            ',',
+                            '',
+                          );
                           final meta = Meta(
                             id:
                                 widget.meta?.id ??
@@ -1240,7 +1347,7 @@ class _CrearMetaDialogState extends State<_CrearMetaDialog> {
                                     .toString(),
                             nombre: _nombreController.text,
                             descripcion: _descripcionController.text,
-                            montoObjetivo: double.parse(_montoController.text),
+                            montoObjetivo: double.parse(cleanMonto),
                             montoActual: widget.meta?.montoActual ?? 0,
                             fechaInicio:
                                 widget.meta?.fechaInicio ??

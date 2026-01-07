@@ -41,7 +41,7 @@ class _SuccessAnimationDialogState extends State<SuccessAnimationDialog>
     super.initState();
 
     _checkController = AnimationController(
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 300),
       vsync: this,
     );
     _checkAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -49,7 +49,7 @@ class _SuccessAnimationDialogState extends State<SuccessAnimationDialog>
     );
 
     _scaleController = AnimationController(
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 100),
       vsync: this,
     );
     _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -57,7 +57,7 @@ class _SuccessAnimationDialogState extends State<SuccessAnimationDialog>
     );
 
     _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 150),
+      duration: const Duration(milliseconds: 100),
       vsync: this,
     );
     _fadeAnimation = Tween<double>(
@@ -66,7 +66,7 @@ class _SuccessAnimationDialogState extends State<SuccessAnimationDialog>
     ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeIn));
 
     _rippleController = AnimationController(
-      duration: const Duration(milliseconds: 750),
+      duration: const Duration(milliseconds: 400),
       vsync: this,
     );
     _rippleAnimation = Tween<double>(begin: 0.0, end: 4.0).animate(
@@ -120,7 +120,7 @@ class _SuccessAnimationDialogState extends State<SuccessAnimationDialog>
     }
 
     await _checkController.forward();
-    await Future.delayed(const Duration(milliseconds: 900));
+    await Future.delayed(const Duration(milliseconds: 400));
     await _fadeController.forward();
     widget.onComplete();
   }

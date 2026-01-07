@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:notificaciones/models/Account.dart';
 import 'package:notificaciones/models/Categoria.dart';
@@ -6,10 +7,34 @@ import 'package:notificaciones/models/Meta.dart';
 import 'package:notificaciones/models/Reporte.dart';
 import 'package:notificaciones/models/Transaccion.dart';
 import 'package:notificaciones/models/api_response.dart';
+import 'package:notificaciones/services/firestore_service.dart';
 
 class ApiService {
   final String baseUrl =
-      "https://script.google.com/macros/s/AKfycbx0iMDZBgxKatERNGpHMmKuLJVEtrj4EBcyDcNez_rw2_u0Rh6C4Nx8VGWQuABxwG4P/exec?action";
+      "https://script.google.com/macros/s/AKfycbyl3CrDkwagnzKckvdPlQc_k_YFdice0ArfRwN5NA5huW_JtIVABLwiVWyKOvleIbz4/exec?action";
+
+  // Instancia de FirestoreService para operaciones en tiempo real
+  final FirestoreService _firestoreService = FirestoreService();
+
+  // ==================== CACHE ====================
+
+  /// Limpia el caché de Firebase y fuerza sincronización
+  Future<void> limpiarCacheFirebase() async {
+    try {
+      await _firestoreService.limpiarCache();
+    } catch (e) {
+      throw ApiException('Error al limpiar caché de Firebase: $e');
+    }
+  }
+
+  /// Obtiene cuentas directamente del servidor (sin caché)
+  Future<List<Account>> fetchCuentasDesdeServidor() async {
+    try {
+      return await _firestoreService.obtenerCuentasDesdeServidor();
+    } catch (e) {
+      throw ApiException('Error al obtener cuentas desde servidor: $e');
+    }
+  }
 
   /// Método auxiliar para manejar respuestas de la API
   T _handleApiResponse<T>(String responseBody, T Function(dynamic) dataParser) {
@@ -26,95 +51,66 @@ class ApiService {
     }
   }
 
-  /// Método auxiliar para respuestas que solo retornan mensaje (sin data)
-  ApiResponse<void> _handleApiResponseMessage(String responseBody) {
-    final json = jsonDecode(responseBody);
-    final apiResponse = ApiResponse<void>.fromJson(json, null);
-
-    if (!apiResponse.isSuccess) {
-      throw ApiException(apiResponse.msgE, errorCode: apiResponse.codE);
-    }
-
-    return apiResponse;
-  }
-
   // ==================== MÉTODOS GET ====================
 
-  /// Obtener los saldos desde Google Apps Script
+  /// Obtener los saldos - AHORA USA FIREBASE
   Future<Map<String, dynamic>> fetchSaldos() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl=getSaldos'));
+      // Obtener todas las cuentas activas desde Firebase
+      final cuentas = await _firestoreService.obtenerCuentas().first;
 
-      if (response.statusCode == 200) {
-        return _handleApiResponse<Map<String, dynamic>>(
-          response.body,
-          (data) => data as Map<String, dynamic>,
-        );
-      } else {
-        throw ApiException('Error de servidor: ${response.statusCode}');
+      Map<String, dynamic> saldos = {};
+      for (var cuenta in cuentas) {
+        saldos[cuenta.nombre] = cuenta.saldo;
       }
+
+      return saldos;
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Error al obtener los saldos: $e');
+      throw ApiException('Error al obtener saldos desde Firebase: $e');
     }
   }
 
-  /// Obtener gastos por categoría
+  /// Obtener gastos por categoría - AHORA USA FIREBASE
   Future<Map<String, double>> fetchGastosPorCategoria() async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl=getGastosPorCategoria'),
-      );
-
-      if (response.statusCode == 200) {
-        return _handleApiResponse<Map<String, double>>(response.body, (data) {
-          Map<String, dynamic> jsonData = data as Map<String, dynamic>;
-          return jsonData.map(
-            (key, value) => MapEntry(key, (value as num).toDouble()),
-          );
-        });
-      } else {
-        throw ApiException('Error de servidor: ${response.statusCode}');
-      }
+      return await _firestoreService.obtenerGastosPorCategoriaMesActual();
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Error al obtener gastos por categoría: $e');
+      throw ApiException(
+        'Error al obtener gastos por categoría desde Firebase: $e',
+      );
     }
   }
 
-  /// Obtener transacciones categorizadas
+  /// Obtener transacciones categorizadas - AHORA USA FIREBASE
   Future<Map<String, double>> fetchTransaccionesCategorizadas() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl=getTransacciones'));
+      // Obtener transacciones del mes actual
+      final transacciones =
+          await _firestoreService.obtenerTransaccionesRecientes().first;
 
-      if (response.statusCode == 200) {
-        return _handleApiResponse<Map<String, double>>(response.body, (data) {
-          List<dynamic> jsonData = data as List<dynamic>;
+      Map<String, double> transaccionesPorCategoria = {};
 
-          // Crear un mapa para almacenar la suma de los montos por categoría
-          Map<String, double> transaccionesPorCategoria = {};
+      for (var transaccion in transacciones) {
+        String categoria =
+            transaccion.categoria.isNotEmpty
+                ? transaccion.categoria
+                : 'Sin Categoría';
+        double monto = transaccion.monto;
 
-          for (var transaction in jsonData) {
-            String categoria = transaction['categoria'] ?? 'Sin Categoría';
-            double monto = (transaction['monto'] as num).toDouble();
-
-            // Sumar el monto a la categoría correspondiente
-            if (transaccionesPorCategoria.containsKey(categoria)) {
-              transaccionesPorCategoria[categoria] =
-                  transaccionesPorCategoria[categoria]! + monto;
-            } else {
-              transaccionesPorCategoria[categoria] = monto;
-            }
-          }
-
-          return transaccionesPorCategoria;
-        });
-      } else {
-        throw ApiException('Error de servidor: ${response.statusCode}');
+        // Sumar el monto a la categoría correspondiente
+        if (transaccionesPorCategoria.containsKey(categoria)) {
+          transaccionesPorCategoria[categoria] =
+              transaccionesPorCategoria[categoria]! + monto;
+        } else {
+          transaccionesPorCategoria[categoria] = monto;
+        }
       }
+
+      return transaccionesPorCategoria;
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Error al obtener transacciones categorizadas: $e');
+      throw ApiException(
+        'Error al obtener transacciones categorizadas desde Firebase: $e',
+      );
     }
   }
 
@@ -150,24 +146,14 @@ class ApiService {
     }
   }
 
-  /// Obtener transacciones
+  /// Obtener transacciones - AHORA USA FIREBASE
   Future<List<Transaction>> fetchTransactions() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl=getTransacciones'));
-
-      if (response.statusCode == 200) {
-        return _handleApiResponse<List<Transaction>>(response.body, (data) {
-          List<dynamic> jsonData = data as List<dynamic>;
-          return jsonData
-              .map((transaction) => Transaction.fromJson(transaction))
-              .toList();
-        });
-      } else {
-        throw ApiException('Error de servidor: ${response.statusCode}');
-      }
+      // Obtener del mes actual desde Firebase (mucho más rápido)
+      final stream = _firestoreService.obtenerTransaccionesRecientes();
+      return await stream.first;
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Error al obtener las transacciones: $e');
+      throw ApiException('Error al obtener transacciones desde Firebase: $e');
     }
   }
 
@@ -192,375 +178,243 @@ class ApiService {
     }
   }
 
-  /// Obtener cuentas
+  /// Obtener cuentas - AHORA USA FIREBASE
   Future<List<Account>> fetchAccounts() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl=getCuentas'));
-
-      if (response.statusCode == 200) {
-        return _handleApiResponse<List<Account>>(response.body, (data) {
-          List<dynamic> jsonData = data as List<dynamic>;
-          return jsonData.map((account) => Account.fromJson(account)).toList();
-        });
-      } else {
-        throw ApiException('Error de servidor: ${response.statusCode}');
-      }
+      // Obtener desde Firebase (tiempo real)
+      final stream = _firestoreService.obtenerCuentas();
+      return await stream.first;
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Error al obtener las cuentas: $e');
+      throw ApiException('Error al obtener cuentas desde Firebase: $e');
     }
   }
 
-  /// Obtener nuevas cuentas
-  Future<List<Account>> fetchCuentas() async {
+  /// Obtener nuevas cuentas - AHORA USA FIREBASE (no necesita caché, Firebase es rápido)
+  Future<List<Account>> fetchCuentas({bool forceRefresh = false}) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl=getNuevasCuentas'));
-
-      if (response.statusCode == 200) {
-        return _handleApiResponse<List<Account>>(response.body, (data) {
-          List<dynamic> jsonData = data as List<dynamic>;
-          return jsonData.map((account) => Account.fromJson(account)).toList();
-        });
-      } else {
-        throw ApiException('Error de servidor: ${response.statusCode}');
-      }
+      // Firebase es tan rápido que no necesitamos caché local
+      final stream = _firestoreService.obtenerCuentas();
+      return await stream.first;
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Error al cargar las cuentas: $e');
+      throw ApiException('Error al cargar cuentas desde Firebase: $e');
     }
   }
 
   // ==================== MÉTODOS POST ====================
 
-  /// Registrar transacción
-  Future<ApiResponse<void>> registerTransaction(
-    Map<String, dynamic> transactionData,
-  ) async {
+  /// Obtener todas las metas - AHORA USA FIREBASE (no necesita caché)
+  Future<List<Meta>> getMetas({bool forceRefresh = false}) async {
     try {
-      var data = json.encode(transactionData);
-      final response = await http.post(
-        Uri.parse('$baseUrl=addTransacciones'),
-        headers: {'Content-Type': 'application/json'},
-        body: data,
-      );
-
-      // Manejar redirecciones 302
-      if (response.statusCode == 302) {
-        var redirectUrl = response.headers['location'];
-        if (redirectUrl != null) {
-          final redirectResponse = await http.get(Uri.parse(redirectUrl));
-          if (redirectResponse.statusCode == 200) {
-            return _handleApiResponseMessage(redirectResponse.body);
-          } else {
-            throw ApiException(
-              'Error en redirección: ${redirectResponse.statusCode}',
-            );
-          }
-        } else {
-          throw ApiException('Redirección sin URL');
-        }
-      } else if (response.statusCode == 200) {
-        return _handleApiResponseMessage(response.body);
-      } else {
-        throw ApiException('Error de servidor: ${response.statusCode}');
-      }
+      // Firebase es rápido, no necesitamos caché local
+      final stream = _firestoreService.obtenerMetas();
+      return await stream.first;
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Error al guardar la transacción: $e');
+      throw ApiException('Error al obtener metas desde Firebase: $e');
     }
   }
 
-  /// Eliminar transacción por ID
-  Future<ApiResponse<void>> eliminarFilaPorIdTransaccion(
-    String idTransaccion,
-  ) async {
+  /// Obtener todos los datos del dashboard - AHORA USA FIREBASE
+  Future<Map<String, dynamic>> getDashboardData({
+    bool forceRefresh = false,
+  }) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl=deleteTransaccion'),
-        body: {'idTransaccion': idTransaccion},
-      );
+      // Obtener datos del mes actual desde Firebase
+      final gastosPorCategoria =
+          await _firestoreService.obtenerGastosPorCategoriaMesActual();
+      final ingresosMes = await _firestoreService.obtenerIngresosMesActual();
+      final cuentasStream = _firestoreService.obtenerCuentas();
+      final cuentas = await cuentasStream.first;
 
-      // Manejar redirecciones 302
-      if (response.statusCode == 302) {
-        var redirectUrl = response.headers['location'];
-        if (redirectUrl != null) {
-          final redirectResponse = await http.get(Uri.parse(redirectUrl));
-          if (redirectResponse.statusCode == 200) {
-            return _handleApiResponseMessage(redirectResponse.body);
-          } else {
-            throw ApiException(
-              'Error en redirección: ${redirectResponse.statusCode}',
-            );
-          }
-        } else {
-          throw ApiException('Redirección sin URL');
-        }
-      } else if (response.statusCode == 200) {
-        return _handleApiResponseMessage(response.body);
-      } else {
-        throw ApiException('Error de servidor: ${response.statusCode}');
-      }
+      // Calcular totales
+      final totalGastos = gastosPorCategoria.values.fold(
+        0.0,
+        (sum, monto) => sum + monto,
+      );
+      final saldoTotal = cuentas.fold(0.0, (sum, cuenta) => sum + cuenta.saldo);
+
+      return {
+        'gastosPorCategoria': gastosPorCategoria,
+        'totalGastos': totalGastos,
+        'totalIngresos': ingresosMes,
+        'saldoTotal': saldoTotal,
+        'cuentas': cuentas.map((c) => c.toJson()).toList(),
+      };
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Error al eliminar la transacción: $e');
+      throw ApiException(
+        'Error al cargar datos del dashboard desde Firebase: $e',
+      );
     }
   }
 
-  /// Actualizar saldo de cuenta
-  Future<ApiResponse<void>> updateAccountBalance({
-    required int idCuenta,
+  /// Registrar transacción - AHORA USA FIREBASE DIRECTAMENTE
+  /// Nota: Este método ahora espera un objeto Transaction, no un Map
+  Future<String> registerTransaction(
+    Transaction transaccion, {
+    Account? cuenta,
+    Account? cuentaOrigen,
+    Account? cuentaDestino,
+  }) async {
+    try {
+      // Guardar directamente en Firebase
+      final transaccionId = await _firestoreService.registrarTransaccion(
+        transaccion: transaccion,
+        cuenta: cuenta,
+        cuentaOrigen: cuentaOrigen,
+        cuentaDestino: cuentaDestino,
+      );
+
+      return transaccionId;
+    } catch (e) {
+      throw ApiException('Error al registrar transacción en Firebase: $e');
+    }
+  }
+
+  /// Enviar transacción a Google Sheets (para sincronización)
+  Future<void> enviarTransaccionASheets(Transaction transaccion) async {
+    try {
+      // Usar cargarTransacciones que acepta JSON en el body
+      final url =
+          'https://script.google.com/macros/s/AKfycbyl3CrDkwagnzKckvdPlQc_k_YFdice0ArfRwN5NA5huW_JtIVABLwiVWyKOvleIbz4/exec';
+
+      // Formato que espera cargarTransacciones (JSON en postData.contents)
+      final datos = {
+        'idTransaccion': transaccion.idTransaccion,
+        'tipoTransaccion': transaccion.tipoTransaccion,
+        'monto': transaccion.monto,
+        'descripcion': transaccion.descripcion,
+        'fecha': transaccion.fecha,
+        'categoria': transaccion.categoria,
+        'cuenta': transaccion.cuenta,
+        'cuentaOrigen': transaccion.cuentaOrigen,
+        'cuentaDestino': transaccion.cuentaDestino,
+      };
+
+      print('📤 Enviando a Sheets: $url?action=addTransaccion');
+      print('📦 Datos: ${jsonEncode(datos)}');
+
+      // Usar HttpClient para seguir redirects automáticamente
+      final uri = Uri.parse('$url?action=addTransaccion');
+      final request = await HttpClient().postUrl(uri);
+      request.headers.set('Content-Type', 'application/json');
+      request.write(jsonEncode(datos));
+
+      final response = await request.close();
+      final responseBody = await response.transform(utf8.decoder).join();
+
+      print('📥 Response status: ${response.statusCode}');
+      print('📥 Response body: $responseBody');
+
+      if (response.statusCode != 200) {
+        throw ApiException('Error HTTP ${response.statusCode}: $responseBody');
+      }
+
+      final json = jsonDecode(responseBody);
+      // El backend devuelve codE: 0 para éxito
+      if (json['codE'] != 0) {
+        throw ApiException(
+          json['msgE'] ?? 'Error desconocido al enviar a Sheets',
+        );
+      }
+
+      print('✅ Transacción enviada exitosamente a Sheets');
+    } catch (e) {
+      print('❌ Error al enviar transacción a Sheets: $e');
+      throw ApiException('Error al enviar transacción a Sheets: $e');
+    }
+  }
+
+  /// Eliminar transacción por ID - AHORA USA FIREBASE
+  Future<void> eliminarFilaPorIdTransaccion(String transaccionId) async {
+    try {
+      await _firestoreService.eliminarTransaccion(transaccionId);
+    } catch (e) {
+      throw ApiException('Error al eliminar transacción en Firebase: $e');
+    }
+  }
+
+  /// Actualizar saldo de cuenta - AHORA USA FIREBASE
+  Future<void> updateAccountBalance({
+    required String cuentaId,
     required double nuevoSaldo,
   }) async {
     try {
-      print("IdCuenta: $idCuenta, NuevoSaldo: $nuevoSaldo"); // Debug
-      final response = await http.post(
-        Uri.parse('$baseUrl=updateAccountBalance'),
-        body: {
-          'idCuenta': idCuenta.toString(),
-          'nuevoSaldo': nuevoSaldo.toString(),
-        },
-      );
-
-      // Manejar redirecciones 302
-      if (response.statusCode == 302) {
-        var redirectUrl = response.headers['location'];
-        if (redirectUrl != null) {
-          final redirectResponse = await http.get(Uri.parse(redirectUrl));
-          if (redirectResponse.statusCode == 200) {
-            return _handleApiResponseMessage(redirectResponse.body);
-          } else {
-            throw ApiException(
-              'Error en redirección: ${redirectResponse.statusCode}',
-            );
-          }
-        } else {
-          throw ApiException('Redirección sin URL');
-        }
-      } else if (response.statusCode == 200) {
-        return _handleApiResponseMessage(response.body);
-      } else {
-        throw ApiException('Error de servidor: ${response.statusCode}');
-      }
+      await _firestoreService.actualizarSaldoCuenta(cuentaId, nuevoSaldo);
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Error al actualizar el saldo: $e');
+      throw ApiException('Error al actualizar saldo en Firebase: $e');
     }
   }
 
-  /// Crear una nueva cuenta
-  Future<Map<String, dynamic>> crearCuenta({
+  /// Crear una nueva cuenta - AHORA USA FIREBASE
+  Future<String> crearCuenta({
     required String nombre,
     String imagen = '',
     String beneficiario = '',
+    String? numeroTarjeta,
+    String tipo = 'efectivo',
     double saldoInicial = 0,
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl=crearCuenta'),
-        body: {
-          'nombre': nombre,
-          'imagen': imagen,
-          'beneficiario': beneficiario,
-          'saldo': saldoInicial.toString(),
-        },
+      final nuevaCuenta = Account(
+        id: '', // Firebase genera el ID
+        nombre: nombre,
+        saldo: saldoInicial,
+        imagen: imagen,
+        beneficiario: beneficiario,
+        numeroTarjeta: numeroTarjeta,
+        tipo: tipo,
+        activa: true,
       );
 
-      if (response.statusCode == 302) {
-        var redirectUrl = response.headers['location'];
-        if (redirectUrl != null) {
-          final redirectResponse = await http.get(Uri.parse(redirectUrl));
-          if (redirectResponse.statusCode == 200) {
-            return _handleApiResponse<Map<String, dynamic>>(
-              redirectResponse.body,
-              (data) => data as Map<String, dynamic>,
-            );
-          } else {
-            throw ApiException(
-              'Error en redirección: ${redirectResponse.statusCode}',
-            );
-          }
-        } else {
-          throw ApiException('Redirección sin URL');
-        }
-      } else if (response.statusCode == 200) {
-        return _handleApiResponse<Map<String, dynamic>>(
-          response.body,
-          (data) => data as Map<String, dynamic>,
-        );
-      } else {
-        throw ApiException('Error de servidor: ${response.statusCode}');
-      }
+      return await _firestoreService.crearCuenta(nuevaCuenta);
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Error al crear la cuenta: $e');
+      throw ApiException('Error al crear cuenta en Firebase: $e');
     }
   }
 
-  /// Eliminar cuenta
-  Future<ApiResponse<void>> eliminarCuenta(String numeroCuenta) async {
+  /// Eliminar cuenta - AHORA USA FIREBASE
+  Future<void> eliminarCuenta(String cuentaId) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl=eliminarCuenta'),
-        body: {'numeroCuenta': numeroCuenta},
-      );
-
-      if (response.statusCode == 302) {
-        var redirectUrl = response.headers['location'];
-        if (redirectUrl != null) {
-          final redirectResponse = await http.get(Uri.parse(redirectUrl));
-          if (redirectResponse.statusCode == 200) {
-            return _handleApiResponseMessage(redirectResponse.body);
-          } else {
-            throw ApiException(
-              'Error en redirección: ${redirectResponse.statusCode}',
-            );
-          }
-        } else {
-          throw ApiException('Redirección sin URL');
-        }
-      } else if (response.statusCode == 200) {
-        return _handleApiResponseMessage(response.body);
-      } else {
-        throw ApiException('Error de servidor: ${response.statusCode}');
-      }
+      await _firestoreService.eliminarCuenta(cuentaId);
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Error al eliminar la cuenta: $e');
+      throw ApiException('Error al eliminar cuenta en Firebase: $e');
     }
   }
 
   // ==================== METAS DE AHORRO ====================
 
-  /// Obtener todas las metas
-  Future<List<Meta>> getMetas() async {
+  /// Guardar o actualizar meta - AHORA USA FIREBASE
+  Future<String> saveMeta(Meta meta) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl=getMetas'));
-
-      if (response.statusCode == 200) {
-        return _handleApiResponse<List<Meta>>(response.body, (data) {
-          List<dynamic> jsonData = data as List<dynamic>;
-          return jsonData.map((json) => Meta.fromJson(json)).toList();
-        });
+      if (meta.id.isEmpty) {
+        // Crear nueva meta
+        return await _firestoreService.crearMeta(meta, null);
       } else {
-        throw ApiException('Error de servidor: ${response.statusCode}');
+        // Actualizar meta existente
+        await _firestoreService.actualizarMeta(meta);
+        return meta.id;
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Error al obtener las metas: $e');
+      throw ApiException('Error al guardar meta en Firebase: $e');
     }
   }
 
-  /// Guardar o actualizar meta
-  Future<ApiResponse<void>> saveMeta(Meta meta) async {
+  /// Eliminar meta - AHORA USA FIREBASE
+  Future<void> deleteMeta(String metaId) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl=saveMeta'),
-        body: {
-          'id': meta.id,
-          'nombre': meta.nombre,
-          'descripcion': meta.descripcion,
-          'montoObjetivo': meta.montoObjetivo.toString(),
-          'montoActual': meta.montoActual.toString(),
-          'fechaInicio': meta.fechaInicio,
-          'fechaObjetivo': meta.fechaObjetivo,
-          'icono': meta.icono,
-          'color': meta.color,
-          'completada': meta.completada.toString(),
-          'numeroCuenta': meta.numeroCuenta ?? '',
-        },
-      );
-
-      if (response.statusCode == 302) {
-        var redirectUrl = response.headers['location'];
-        if (redirectUrl != null) {
-          final redirectResponse = await http.get(Uri.parse(redirectUrl));
-          if (redirectResponse.statusCode == 200) {
-            return _handleApiResponseMessage(redirectResponse.body);
-          } else {
-            throw ApiException(
-              'Error en redirección: ${redirectResponse.statusCode}',
-            );
-          }
-        } else {
-          throw ApiException('Redirección sin URL');
-        }
-      } else if (response.statusCode == 200) {
-        return _handleApiResponseMessage(response.body);
-      } else {
-        throw ApiException('Error de servidor: ${response.statusCode}');
-      }
+      await _firestoreService.eliminarMeta(metaId);
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Error al guardar la meta: $e');
+      throw ApiException('Error al eliminar meta en Firebase: $e');
     }
   }
 
-  /// Eliminar meta
-  Future<ApiResponse<void>> deleteMeta(String id) async {
+  /// Actualizar progreso de meta - AHORA USA FIREBASE
+  Future<void> updateMetaProgress(String metaId, double montoActual) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl=deleteMeta'),
-        body: {'id': id},
-      );
-
-      if (response.statusCode == 302) {
-        var redirectUrl = response.headers['location'];
-        if (redirectUrl != null) {
-          final redirectResponse = await http.get(Uri.parse(redirectUrl));
-          if (redirectResponse.statusCode == 200) {
-            return _handleApiResponseMessage(redirectResponse.body);
-          } else {
-            throw ApiException(
-              'Error en redirección: ${redirectResponse.statusCode}',
-            );
-          }
-        } else {
-          throw ApiException('Redirección sin URL');
-        }
-      } else if (response.statusCode == 200) {
-        return _handleApiResponseMessage(response.body);
-      } else {
-        throw ApiException('Error de servidor: ${response.statusCode}');
-      }
+      await _firestoreService.actualizarAvanceMeta(metaId, montoActual);
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Error al eliminar la meta: $e');
-    }
-  }
-
-  /// Actualizar progreso de meta
-  Future<ApiResponse<void>> updateMetaProgress(
-    String id,
-    double montoActual,
-  ) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl=updateMetaProgress'),
-        body: {'id': id, 'montoActual': montoActual.toString()},
+      throw ApiException(
+        'Error al actualizar progreso de meta en Firebase: $e',
       );
-
-      if (response.statusCode == 302) {
-        var redirectUrl = response.headers['location'];
-        if (redirectUrl != null) {
-          final redirectResponse = await http.get(Uri.parse(redirectUrl));
-          if (redirectResponse.statusCode == 200) {
-            return _handleApiResponseMessage(redirectResponse.body);
-          } else {
-            throw ApiException(
-              'Error en redirección: ${redirectResponse.statusCode}',
-            );
-          }
-        } else {
-          throw ApiException('Redirección sin URL');
-        }
-      } else if (response.statusCode == 200) {
-        return _handleApiResponseMessage(response.body);
-      } else {
-        throw ApiException('Error de servidor: ${response.statusCode}');
-      }
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Error al actualizar el progreso: $e');
     }
   }
 }

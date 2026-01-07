@@ -139,6 +139,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
           SnackBar(
             content: Text('Notificación programada correctamente'),
             backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.fixed,
           ),
         );
       }
@@ -149,6 +150,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
           SnackBar(
             content: Text('Error al programar notificación'),
             backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.fixed,
           ),
         );
       }
@@ -202,6 +204,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
           SnackBar(
             content: Text('Notificación eliminada'),
             backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.fixed,
           ),
         );
       }
@@ -561,6 +564,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                             SnackBar(
                               content: Text('Notificación enviada'),
                               duration: Duration(seconds: 1),
+                              behavior: SnackBarBehavior.fixed,
                             ),
                           );
                         }

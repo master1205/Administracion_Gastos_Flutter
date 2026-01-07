@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -15,9 +16,11 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import 'dart:convert';
+import 'dart:async';
 import 'utils/animation_utils.dart';
 import 'componentes/empty_states.dart';
 import 'metas_screen.dart';
+import 'services/firestore_service.dart';
 
 class NewDashboardScreen extends StatefulWidget {
   final void Function(int)? onTabChange;
@@ -52,7 +55,15 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
   List<Transaction> _transactions = [];
   List<Meta> _metas = [];
   bool _isLoading = false;
+  bool _isManualRefresh = false;
   bool _metasExpanded = false;
+  bool _hasInitialData = false;
+
+  // Firebase streams
+  final FirestoreService _firestoreService = FirestoreService();
+  StreamSubscription<List<Account>>? _cuentasSubscription;
+  StreamSubscription<List<Transaction>>? _transaccionesSubscription;
+  StreamSubscription<List<Meta>>? _metasSubscription;
 
   // Tutorial
   late TutorialCoachMark _tutorialCoachMark;
@@ -66,18 +77,29 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reactivar streams cuando el widget vuelve a estar activo
+    if (mounted && _hasInitialData) {
+      _setupStreams();
+    }
+  }
+
+  @override
   void dispose() {
+    _cuentasSubscription?.cancel();
+    _transaccionesSubscription?.cancel();
+    _metasSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      setState(() => _isLoading = true);
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) setState(() => _isLoading = false);
-      });
+    debugPrint('📱 Lifecycle cambió a: $state');
+    if (state == AppLifecycleState.resumed && mounted) {
+      debugPrint('🔄 App resumed - reactivando streams');
+      _setupStreams();
     }
   }
 
@@ -85,15 +107,136 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
   Future<void> _initializeData() async {
     setState(() => _isLoading = true);
     try {
-      await Future.wait([
-        _fetchAccounts(),
-        _fetchSaldos(),
-        _fetchTransactions(),
-      ]);
-      await _fetchMetas(); // Ejecutar después para sincronizar con cuentas
+      // Suscribirse a streams en tiempo real
+      _setupStreams();
       await _maybeShowDashboardTutorial();
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _setupStreams() {
+    debugPrint('🔄 Configurando streams de Firebase...');
+    final startTime = DateTime.now();
+    final shouldShowProgress = _isManualRefresh;
+
+    // Stream de cuentas
+    _cuentasSubscription?.cancel();
+    _cuentasSubscription = _firestoreService.obtenerCuentas().listen((
+      cuentas,
+    ) async {
+      debugPrint('🔄 Stream de cuentas recibió: ${cuentas.length} cuentas');
+      if (mounted) {
+        setState(() {
+          _accounts = cuentas;
+          _hasInitialData = true;
+        });
+        _calculateBalanceData();
+
+        // Esperar mínimo 800ms para mostrar animación (solo en refresh manual)
+        if (shouldShowProgress) {
+          final elapsed = DateTime.now().difference(startTime).inMilliseconds;
+          if (elapsed < 800) {
+            await Future.delayed(Duration(milliseconds: 800 - elapsed));
+          }
+          if (mounted && _isManualRefresh) {
+            setState(() => _isManualRefresh = false);
+          }
+        }
+      }
+    });
+
+    // Stream de transacciones
+    _transaccionesSubscription?.cancel();
+    _transaccionesSubscription = _firestoreService
+        .obtenerTransaccionesRecientes()
+        .listen((transacciones) async {
+          debugPrint(
+            '🔄 Stream de transacciones recibió: ${transacciones.length} transacciones',
+          );
+          if (mounted) {
+            setState(() {
+              _transactions = transacciones;
+              _hasInitialData = true;
+            });
+            _calculateBalanceData();
+
+            // Esperar mínimo 800ms para mostrar animación (solo en refresh manual)
+            if (shouldShowProgress) {
+              final elapsed =
+                  DateTime.now().difference(startTime).inMilliseconds;
+              if (elapsed < 800) {
+                await Future.delayed(Duration(milliseconds: 800 - elapsed));
+              }
+              if (mounted && _isManualRefresh) {
+                setState(() => _isManualRefresh = false);
+              }
+            }
+          }
+        });
+
+    // Stream de metas
+    _metasSubscription?.cancel();
+    _metasSubscription = _firestoreService.obtenerMetas().listen((metas) {
+      debugPrint('🔄 Stream de metas recibió: ${metas.length} metas');
+      if (mounted) {
+        setState(() => _metas = metas);
+      }
+    });
+  }
+
+  void _calculateBalanceData() {
+    // Solo calcular si ya tenemos datos iniciales Y hay cuentas o transacciones
+    if (!_hasInitialData) {
+      debugPrint('❌ No hay datos iniciales aún');
+      return;
+    }
+
+    debugPrint(
+      '✅ Calculando balances: ${_accounts.length} cuentas, ${_transactions.length} transacciones',
+    );
+
+    double totalSaldo = _accounts.fold(
+      0.0,
+      (sum, cuenta) => sum + cuenta.saldo,
+    );
+
+    // Calcular ingresos y gastos del mes actual
+    final now = DateTime.now();
+    final mesActual = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+
+    double ingresos = 0.0;
+    double gastos = 0.0;
+
+    for (var transaccion in _transactions) {
+      final fecha =
+          transaccion.fechaTimestamp ?? DateTime.parse(transaccion.fecha);
+      final mesTrans =
+          '${fecha.year}-${fecha.month.toString().padLeft(2, '0')}';
+
+      if (mesTrans == mesActual) {
+        if (transaccion.tipoTransaccion == 'Ingresos' ||
+            transaccion.tipoTransaccion == 'Reembolsos') {
+          ingresos += transaccion.monto.abs();
+        } else if (transaccion.tipoTransaccion == 'Gastos' ||
+            transaccion.tipoTransaccion == 'Pagos') {
+          gastos += transaccion.monto.abs();
+        }
+      }
+    }
+
+    debugPrint(
+      '📊 Balance calculado: \$${totalSaldo}, Ingresos: \$${ingresos}, Gastos: \$${gastos}',
+    );
+
+    if (mounted) {
+      setState(() {
+        _balanceData = {
+          'saldoCuentas': totalSaldo,
+          'ingresos': ingresos,
+          'gastos': gastos,
+        };
+      });
     }
   }
 
@@ -466,151 +609,10 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
     );
   }
 
-  // Data Fetching
-  Future<void> _fetchAccounts() async {
-    try {
-      final fetchedAccounts =
-          await Provider.of<DataProvider>(
-            context,
-            listen: false,
-          ).apiService.fetchCuentas();
-      if (mounted) setState(() => _accounts = fetchedAccounts);
-    } catch (e) {
-      debugPrint('Error al cargar cuentas: $e');
-    }
-  }
-
-  Future<void> _fetchSaldos() async {
-    try {
-      final fetchedSaldos =
-          await Provider.of<DataProvider>(
-            context,
-            listen: false,
-          ).apiService.fetchSaldos();
-      if (mounted) setState(() => _balanceData = fetchedSaldos);
-    } catch (e) {
-      debugPrint('Error al cargar saldos: $e');
-      if (mounted) {
-        setState(
-          () =>
-              _balanceData = {
-                'saldoCuentas': 0.0,
-                'ingresos': 0.0,
-                'gastos': 0.0,
-              },
-        );
-      }
-    }
-  }
-
-  Future<void> _fetchTransactions() async {
-    try {
-      final fetchedTransactions =
-          await Provider.of<DataProvider>(
-            context,
-            listen: false,
-          ).apiService.fetchTransactions();
-      if (mounted) setState(() => _transactions = fetchedTransactions);
-    } catch (e) {
-      debugPrint('Error al cargar transacciones: $e');
-    }
-  }
-
-  Future<void> _fetchMetas() async {
-    try {
-      // Recargar desde el servidor
-      final apiService = ApiService();
-      final metasServidor = await apiService.getMetas();
-
-      // Guardar en SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-        'metas_ahorro',
-        json.encode(metasServidor.map((m) => m.toJson()).toList()),
-      );
-
-      if (mounted) {
-        setState(() {
-          _metas = metasServidor;
-        });
-        // Sincronizar progreso con cuentas (por si acaso)
-        await _syncMetasWithAccounts();
-      }
-    } catch (e) {
-      debugPrint('Error al cargar metas: $e');
-      // Si falla, intentar cargar desde caché
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final String? metasJson = prefs.getString('metas_ahorro');
-
-        if (metasJson != null) {
-          final List<dynamic> decoded = json.decode(metasJson);
-          if (mounted) {
-            setState(() {
-              _metas = decoded.map((json) => Meta.fromJson(json)).toList();
-            });
-            await _syncMetasWithAccounts();
-          }
-        }
-      } catch (e2) {
-        debugPrint('Error al cargar metas desde caché: $e2');
-      }
-    }
-  }
-
-  Future<void> _syncMetasWithAccounts() async {
-    try {
-      bool metasUpdated = false;
-
-      for (int i = 0; i < _metas.length; i++) {
-        final meta = _metas[i];
-
-        // Si la meta tiene cuenta asociada
-        if (meta.numeroCuenta != null && meta.numeroCuenta!.isNotEmpty) {
-          // Buscar la cuenta correspondiente
-          final cuenta = _accounts.firstWhere(
-            (acc) => acc.numeroTarjeta == meta.numeroCuenta,
-            orElse: () => Account(nombre: ''),
-          );
-
-          // Si encontramos la cuenta y el saldo es diferente
-          if (cuenta.numeroTarjeta != null &&
-              cuenta.numeroTarjeta!.isNotEmpty &&
-              cuenta.saldo != meta.montoActual) {
-            final nuevoProgreso = (cuenta.saldo! / meta.montoObjetivo * 100)
-                .clamp(0.0, 100.0);
-
-            _metas[i] = meta.copyWith(
-              montoActual: cuenta.saldo,
-              completada: nuevoProgreso >= 100.0,
-            );
-            metasUpdated = true;
-          }
-        }
-      }
-
-      // Guardar metas actualizadas en SharedPreferences
-      if (metasUpdated) {
-        final prefs = await SharedPreferences.getInstance();
-        final metasJson = json.encode(
-          _metas.map((meta) => meta.toJson()).toList(),
-        );
-        await prefs.setString('metas_ahorro', metasJson);
-
-        if (mounted) {
-          setState(() {}); // Refrescar UI con nuevos valores
-        }
-      }
-    } catch (e) {
-      debugPrint('Error al sincronizar metas con cuentas: $e');
-    }
-  }
-
   Future<void> refreshData() async {
-    setState(() => _isLoading = true);
-    await Future.wait([_fetchAccounts(), _fetchSaldos(), _fetchTransactions()]);
-    await _fetchMetas(); // Ejecutar después para que las cuentas ya estén cargadas
-    if (mounted) setState(() => _isLoading = false);
+    debugPrint('🔄 RefreshData llamado (manual) - reactivando streams');
+    setState(() => _isManualRefresh = true);
+    _setupStreams();
   }
 
   // UI Builders - Balance Card
@@ -802,7 +804,6 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
             context,
             MaterialPageRoute(builder: (context) => const MetasScreen()),
           );
-          _fetchMetas(); // Recargar después de volver
         },
         child: Container(
           margin: EdgeInsets.symmetric(horizontal: 2.w),
@@ -883,7 +884,6 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
               context,
               MaterialPageRoute(builder: (context) => const MetasScreen()),
             );
-            _fetchMetas();
           },
           child: Container(
             margin: EdgeInsets.symmetric(horizontal: 2.w),
@@ -1047,7 +1047,6 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
           context,
           MaterialPageRoute(builder: (context) => const MetasScreen()),
         );
-        _fetchMetas();
       },
       child: Container(
         margin: EdgeInsets.symmetric(horizontal: 2.w),
@@ -1688,26 +1687,65 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                   ],
                 ),
               )
-              : RefreshIndicator(
-                onRefresh: refreshData,
-                color: const Color(0xFF667eea),
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.all(14.r), // ✅ REDUCIDO de 16
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildBalanceCard(),
-                      SizedBox(height: 18.h), // ✅ REDUCIDO de 20
-                      _buildMetasCard(),
-                      SizedBox(height: 18.h),
-                      _buildAccountsCarousel(),
-                      SizedBox(height: 18.h),
-                      _buildTransactionsList(),
-                      SizedBox(height: 14.h),
-                    ],
+              : Stack(
+                children: [
+                  RefreshIndicator(
+                    onRefresh: refreshData,
+                    color: const Color(0xFF667eea),
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: EdgeInsets.all(14.r),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildBalanceCard(),
+                          SizedBox(height: 18.h),
+                          _buildMetasCard(),
+                          SizedBox(height: 18.h),
+                          _buildAccountsCarousel(),
+                          SizedBox(height: 18.h),
+                          _buildTransactionsList(),
+                          SizedBox(height: 14.h),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                  // Indicador sutil de recarga (solo refresh manual)
+                  if (_isManualRefresh)
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        duration: const Duration(milliseconds: 300),
+                        builder: (context, value, child) {
+                          return Opacity(
+                            opacity: value,
+                            child: Container(
+                              height: 3.h,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color(0xFF667eea).withOpacity(0.0),
+                                    const Color(0xFF667eea),
+                                    const Color(0xFF764ba2),
+                                    const Color(0xFF764ba2).withOpacity(0.0),
+                                  ],
+                                ),
+                              ),
+                              child: LinearProgressIndicator(
+                                backgroundColor: Colors.transparent,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white.withOpacity(0.5),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                ],
               ),
     );
   }

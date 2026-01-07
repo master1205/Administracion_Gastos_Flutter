@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'theme_provider.dart';
+import 'services/sync_service.dart';
+import 'services/background_tasks.dart';
 
 class AjustesScreen extends StatefulWidget {
   const AjustesScreen({Key? key}) : super(key: key);
@@ -197,33 +199,13 @@ class _AjustesScreenState extends State<AjustesScreen> {
 
           // DATOS
           _buildSeccionTitulo(
-            'Datos y Sincronización',
-            Icons.cloud_outlined,
+            'Datos',
+            Icons.storage_outlined,
             themeManager,
           ),
           _buildCard(
             themeManager,
             children: [
-              _buildSwitchTile(
-                'Sincronización automática',
-                'Sincronizar con Google Sheets',
-                Icons.sync_outlined,
-                autoSync,
-                (value) {
-                  setState(() => autoSync = value);
-                  _guardarConfiguracion('auto_sync', value);
-                },
-                themeManager,
-              ),
-              Divider(height: 1.h),
-              _buildListTile(
-                'Sincronizar ahora',
-                'Última: Hace 5 minutos',
-                Icons.sync_outlined,
-                () => _sincronizarAhora(),
-                themeManager,
-              ),
-              Divider(height: 1.h),
               _buildListTile(
                 'Exportar datos',
                 'CSV, Excel, PDF',
@@ -556,8 +538,11 @@ class _AjustesScreenState extends State<AjustesScreen> {
     );
   }
 
-  void _sincronizarAhora() {
-    ScaffoldMessenger.of(context).showSnackBar(
+  Future<void> _sincronizarMesCompleto() async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    // Mostrar snackbar de progreso
+    messenger.showSnackBar(
       SnackBar(
         content: Row(
           children: [
@@ -570,11 +555,290 @@ class _AjustesScreenState extends State<AjustesScreen> {
               ),
             ),
             SizedBox(width: 12.w),
-            Text('Sincronizando...'),
+            Text('Sincronizando mes completo...'),
           ],
         ),
         backgroundColor: Colors.blue.shade600,
+        duration: Duration(seconds: 120), // Puede tardar más
       ),
+    );
+
+    try {
+      final syncService = SyncService();
+      final resultado = await syncService.sincronizarMesCompleto();
+
+      messenger.clearSnackBars();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(
+                resultado.success ? Icons.check_circle : Icons.error,
+                color: Colors.white,
+                size: 20.sp,
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Text(
+                  resultado.mensaje,
+                  style: TextStyle(fontSize: 13.sp),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor:
+              resultado.success ? Colors.green.shade600 : Colors.red.shade600,
+          duration: Duration(seconds: 4),
+        ),
+      );
+
+      // Si hay errores, mostrar diálogo con detalles
+      if (resultado.errores > 0 && resultado.mensajesError.isNotEmpty) {
+        _mostrarDialogoErroresSync(resultado.mensajesError);
+      }
+    } catch (e) {
+      messenger.clearSnackBars();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error, color: Colors.white, size: 20.sp),
+              SizedBox(width: 12.w),
+              Expanded(child: Text('Error: $e')),
+            ],
+          ),
+          backgroundColor: Colors.red.shade600,
+        ),
+      );
+    }
+  }
+
+  void _mostrarDialogoErroresSync(List<String> errores) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final themeManager = Provider.of<ThemeManager>(context, listen: false);
+        return AlertDialog(
+          backgroundColor:
+              themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.r),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange),
+              SizedBox(width: 8.w),
+              Text(
+                'Errores de Sincronización',
+                style: GoogleFonts.lato(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16.sp,
+                  color:
+                      themeManager.isDarkMode ? Colors.white : Colors.black87,
+                ),
+              ),
+            ],
+          ),
+          content: Container(
+            constraints: BoxConstraints(maxHeight: 300.h),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children:
+                    errores
+                        .map(
+                          (e) => Padding(
+                            padding: EdgeInsets.only(bottom: 8.h),
+                            child: Text(
+                              '• $e',
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                color:
+                                    themeManager.isDarkMode
+                                        ? Colors.white70
+                                        : Colors.black87,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cerrar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Métodos de prueba para sincronización automática
+  void _probarSyncMensual() async {
+    final themeManager = Provider.of<ThemeManager>(context, listen: false);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => AlertDialog(
+            backgroundColor:
+                themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16.r),
+            ),
+            title: Row(
+              children: [
+                Icon(Icons.science_outlined, color: Colors.blue),
+                SizedBox(width: 8.w),
+                Text(
+                  'Prueba de Sync Mensual',
+                  style: GoogleFonts.lato(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16.sp,
+                    color:
+                        themeManager.isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'La sincronización se ejecutará en 5 segundos en segundo plano.',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    color:
+                        themeManager.isDarkMode
+                            ? Colors.white70
+                            : Colors.black87,
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                Text(
+                  'Revisa los logs en la consola para ver el resultado.',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    fontStyle: FontStyle.italic,
+                    color:
+                        themeManager.isDarkMode
+                            ? Colors.white54
+                            : Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  await BackgroundTaskManager.ejecutarSyncMensualAhora();
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        '🧪 Tarea programada. Ejecutará en 5 segundos...',
+                      ),
+                      duration: Duration(seconds: 3),
+                      backgroundColor: Colors.blue,
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                child: Text('Ejecutar'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _probarCorteSemanal() async {
+    final themeManager = Provider.of<ThemeManager>(context, listen: false);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => AlertDialog(
+            backgroundColor:
+                themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16.r),
+            ),
+            title: Row(
+              children: [
+                Icon(Icons.science_outlined, color: Colors.orange),
+                SizedBox(width: 8.w),
+                Text(
+                  'Prueba de Corte Semanal',
+                  style: GoogleFonts.lato(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16.sp,
+                    color:
+                        themeManager.isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'El corte semanal se ejecutará en 5 segundos en segundo plano.',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    color:
+                        themeManager.isDarkMode
+                            ? Colors.white70
+                            : Colors.black87,
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                Text(
+                  'Agrupa transacciones de Supermercado de la última semana.',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    fontStyle: FontStyle.italic,
+                    color:
+                        themeManager.isDarkMode
+                            ? Colors.white54
+                            : Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  await BackgroundTaskManager.ejecutarCorteSemanalAhora();
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        '🧪 Tarea programada. Ejecutará en 5 segundos...',
+                      ),
+                      duration: Duration(seconds: 3),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                child: Text('Ejecutar'),
+              ),
+            ],
+          ),
     );
   }
 

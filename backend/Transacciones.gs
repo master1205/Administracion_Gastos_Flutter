@@ -221,19 +221,12 @@ const TransaccionManager = {
       if (tipoTransaccion === TIPOS_TRANSACCION.TRASPASOS) {
         SaldoManager.actualizarSaldo(sheet, cuentaOrigen, monto, TIPOS_TRANSACCION.GASTOS);
         SaldoManager.actualizarSaldo(sheet, cuentaDestino, monto, TIPOS_TRANSACCION.INGRESOS);
-        
-        // Sincronizar metas si existen (optimizado: una sola lectura de datos)
-        const dataCuentas = sheet.getDataRange().getValues();
-        this._syncMetasOptimizado(dataCuentas, cuentaOrigen);
-        this._syncMetasOptimizado(dataCuentas, cuentaDestino);
-        
       } else {
         SaldoManager.actualizarSaldo(sheet, cuenta, monto, tipoTransaccion);
-        
-        // Sincronizar meta si existe (optimizado)
-        const dataCuentas = sheet.getDataRange().getValues();
-        this._syncMetasOptimizado(dataCuentas, cuenta);
       }
+      
+      // Flush para ejecutar todas las escrituras de una vez
+      SpreadsheetApp.flush();
 
       // Generar ID y registrar
       const idTransaccion = FormatoUtil.generarId();
@@ -250,11 +243,13 @@ const TransaccionManager = {
         cuentaOrigen,
         cuentaDestino
       ]);
-
-      Logger.transaccion('TransaccionManager.crear', idTransaccion, {
-        tipo: tipoTransaccion,
-        monto: monto
-      });
+      
+      // Invalidar cachés relevantes (rápido, solo borra claves)
+      CachedSheetManager.invalidateCuentas();
+      CachedSheetManager.invalidateTransacciones();
+      
+      // NO sincronizar metas aquí - se hará en background o cuando se consulte
+      // SyncQueue se procesará solo cuando el usuario visite la pantalla de metas
 
       return { 
         codE: RESPONSE_CODE.OK, 
@@ -313,13 +308,13 @@ const TransaccionManager = {
           });
 
           // Sincronizar metas después de aplicar nuevos saldos (optimizado)
-          const dataCuentas = cuentasSheet.getDataRange().getValues();
-          if (tipoTransaccion === TIPOS_TRANSACCION.TRASPASOS) {
-            this._syncMetasOptimizado(dataCuentas, cuentaOrigen);
-            this._syncMetasOptimizado(dataCuentas, cuentaDestino);
-          } else {
-            this._syncMetasOptimizado(dataCuentas, cuenta);
-          }
+          SyncQueue.add(cuentaOrigen);
+          SyncQueue.add(cuentaDestino);
+          SyncQueue.process();
+          
+          // Invalidar cachés
+          CachedSheetManager.invalidateCuentas();
+          CachedSheetManager.invalidateTransacciones();
 
           // Actualizar fila
           sheet.getRange(i + 1, COLUMNAS_TRANSACCIONES.TIPO + 1, 1, 8).setValues([[
@@ -375,27 +370,34 @@ const TransaccionManager = {
           if (tipoTransaccion === TIPOS_TRANSACCION.GASTOS || 
               tipoTransaccion === TIPOS_TRANSACCION.PAGOS) {
             SaldoManager.actualizarSaldoPorNombre(cuentasData, cuenta, monto);
-            syncMetaPorNombreCuenta(cuenta);
+            SyncQueue.add(cuenta);
             
           } else if (tipoTransaccion === TIPOS_TRANSACCION.INGRESOS || 
                      tipoTransaccion === TIPOS_TRANSACCION.REEMBOLSOS) {
             SaldoManager.actualizarSaldoPorNombre(cuentasData, cuenta, -monto);
-            syncMetaPorNombreCuenta(cuenta);
+            SyncQueue.add(cuenta);
             
           } else if (tipoTransaccion === TIPOS_TRANSACCION.TRASPASOS) {
             SaldoManager.actualizarSaldoPorNombre(cuentasData, cuentaOrigen, monto);
             SaldoManager.actualizarSaldoPorNombre(cuentasData, cuentaDestino, -monto);
-            syncMetaPorNombreCuenta(cuentaOrigen);
-            syncMetaPorNombreCuenta(cuentaDestino);
+            SyncQueue.add(cuentaOrigen);
+            SyncQueue.add(cuentaDestino);
           }
 
           // Guardar cambios
           SheetManager.getNuevasCuentas().getRange(
             1, 1, cuentasData.length, cuentasData[0].length
           ).setValues(cuentasData);
+          
+          // Procesar sincronización
+          SyncQueue.process();
 
           // Eliminar fila
           sheet.deleteRow(i + 1);
+          
+          // Invalidar cachés
+          CachedSheetManager.invalidateCuentas();
+          CachedSheetManager.invalidateTransacciones();
           
           return { exito: true };
         }

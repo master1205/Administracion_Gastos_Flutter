@@ -14,8 +14,9 @@ function doGet(e) {
     'getSaldos': getSaldos,
     'listReportes': listReportes,
     'getGastosPorCategoria': getGastosPorCategoria,
-    'getNotificaciones': getNotificaciones, // ← NUEVA RUTA
-    'getMetas':getMetas
+    'getNotificaciones': getNotificaciones,
+    'getMetas': getMetas,
+    'getDashboardData': getDashboardData // ← NUEVO ENDPOINT UNIFICADO
   });
 }
 

@@ -8,11 +8,11 @@ import 'package:notificaciones/api_service.dart';
 import 'package:notificaciones/data_provider.dart';
 import 'package:notificaciones/models/Account.dart';
 import 'package:notificaciones/models/Categoria.dart';
+import 'package:notificaciones/models/Transaccion.dart' as models;
 import 'package:notificaciones/models/Transaccion.dart';
 import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'utils/animation_utils.dart';
-import 'componentes/success_animation.dart';
 
 class TrasaccionScreen extends StatefulWidget {
   final String transactionType;
@@ -358,6 +358,22 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
       if (selectedAccount == null) {
         setState(() => accountError = 'Por favor selecciona una cuenta');
         isValid = false;
+      } else {
+        // Validar saldo suficiente para gastos y pagos
+        if (widget.transactionType == 'Gastos' ||
+            widget.transactionType == 'Pagos') {
+          final monto =
+              double.tryParse(_amountController.text.replaceAll(',', '')) ??
+              0.0;
+          if (monto > selectedAccount!.saldo) {
+            setState(
+              () =>
+                  accountError =
+                      'Saldo insuficiente. Disponible: \$${selectedAccount!.saldo.toStringAsFixed(2)}',
+            );
+            isValid = false;
+          }
+        }
       }
     } else {
       if (selectedAccountFrom == null) {
@@ -365,6 +381,18 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
           () => accountFromError = 'Por favor selecciona la cuenta origen',
         );
         isValid = false;
+      } else {
+        // Validar saldo suficiente en cuenta origen para traspaso
+        final monto =
+            double.tryParse(_amountController.text.replaceAll(',', '')) ?? 0.0;
+        if (monto > selectedAccountFrom!.saldo) {
+          setState(
+            () =>
+                accountFromError =
+                    'Saldo insuficiente. Disponible: \$${selectedAccountFrom!.saldo.toStringAsFixed(2)}',
+          );
+          isValid = false;
+        }
       }
       if (selectedAccountTo == null) {
         setState(
@@ -389,6 +417,35 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
     if (_validateForm()) {
       setState(() => isRegistering = true);
 
+      // Mostrar feedback inmediato
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 16.sp,
+                height: 16.sp,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                ),
+              ),
+              SizedBox(width: 10.w),
+              Text(
+                'Registrando transacción...',
+                style: TextStyle(fontSize: 14.sp),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.blue.shade700,
+          behavior: SnackBarBehavior.fixed,
+          duration: const Duration(seconds: 10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.r),
+          ),
+        ),
+      );
+
       try {
         final amount = double.parse(_amountController.text.replaceAll(',', ''));
         final description = _descriptionController.text;
@@ -412,17 +469,44 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
           transactionData['cuenta'] = selectedAccount!.nombre;
         }
 
-        String mensaje = await ApiService()
-            .registerTransaction(transactionData)
-            .then((response) => response.msgE);
+        final transaccion = models.Transaction.fromJson(transactionData);
+        final transaccionId = await ApiService().registerTransaction(
+          transaccion,
+          cuenta:
+              widget.transactionType == 'Traspasos' ? null : selectedAccount,
+          cuentaOrigen:
+              widget.transactionType == 'Traspasos'
+                  ? selectedAccountFrom
+                  : null,
+          cuentaDestino:
+              widget.transactionType == 'Traspasos' ? selectedAccountTo : null,
+        );
+        String mensaje = 'Transacción registrada exitosamente';
 
         if (!mounted) return;
 
-        // Mostrar animación de éxito según el tipo de transacción
-        await showSuccessAnimation(
-          context,
-          message: mensaje,
-          type: getAnimationType(widget.transactionType),
+        // Cerrar el snackbar de loading
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+        // Mostrar mensaje de éxito rápido
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white, size: 20.sp),
+                SizedBox(width: 10.w),
+                Expanded(
+                  child: Text(mensaje, style: TextStyle(fontSize: 14.sp)),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.fixed,
+            duration: const Duration(milliseconds: 1500),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+          ),
         );
 
         _resetForm();
@@ -432,6 +516,10 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
         }
       } catch (e) {
         if (!mounted) return;
+
+        // Cerrar el snackbar de loading
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
         _showErrorSnackBar('Error al registrar la transacción: $e');
       } finally {
         if (mounted) setState(() => isRegistering = false);
@@ -1067,20 +1155,24 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
     );
   }
 
-  Widget _buildSubmitButton() {
+  Widget _buildSubmitButton({bool enabled = true}) {
     return BounceTapButton(
-      onTap: isRegistering ? null : _registerTransaction,
+      onTap: (isRegistering || !enabled) ? null : _registerTransaction,
       child: Container(
         width: double.infinity,
         height: 46.h,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [widget.color, widget.color.withOpacity(0.8)],
+            colors:
+                enabled
+                    ? [widget.color, widget.color.withOpacity(0.8)]
+                    : [Colors.grey.shade400, Colors.grey.shade400],
           ),
           borderRadius: BorderRadius.circular(12.r),
           boxShadow: [
             BoxShadow(
-              color: widget.color.withOpacity(0.4),
+              color: (enabled ? widget.color : Colors.grey.shade400)
+                  .withOpacity(0.4),
               blurRadius: 10.r,
               offset: Offset(0, 4.h),
             ),
@@ -1089,7 +1181,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: isRegistering ? null : _registerTransaction,
+            onTap: (isRegistering || !enabled) ? null : _registerTransaction,
             borderRadius: BorderRadius.circular(12.r),
             child: Center(
               child:
@@ -1135,6 +1227,13 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
   Widget build(BuildContext context) {
     final dataProvider = Provider.of<DataProvider>(context);
     final themeManager = Provider.of<ThemeManager>(context);
+
+    // Validar que hay suficientes cuentas
+    final int cuentasDisponibles = dataProvider.cuentas.length;
+    final bool puedeCrearTransaccion =
+        widget.transactionType == 'Traspasos'
+            ? cuentasDisponibles >= 2
+            : cuentasDisponibles >= 1;
 
     final filteredCategories =
         dataProvider.categorias.where((category) {
@@ -1190,6 +1289,58 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
+                                // Advertencia si no hay suficientes cuentas
+                                if (!puedeCrearTransaccion) ...[
+                                  Container(
+                                    padding: EdgeInsets.all(16.r),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.shade50,
+                                      border: Border.all(
+                                        color: Colors.orange.shade300,
+                                        width: 1.5,
+                                      ),
+                                      borderRadius: BorderRadius.circular(12.r),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.warning_amber_rounded,
+                                          color: Colors.orange.shade700,
+                                          size: 28.sp,
+                                        ),
+                                        SizedBox(width: 12.w),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                widget.transactionType ==
+                                                        'Traspasos'
+                                                    ? 'Se necesitan al menos 2 cuentas'
+                                                    : 'Se necesita al menos 1 cuenta',
+                                                style: GoogleFonts.lato(
+                                                  fontSize: 14.sp,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.orange.shade900,
+                                                ),
+                                              ),
+                                              SizedBox(height: 4.h),
+                                              Text(
+                                                'Crea cuentas desde el menú de Cuentas para poder registrar transacciones.',
+                                                style: GoogleFonts.openSans(
+                                                  fontSize: 12.sp,
+                                                  color: Colors.orange.shade800,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  SizedBox(height: 16.h),
+                                ],
                                 _buildAmountField(themeManager),
                                 if (amountError != null) ...[
                                   SizedBox(height: 6.h),
@@ -1409,7 +1560,9 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                 ],
 
                                 SizedBox(height: 20.h),
-                                _buildSubmitButton(),
+                                _buildSubmitButton(
+                                  enabled: puedeCrearTransaccion,
+                                ),
                                 SizedBox(height: 12.h),
                               ],
                             ),

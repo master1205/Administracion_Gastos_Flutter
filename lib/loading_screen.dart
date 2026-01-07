@@ -132,13 +132,39 @@ class _LoadingScreenState extends State<LoadingScreen>
 
       if (!mounted) return;
 
+      // Paso 0: Limpiar caché de Firebase para obtener datos frescos del servidor
+      setState(() {
+        _currentStep = 0;
+        _progress = 0.05;
+      });
+
+      final apiService = ApiService();
+      try {
+        await apiService.limpiarCacheFirebase();
+        print('✅ Caché de Firebase limpiado');
+      } catch (e) {
+        print('⚠️ No se pudo limpiar caché: $e (continuando de todos modos)');
+      }
+
+      if (!mounted) return;
+
       // Paso 1: Cargar datos principales
+      setState(() {
+        _currentStep = 1;
+        _progress = 0.2;
+      });
+
       final dataProvider = Provider.of<DataProvider>(context, listen: false);
       await dataProvider.loadData();
 
       if (!mounted) return;
 
       // Paso 2: Sincronizar metas de ahorro
+      setState(() {
+        _currentStep = 3;
+        _progress = 0.7;
+      });
+
       await _sincronizarMetas();
 
       if (!mounted) return;
@@ -150,7 +176,7 @@ class _LoadingScreenState extends State<LoadingScreen>
       });
 
       // Pequeña pausa para mostrar el 100%
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 100));
 
       if (!mounted) return;
 

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "253647380326",
+    "project_id": "administracion-gastos-f84ea",
+    "storage_bucket": "administracion-gastos-f84ea.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:253647380326:android:ee24cebf8501b9b7b372a7",
+        "android_client_info": {
+          "package_name": "com.example.notificaciones"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCkY6b6VctpDfu7gzhuxos2wrwA2vpj8xc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

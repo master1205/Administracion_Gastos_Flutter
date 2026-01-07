@@ -25,6 +25,7 @@ class ReportesScreenState extends State<ReportesScreen>
   // State
   late Future<List<Reporte>> _futureReportes;
   bool _isLoading = false;
+  bool _isManualRefresh = false;
   final Map<String, bool> _expandedYears = {};
 
   @override
@@ -64,12 +65,18 @@ class ReportesScreenState extends State<ReportesScreen>
   }
 
   Future<void> refreshData() async {
-    setState(() => _isLoading = true);
-    _futureReportes = ApiService().fetchReportes();
-    try {
-      await _futureReportes;
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+    setState(() => _isManualRefresh = true);
+
+    // Iniciar la carga
+    setState(() {
+      _futureReportes = ApiService().fetchReportes();
+    });
+
+    // Esperar mínimo 800ms para mostrar la barra de progreso
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    if (mounted) {
+      setState(() => _isManualRefresh = false);
     }
   }
 
@@ -419,7 +426,8 @@ class ReportesScreenState extends State<ReportesScreen>
 
     return Scaffold(
       backgroundColor: bgColor,
-      body:
+      body: Stack(
+        children: [
           _isLoading
               ? _buildLoadingIndicator(themeManager)
               : RefreshIndicator(
@@ -429,8 +437,13 @@ class ReportesScreenState extends State<ReportesScreen>
                 child: FutureBuilder<List<Reporte>>(
                   future: _futureReportes,
                   builder: (context, snapshot) {
+                    // Si está en waiting y es refresh manual, mostrar datos anteriores si existen
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return _buildLoadingIndicator(themeManager);
+                      if (_isManualRefresh && snapshot.hasData) {
+                        // Continuar mostrando los datos anteriores
+                      } else if (!_isManualRefresh) {
+                        return _buildLoadingIndicator(themeManager);
+                      }
                     }
 
                     if (snapshot.hasError) {
@@ -469,6 +482,43 @@ class ReportesScreenState extends State<ReportesScreen>
                   },
                 ),
               ),
+          // Indicador sutil de recarga (solo refresh manual)
+          if (_isManualRefresh)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 300),
+                builder: (context, value, child) {
+                  return Opacity(
+                    opacity: value,
+                    child: Container(
+                      height: 3.h,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFF667eea).withOpacity(0.0),
+                            const Color(0xFF667eea),
+                            const Color(0xFF764ba2),
+                            const Color(0xFF764ba2).withOpacity(0.0),
+                          ],
+                        ),
+                      ),
+                      child: LinearProgressIndicator(
+                        backgroundColor: Colors.transparent,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Colors.white.withOpacity(0.5),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

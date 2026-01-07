@@ -197,11 +197,10 @@ class OnboardingScreenState extends State<OnboardingScreen>
           ],
         ),
         backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
+        behavior: SnackBarBehavior.fixed,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.r),
         ),
-        margin: EdgeInsets.all(14.r),
       ),
     );
   }
@@ -218,11 +217,10 @@ class OnboardingScreenState extends State<OnboardingScreen>
           ],
         ),
         backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
+        behavior: SnackBarBehavior.fixed,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.r),
         ),
-        margin: EdgeInsets.all(14.r),
       ),
     );
   }

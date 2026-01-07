@@ -9,6 +9,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:notificaciones/api_service.dart';
 import 'package:notificaciones/dynamic_form_screen.dart';
 import 'package:notificaciones/models/Transaccion.dart';
+import 'package:notificaciones/services/firestore_service.dart';
 import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,8 +33,11 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
 
   // Services & Data
   final ApiService _apiService = ApiService();
-  Future<List<Transaction>>? _futureTransacciones;
+  final FirestoreService _firestoreService = FirestoreService();
+  StreamSubscription<List<Transaction>>? _transaccionesSubscription;
+  List<Transaction> _transacciones = [];
   bool _isLoading = true;
+  bool _isManualRefresh = false;
 
   // Formatters
   final NumberFormat _currencyFormat = NumberFormat.currency(
@@ -57,6 +61,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
 
   @override
   void dispose() {
+    _transaccionesSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -77,21 +82,53 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
   }
 
   Future<void> _loadData() async {
+    final startTime = DateTime.now();
+    final shouldShowProgress = _isManualRefresh;
+
     setState(() {
-      _isLoading = true;
-      _futureTransacciones = _apiService.fetchTransactions();
+      if (!_isManualRefresh) {
+        _isLoading = true;
+      }
     });
 
     try {
-      await _futureTransacciones!;
+      // Cancelar subscription anterior si existe
+      _transaccionesSubscription?.cancel();
+
+      // Escuchar cambios en tiempo real
+      _transaccionesSubscription = _firestoreService
+          .obtenerTransaccionesRecientes()
+          .listen((transacciones) {
+            if (mounted) {
+              setState(() {
+                _transacciones = transacciones;
+                _isLoading = false;
+              });
+            }
+          });
+
       await _maybeShowTutorial();
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+
+      // Esperar mínimo 800ms para mostrar animación (solo en refresh manual)
+      if (shouldShowProgress) {
+        final elapsed = DateTime.now().difference(startTime).inMilliseconds;
+        if (elapsed < 800) {
+          await Future.delayed(Duration(milliseconds: 800 - elapsed));
+        }
+        if (mounted && _isManualRefresh) {
+          setState(() => _isManualRefresh = false);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   Future<void> refreshData() async {
-    await _loadData();
+    setState(() => _isManualRefresh = true);
+    _loadData();
   }
 
   // Tutorial Methods
@@ -430,7 +467,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
   Future<void> _deleteTransaction(String id) async {
     setState(() => _isLoading = true);
     try {
-      final response = await _apiService.eliminarFilaPorIdTransaccion(id);
+      await _apiService.eliminarFilaPorIdTransaccion(id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -442,7 +479,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
                   size: 18.sp,
                 ), // ✅ REDUCIDO de 20
                 SizedBox(width: 10.w),
-                Text(response.msgE),
+                Text('Transacción eliminada exitosamente'),
               ],
             ),
             backgroundColor: Colors.green,
@@ -728,7 +765,10 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
         // Navegar al formulario de nueva transacción
         // Nota: Implementar navegación correcta según tu app
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Navegar a agregar transacción')),
+          const SnackBar(
+            content: Text('Navegar a agregar transacción'),
+            behavior: SnackBarBehavior.fixed,
+          ),
         );
       },
     );
@@ -946,43 +986,50 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
 
     switch (transaction.tipoTransaccion) {
       case 'Traspasos':
-        badges.addAll([
-          _buildBadge(
-            text: transaction.cuentaOrigen,
-            backgroundColor: color,
-            textStyle: badgeTextStyle,
-          ),
-          Icon(
-            Icons.arrow_forward_rounded,
-            size: 10.sp,
-            color: color,
-          ), // ✅ REDUCIDO de 11
-          _buildBadge(
-            text: transaction.cuentaDestino,
-            backgroundColor: color,
-            textStyle: badgeTextStyle,
-          ),
-        ]);
+        if (transaction.cuentaOrigen.isNotEmpty &&
+            transaction.cuentaDestino.isNotEmpty) {
+          badges.addAll([
+            _buildBadge(
+              text: transaction.cuentaOrigen,
+              backgroundColor: color,
+              textStyle: badgeTextStyle,
+            ),
+            Icon(
+              Icons.arrow_forward_rounded,
+              size: 10.sp,
+              color: color,
+            ), // ✅ REDUCIDO de 11
+            _buildBadge(
+              text: transaction.cuentaDestino,
+              backgroundColor: color,
+              textStyle: badgeTextStyle,
+            ),
+          ]);
+        }
         break;
       case 'Reembolsos':
-        badges.add(
-          _buildBadge(
-            text: transaction.cuenta,
-            backgroundColor: color,
-            textStyle: badgeTextStyle,
-          ),
-        );
+        if (transaction.cuenta.isNotEmpty) {
+          badges.add(
+            _buildBadge(
+              text: transaction.cuenta,
+              backgroundColor: color,
+              textStyle: badgeTextStyle,
+            ),
+          );
+        }
         break;
       case 'Gastos':
       case 'Pagos':
       case 'Ingresos':
-        badges.add(
-          _buildBadge(
-            text: transaction.categoria,
-            backgroundColor: color,
-            textStyle: badgeTextStyle,
-          ),
-        );
+        if (transaction.categoria.isNotEmpty) {
+          badges.add(
+            _buildBadge(
+              text: transaction.categoria,
+              backgroundColor: color,
+              textStyle: badgeTextStyle,
+            ),
+          );
+        }
         if (transaction.cuenta.isNotEmpty) {
           badges.add(
             _buildBadge(
@@ -1153,97 +1200,49 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
           RefreshIndicator(
             onRefresh: refreshData,
             color: const Color(0xFF667eea),
-            strokeWidth: 2.3.w, // ✅ REDUCIDO de 2.5
-            child: FutureBuilder<List<Transaction>>(
-              future: _futureTransacciones,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting &&
-                    !snapshot.hasData &&
-                    !_isLoading) {
-                  return const TransactionListShimmer(itemCount: 8);
-                }
-
-                if (snapshot.hasError) {
-                  if (snapshot.error is SocketException) {
-                    return _buildErrorState(
-                      icon: Icons.wifi_off_rounded,
-                      title: 'Sin conexión',
-                      message: 'Verifica tu conexión a internet',
-                    );
-                  }
-                  return _buildErrorState(
-                    icon: Icons.error_outline_rounded,
-                    title: 'Error',
-                    message: snapshot.error.toString(),
-                  );
-                }
-
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return _buildEmptyState();
-                }
-
-                final sortedTransactions = List<Transaction>.from(
-                  snapshot.data!,
-                )..sort(
-                  (a, b) => DateTime.parse(
-                    b.fecha,
-                  ).compareTo(DateTime.parse(a.fecha)),
-                );
-
-                final Map<String, List<Transaction>> groupedTransactions = {};
-                for (var transaction in sortedTransactions) {
-                  groupedTransactions
-                      .putIfAbsent(transaction.fecha, () => [])
-                      .add(transaction);
-                }
-
-                return ListView.builder(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.symmetric(
-                    vertical: 12.h,
-                  ), // ✅ REDUCIDO de 14
-                  itemCount:
-                      sortedTransactions.length +
-                      groupedTransactions.keys.length,
-                  itemBuilder: (context, index) {
-                    int transactionIndex = 0;
-                    int dateHeaderCount = 0;
-
-                    for (var date in groupedTransactions.keys) {
-                      if (index == transactionIndex) {
-                        final dailyTransactions = groupedTransactions[date]!;
-                        return AnimationUtils.slideFromBottom(
-                          _buildDateHeader(date, dailyTransactions),
-                          delay: dateHeaderCount * 50,
-                        );
-                      }
-                      transactionIndex++;
-
-                      final transactions = groupedTransactions[date]!;
-                      if (index < transactionIndex + transactions.length) {
-                        final localIndex = index - transactionIndex;
-                        final transaction = transactions[localIndex];
-                        final isFirst = dateHeaderCount == 0 && localIndex == 0;
-                        return AnimationUtils.staggeredAnimation(
-                          index: index,
-                          type: AnimationType.slideFromBottom,
-                          child: _buildTransactionCard(
-                            transaction,
-                            isFirst,
-                            themeManager,
-                          ),
-                        );
-                      }
-                      transactionIndex += transactions.length;
-                      dateHeaderCount++;
-                    }
-
-                    return const SizedBox.shrink();
-                  },
-                );
-              },
-            ),
+            strokeWidth: 2.3.w,
+            child:
+                _isLoading
+                    ? const TransactionListShimmer(itemCount: 8)
+                    : _transacciones.isEmpty
+                    ? _buildEmptyState()
+                    : _buildTransactionsList(_transacciones),
           ),
+          // Indicador sutil de recarga (solo refresh manual)
+          if (_isManualRefresh)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 300),
+                builder: (context, value, child) {
+                  return Opacity(
+                    opacity: value,
+                    child: Container(
+                      height: 3.h,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFF667eea).withOpacity(0.0),
+                            const Color(0xFF667eea),
+                            const Color(0xFF764ba2),
+                            const Color(0xFF764ba2).withOpacity(0.0),
+                          ],
+                        ),
+                      ),
+                      child: LinearProgressIndicator(
+                        backgroundColor: Colors.transparent,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Colors.white.withOpacity(0.5),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
           if (_isLoading)
             Container(
               color: bgColor.withOpacity(0.8),
@@ -1277,6 +1276,58 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTransactionsList(List<Transaction> transactions) {
+    final themeManager = Provider.of<ThemeManager>(context, listen: false);
+
+    final sortedTransactions = List<Transaction>.from(transactions)..sort(
+      (a, b) => DateTime.parse(b.fecha).compareTo(DateTime.parse(a.fecha)),
+    );
+
+    final Map<String, List<Transaction>> groupedTransactions = {};
+    for (var transaction in sortedTransactions) {
+      groupedTransactions
+          .putIfAbsent(transaction.fecha, () => [])
+          .add(transaction);
+    }
+
+    return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.symmetric(vertical: 12.h),
+      itemCount: sortedTransactions.length + groupedTransactions.keys.length,
+      itemBuilder: (context, index) {
+        int transactionIndex = 0;
+        int dateHeaderCount = 0;
+
+        for (var date in groupedTransactions.keys) {
+          if (index == transactionIndex) {
+            final dailyTransactions = groupedTransactions[date]!;
+            return AnimationUtils.slideFromBottom(
+              _buildDateHeader(date, dailyTransactions),
+              delay: dateHeaderCount * 50,
+            );
+          }
+          transactionIndex++;
+
+          final transactions = groupedTransactions[date]!;
+          if (index < transactionIndex + transactions.length) {
+            final localIndex = index - transactionIndex;
+            final transaction = transactions[localIndex];
+            final isFirst = dateHeaderCount == 0 && localIndex == 0;
+            return AnimationUtils.staggeredAnimation(
+              index: index,
+              type: AnimationType.slideFromBottom,
+              child: _buildTransactionCard(transaction, isFirst, themeManager),
+            );
+          }
+          transactionIndex += transactions.length;
+          dateHeaderCount++;
+        }
+
+        return const SizedBox.shrink();
+      },
     );
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:notificaciones/api_service.dart';
 import 'package:notificaciones/models/api_response.dart';
+import 'package:notificaciones/models/Transaccion.dart' as models;
 
 /// Ejemplos de uso de la nueva estructura de respuestas API
 
@@ -51,7 +52,8 @@ Future<void> ejemploRegistrarTransaccion(BuildContext context) async {
 
   try {
     // Registrar la transacción
-    final response = await apiService.registerTransaction(transaccionData);
+    final transaccion = models.Transaction.fromJson(transaccionData);
+    final transaccionId = await apiService.registerTransaction(transaccion);
 
     // Mostrar mensaje de éxito
     ScaffoldMessenger.of(context).showSnackBar(
@@ -60,7 +62,7 @@ Future<void> ejemploRegistrarTransaccion(BuildContext context) async {
           children: [
             const Icon(Icons.check_circle, color: Colors.white),
             const SizedBox(width: 10),
-            Text(response.msgE), // ✅ Mensaje del servidor
+            Text('Transacción registrada exitosamente'),
           ],
         ),
         backgroundColor: Colors.green,
@@ -128,9 +130,7 @@ Future<void> ejemploEliminarTransaccion(
     if (confirmar != true) return;
 
     // Eliminar la transacción
-    final response = await apiService.eliminarFilaPorIdTransaccion(
-      idTransaccion,
-    );
+    await apiService.eliminarFilaPorIdTransaccion(idTransaccion);
 
     // Mostrar mensaje de éxito
     if (context.mounted) {
@@ -140,7 +140,7 @@ Future<void> ejemploEliminarTransaccion(
             children: [
               const Icon(Icons.check_circle, color: Colors.white),
               const SizedBox(width: 10),
-              Text(response.msgE), // ✅ Mensaje del servidor
+              Text('Transacción eliminada exitosamente'),
             ],
           ),
           backgroundColor: Colors.green,
@@ -250,11 +250,15 @@ Future<void> ejemploTraspasoConValidacion(BuildContext context) async {
   };
 
   try {
-    final response = await apiService.registerTransaction(traspasoData);
+    final transaccion = models.Transaction.fromJson(traspasoData);
+    final transaccionId = await apiService.registerTransaction(transaccion);
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response.msgE), backgroundColor: Colors.green),
+        SnackBar(
+          content: Text('Traspaso registrado exitosamente'),
+          backgroundColor: Colors.green,
+        ),
       );
     }
   } on ApiException catch (e) {
