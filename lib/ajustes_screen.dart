@@ -198,11 +198,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
           SizedBox(height: 20.h),
 
           // DATOS
-          _buildSeccionTitulo(
-            'Datos',
-            Icons.storage_outlined,
-            themeManager,
-          ),
+          _buildSeccionTitulo('Datos', Icons.storage_outlined, themeManager),
           _buildCard(
             themeManager,
             children: [
