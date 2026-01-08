@@ -171,26 +171,45 @@ class FirestoreService {
     if (transaccion.esTraspaso) {
       // Traspaso: restar de origen y sumar a destino
       if (cuentaOrigen != null) {
-        final nuevoSaldoOrigen = cuentaOrigen.saldo - transaccion.monto.abs();
-        await actualizarSaldoCuenta(cuentaOrigen.id, nuevoSaldoOrigen);
-        await sincronizarMetaConCuenta(cuentaOrigen.id);
+        // Leer el saldo actual de Firebase (ya revertido si es edición)
+        final cuentaOrigenDoc =
+            await _db.collection('cuentas').doc(cuentaOrigen.id).get();
+        if (cuentaOrigenDoc.exists) {
+          final saldoActual =
+              (cuentaOrigenDoc.data()!['saldo'] as num).toDouble();
+          final nuevoSaldoOrigen = saldoActual - transaccion.monto.abs();
+          await actualizarSaldoCuenta(cuentaOrigen.id, nuevoSaldoOrigen);
+          await sincronizarMetaConCuenta(cuentaOrigen.id);
+        }
       }
       if (cuentaDestino != null) {
-        final nuevoSaldoDestino = cuentaDestino.saldo + transaccion.monto.abs();
-        await actualizarSaldoCuenta(cuentaDestino.id, nuevoSaldoDestino);
-        await sincronizarMetaConCuenta(cuentaDestino.id);
+        // Leer el saldo actual de Firebase (ya revertido si es edición)
+        final cuentaDestinoDoc =
+            await _db.collection('cuentas').doc(cuentaDestino.id).get();
+        if (cuentaDestinoDoc.exists) {
+          final saldoActual =
+              (cuentaDestinoDoc.data()!['saldo'] as num).toDouble();
+          final nuevoSaldoDestino = saldoActual + transaccion.monto.abs();
+          await actualizarSaldoCuenta(cuentaDestino.id, nuevoSaldoDestino);
+          await sincronizarMetaConCuenta(cuentaDestino.id);
+        }
       }
     } else if (cuenta != null) {
       // Gasto/Ingreso: actualizar saldo según tipo
-      double nuevoSaldo;
-      if (transaccion.tipoTransaccion == 'Gastos' ||
-          transaccion.tipoTransaccion == 'Pagos') {
-        nuevoSaldo = cuenta.saldo - transaccion.monto.abs();
-      } else {
-        nuevoSaldo = cuenta.saldo + transaccion.monto.abs();
+      // Leer el saldo actual de Firebase (ya revertido si es edición)
+      final cuentaDoc = await _db.collection('cuentas').doc(cuenta.id).get();
+      if (cuentaDoc.exists) {
+        final saldoActual = (cuentaDoc.data()!['saldo'] as num).toDouble();
+        double nuevoSaldo;
+        if (transaccion.tipoTransaccion == 'Gastos' ||
+            transaccion.tipoTransaccion == 'Pagos') {
+          nuevoSaldo = saldoActual - transaccion.monto.abs();
+        } else {
+          nuevoSaldo = saldoActual + transaccion.monto.abs();
+        }
+        await actualizarSaldoCuenta(cuenta.id, nuevoSaldo);
+        await sincronizarMetaConCuenta(cuenta.id);
       }
-      await actualizarSaldoCuenta(cuenta.id, nuevoSaldo);
-      await sincronizarMetaConCuenta(cuenta.id);
     }
 
     return transaccionId;

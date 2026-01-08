@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:notificaciones/models/Account.dart';
 import 'package:notificaciones/models/Categoria.dart';
@@ -15,26 +14,6 @@ class ApiService {
 
   // Instancia de FirestoreService para operaciones en tiempo real
   final FirestoreService _firestoreService = FirestoreService();
-
-  // ==================== CACHE ====================
-
-  /// Limpia el caché de Firebase y fuerza sincronización
-  Future<void> limpiarCacheFirebase() async {
-    try {
-      await _firestoreService.limpiarCache();
-    } catch (e) {
-      throw ApiException('Error al limpiar caché de Firebase: $e');
-    }
-  }
-
-  /// Obtiene cuentas directamente del servidor (sin caché)
-  Future<List<Account>> fetchCuentasDesdeServidor() async {
-    try {
-      return await _firestoreService.obtenerCuentasDesdeServidor();
-    } catch (e) {
-      throw ApiException('Error al obtener cuentas desde servidor: $e');
-    }
-  }
 
   /// Método auxiliar para manejar respuestas de la API
   T _handleApiResponse<T>(String responseBody, T Function(dynamic) dataParser) {
@@ -52,67 +31,6 @@ class ApiService {
   }
 
   // ==================== MÉTODOS GET ====================
-
-  /// Obtener los saldos - AHORA USA FIREBASE
-  Future<Map<String, dynamic>> fetchSaldos() async {
-    try {
-      // Obtener todas las cuentas activas desde Firebase
-      final cuentas = await _firestoreService.obtenerCuentas().first;
-
-      Map<String, dynamic> saldos = {};
-      for (var cuenta in cuentas) {
-        saldos[cuenta.nombre] = cuenta.saldo;
-      }
-
-      return saldos;
-    } catch (e) {
-      throw ApiException('Error al obtener saldos desde Firebase: $e');
-    }
-  }
-
-  /// Obtener gastos por categoría - AHORA USA FIREBASE
-  Future<Map<String, double>> fetchGastosPorCategoria() async {
-    try {
-      return await _firestoreService.obtenerGastosPorCategoriaMesActual();
-    } catch (e) {
-      throw ApiException(
-        'Error al obtener gastos por categoría desde Firebase: $e',
-      );
-    }
-  }
-
-  /// Obtener transacciones categorizadas - AHORA USA FIREBASE
-  Future<Map<String, double>> fetchTransaccionesCategorizadas() async {
-    try {
-      // Obtener transacciones del mes actual
-      final transacciones =
-          await _firestoreService.obtenerTransaccionesRecientes().first;
-
-      Map<String, double> transaccionesPorCategoria = {};
-
-      for (var transaccion in transacciones) {
-        String categoria =
-            transaccion.categoria.isNotEmpty
-                ? transaccion.categoria
-                : 'Sin Categoría';
-        double monto = transaccion.monto;
-
-        // Sumar el monto a la categoría correspondiente
-        if (transaccionesPorCategoria.containsKey(categoria)) {
-          transaccionesPorCategoria[categoria] =
-              transaccionesPorCategoria[categoria]! + monto;
-        } else {
-          transaccionesPorCategoria[categoria] = monto;
-        }
-      }
-
-      return transaccionesPorCategoria;
-    } catch (e) {
-      throw ApiException(
-        'Error al obtener transacciones categorizadas desde Firebase: $e',
-      );
-    }
-  }
 
   /// Obtener reportes
   Future<List<Reporte>> fetchReportes() async {
@@ -178,34 +96,11 @@ class ApiService {
     }
   }
 
-  /// Obtener cuentas - AHORA USA FIREBASE
-  Future<List<Account>> fetchAccounts() async {
-    try {
-      // Obtener desde Firebase (tiempo real)
-      final stream = _firestoreService.obtenerCuentas();
-      return await stream.first;
-    } catch (e) {
-      throw ApiException('Error al obtener cuentas desde Firebase: $e');
-    }
-  }
+  // ==================== FIREBASE WRAPPERS ====================
 
-  /// Obtener nuevas cuentas - AHORA USA FIREBASE (no necesita caché, Firebase es rápido)
-  Future<List<Account>> fetchCuentas({bool forceRefresh = false}) async {
+  /// Obtener todas las metas desde Firebase
+  Future<List<Meta>> getMetas() async {
     try {
-      // Firebase es tan rápido que no necesitamos caché local
-      final stream = _firestoreService.obtenerCuentas();
-      return await stream.first;
-    } catch (e) {
-      throw ApiException('Error al cargar cuentas desde Firebase: $e');
-    }
-  }
-
-  // ==================== MÉTODOS POST ====================
-
-  /// Obtener todas las metas - AHORA USA FIREBASE (no necesita caché)
-  Future<List<Meta>> getMetas({bool forceRefresh = false}) async {
-    try {
-      // Firebase es rápido, no necesitamos caché local
       final stream = _firestoreService.obtenerMetas();
       return await stream.first;
     } catch (e) {
@@ -213,40 +108,17 @@ class ApiService {
     }
   }
 
-  /// Obtener todos los datos del dashboard - AHORA USA FIREBASE
-  Future<Map<String, dynamic>> getDashboardData({
-    bool forceRefresh = false,
-  }) async {
+  /// Obtener cuentas desde Firebase
+  Future<List<Account>> fetchCuentas() async {
     try {
-      // Obtener datos del mes actual desde Firebase
-      final gastosPorCategoria =
-          await _firestoreService.obtenerGastosPorCategoriaMesActual();
-      final ingresosMes = await _firestoreService.obtenerIngresosMesActual();
-      final cuentasStream = _firestoreService.obtenerCuentas();
-      final cuentas = await cuentasStream.first;
-
-      // Calcular totales
-      final totalGastos = gastosPorCategoria.values.fold(
-        0.0,
-        (sum, monto) => sum + monto,
-      );
-      final saldoTotal = cuentas.fold(0.0, (sum, cuenta) => sum + cuenta.saldo);
-
-      return {
-        'gastosPorCategoria': gastosPorCategoria,
-        'totalGastos': totalGastos,
-        'totalIngresos': ingresosMes,
-        'saldoTotal': saldoTotal,
-        'cuentas': cuentas.map((c) => c.toJson()).toList(),
-      };
+      final stream = _firestoreService.obtenerCuentas();
+      return await stream.first;
     } catch (e) {
-      throw ApiException(
-        'Error al cargar datos del dashboard desde Firebase: $e',
-      );
+      throw ApiException('Error al cargar cuentas desde Firebase: $e');
     }
   }
 
-  /// Registrar transacción - AHORA USA FIREBASE DIRECTAMENTE
+  /// Registrar transacción - USA FIREBASE DIRECTAMENTE
   /// Nota: Este método ahora espera un objeto Transaction, no un Map
   Future<String> registerTransaction(
     Transaction transaccion, {
@@ -269,61 +141,7 @@ class ApiService {
     }
   }
 
-  /// Enviar transacción a Google Sheets (para sincronización)
-  Future<void> enviarTransaccionASheets(Transaction transaccion) async {
-    try {
-      // Usar cargarTransacciones que acepta JSON en el body
-      final url =
-          'https://script.google.com/macros/s/AKfycbyl3CrDkwagnzKckvdPlQc_k_YFdice0ArfRwN5NA5huW_JtIVABLwiVWyKOvleIbz4/exec';
-
-      // Formato que espera cargarTransacciones (JSON en postData.contents)
-      final datos = {
-        'idTransaccion': transaccion.idTransaccion,
-        'tipoTransaccion': transaccion.tipoTransaccion,
-        'monto': transaccion.monto,
-        'descripcion': transaccion.descripcion,
-        'fecha': transaccion.fecha,
-        'categoria': transaccion.categoria,
-        'cuenta': transaccion.cuenta,
-        'cuentaOrigen': transaccion.cuentaOrigen,
-        'cuentaDestino': transaccion.cuentaDestino,
-      };
-
-      print('📤 Enviando a Sheets: $url?action=addTransaccion');
-      print('📦 Datos: ${jsonEncode(datos)}');
-
-      // Usar HttpClient para seguir redirects automáticamente
-      final uri = Uri.parse('$url?action=addTransaccion');
-      final request = await HttpClient().postUrl(uri);
-      request.headers.set('Content-Type', 'application/json');
-      request.write(jsonEncode(datos));
-
-      final response = await request.close();
-      final responseBody = await response.transform(utf8.decoder).join();
-
-      print('📥 Response status: ${response.statusCode}');
-      print('📥 Response body: $responseBody');
-
-      if (response.statusCode != 200) {
-        throw ApiException('Error HTTP ${response.statusCode}: $responseBody');
-      }
-
-      final json = jsonDecode(responseBody);
-      // El backend devuelve codE: 0 para éxito
-      if (json['codE'] != 0) {
-        throw ApiException(
-          json['msgE'] ?? 'Error desconocido al enviar a Sheets',
-        );
-      }
-
-      print('✅ Transacción enviada exitosamente a Sheets');
-    } catch (e) {
-      print('❌ Error al enviar transacción a Sheets: $e');
-      throw ApiException('Error al enviar transacción a Sheets: $e');
-    }
-  }
-
-  /// Eliminar transacción por ID - AHORA USA FIREBASE
+  /// Eliminar transacción por ID - USA FIREBASE
   Future<void> eliminarFilaPorIdTransaccion(String transaccionId) async {
     try {
       await _firestoreService.eliminarTransaccion(transaccionId);

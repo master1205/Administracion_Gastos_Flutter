@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -1328,53 +1327,6 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
 
         return const SizedBox.shrink();
       },
-    );
-  }
-
-  Widget _buildErrorState({
-    required IconData icon,
-    required String title,
-    required String message,
-  }) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: EdgeInsets.all(24.r), // ✅ REDUCIDO de 28
-            decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              size: 60.sp,
-              color: Colors.red.shade400,
-            ), // ✅ REDUCIDO de 70
-          ),
-          SizedBox(height: 16.h), // ✅ REDUCIDO de 20
-          Text(
-            title,
-            style: GoogleFonts.lato(
-              fontSize: 16.sp, // ✅ REDUCIDO de 18
-              fontWeight: FontWeight.bold,
-              color: Colors.grey.shade700,
-            ),
-          ),
-          SizedBox(height: 5.h), // ✅ REDUCIDO de 6
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 30.w), // ✅ REDUCIDO de 35
-            child: Text(
-              message,
-              style: TextStyle(
-                fontSize: 12.sp,
-                color: Colors.grey.shade500,
-              ), // ✅ REDUCIDO de 13
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

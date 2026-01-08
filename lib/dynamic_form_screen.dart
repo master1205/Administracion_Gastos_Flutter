@@ -365,11 +365,20 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
           final monto =
               double.tryParse(_amountController.text.replaceAll(',', '')) ??
               0.0;
-          if (monto > selectedAccount!.saldo) {
+
+          // En modo edición, considerar el monto anterior que ya fue restado
+          double saldoDisponible = selectedAccount!.saldo;
+          if (widget.transaction != null &&
+              widget.transaction!.cuentaNombre == selectedAccount!.nombre) {
+            // Si es edición y es la misma cuenta, sumar el monto anterior
+            saldoDisponible += widget.transaction!.monto;
+          }
+
+          if (monto > saldoDisponible) {
             setState(
               () =>
                   accountError =
-                      'Saldo insuficiente. Disponible: \$${selectedAccount!.saldo.toStringAsFixed(2)}',
+                      'Saldo insuficiente. Disponible: \$${saldoDisponible.toStringAsFixed(2)}',
             );
             isValid = false;
           }
@@ -385,11 +394,21 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
         // Validar saldo suficiente en cuenta origen para traspaso
         final monto =
             double.tryParse(_amountController.text.replaceAll(',', '')) ?? 0.0;
-        if (monto > selectedAccountFrom!.saldo) {
+
+        // En modo edición, considerar el monto anterior que ya fue restado
+        double saldoDisponible = selectedAccountFrom!.saldo;
+        if (widget.transaction != null &&
+            widget.transaction!.cuentaOrigenNombre ==
+                selectedAccountFrom!.nombre) {
+          // Si es edición y es la misma cuenta origen, sumar el monto anterior
+          saldoDisponible += widget.transaction!.monto;
+        }
+
+        if (monto > saldoDisponible) {
           setState(
             () =>
                 accountFromError =
-                    'Saldo insuficiente. Disponible: \$${selectedAccountFrom!.saldo.toStringAsFixed(2)}',
+                    'Saldo insuficiente. Disponible: \$${saldoDisponible.toStringAsFixed(2)}',
           );
           isValid = false;
         }
@@ -470,7 +489,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
         }
 
         final transaccion = models.Transaction.fromJson(transactionData);
-        final transaccionId = await ApiService().registerTransaction(
+        await ApiService().registerTransaction(
           transaccion,
           cuenta:
               widget.transactionType == 'Traspasos' ? null : selectedAccount,

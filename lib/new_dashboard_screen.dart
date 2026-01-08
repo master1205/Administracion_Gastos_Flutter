@@ -1,13 +1,10 @@
 import 'dart:ui';
 
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:card_swiper/card_swiper.dart';
-import 'package:notificaciones/api_service.dart';
-import 'package:notificaciones/data_provider.dart';
 import 'package:notificaciones/models/Account.dart';
 import 'package:notificaciones/models/Meta.dart';
 import 'package:notificaciones/models/Transaccion.dart';
@@ -15,7 +12,6 @@ import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
-import 'dart:convert';
 import 'dart:async';
 import 'utils/animation_utils.dart';
 import 'componentes/empty_states.dart';
@@ -1159,7 +1155,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
   // UI Builders - Accounts Carousel
   Widget _buildAccountsCarousel() {
     final sortedAccounts = List<Account>.from(_accounts)
-      ..sort((a, b) => (b.saldo ?? 0.0).compareTo(a.saldo ?? 0.0));
+      ..sort((a, b) => b.saldo.compareTo(a.saldo));
 
     if (sortedAccounts.isEmpty) return _buildEmptyAccounts();
 
@@ -1313,7 +1309,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                   ),
                   SizedBox(height: 2.h),
                   TweenAnimationBuilder<double>(
-                    tween: Tween<double>(begin: 0, end: account.saldo ?? 0.0),
+                    tween: Tween<double>(begin: 0, end: account.saldo),
                     duration: _animationDuration,
                     builder: (context, animatedValue, _) {
                       return Text(

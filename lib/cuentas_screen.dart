@@ -627,7 +627,7 @@ class _CuentasScreenState extends State<CuentasScreen> {
 
   void _mostrarDialogoEditarSaldo(Account cuenta) {
     final TextEditingController saldoController = TextEditingController(
-      text: (cuenta.saldo ?? 0).toStringAsFixed(2),
+      text: cuenta.saldo.toStringAsFixed(2),
     );
     final formKey = GlobalKey<FormState>();
 

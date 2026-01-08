@@ -132,22 +132,6 @@ class _LoadingScreenState extends State<LoadingScreen>
 
       if (!mounted) return;
 
-      // Paso 0: Limpiar caché de Firebase para obtener datos frescos del servidor
-      setState(() {
-        _currentStep = 0;
-        _progress = 0.05;
-      });
-
-      final apiService = ApiService();
-      try {
-        await apiService.limpiarCacheFirebase();
-        print('✅ Caché de Firebase limpiado');
-      } catch (e) {
-        print('⚠️ No se pudo limpiar caché: $e (continuando de todos modos)');
-      }
-
-      if (!mounted) return;
-
       // Paso 1: Cargar datos principales
       setState(() {
         _currentStep = 1;

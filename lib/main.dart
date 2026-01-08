@@ -10,17 +10,11 @@ import 'package:notificaciones/permission_handler.dart';
 import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:notificaciones/services/background_tasks.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await LocalNotifications.initialize();
-
-  // Inicializar workmanager y registrar tareas automáticas
-  await BackgroundTaskManager.inicializar();
-  await BackgroundTaskManager.registrarSincronizacionMensual();
-  await BackgroundTaskManager.registrarCorteSemanal();
 
   runApp(
     MultiProvider(
