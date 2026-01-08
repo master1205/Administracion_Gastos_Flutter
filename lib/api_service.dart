@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:notificaciones/models/Account.dart';
-import 'package:notificaciones/models/Categoria.dart';
 import 'package:notificaciones/models/Meta.dart';
 import 'package:notificaciones/models/Reporte.dart';
 import 'package:notificaciones/models/Transaccion.dart';
@@ -72,27 +71,6 @@ class ApiService {
       return await stream.first;
     } catch (e) {
       throw ApiException('Error al obtener transacciones desde Firebase: $e');
-    }
-  }
-
-  /// Obtener categorías
-  Future<List<Categoria>> fetchCategories() async {
-    try {
-      final response = await http.get(Uri.parse('$baseUrl=getCategorias'));
-
-      if (response.statusCode == 200) {
-        return _handleApiResponse<List<Categoria>>(response.body, (data) {
-          List<dynamic> jsonData = data as List<dynamic>;
-          return jsonData
-              .map((categoria) => Categoria.fromJson(categoria))
-              .toList();
-        });
-      } else {
-        throw ApiException('Error de servidor: ${response.statusCode}');
-      }
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Error al obtener las categorías: $e');
     }
   }
 

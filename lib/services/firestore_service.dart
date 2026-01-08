@@ -614,8 +614,91 @@ class FirestoreService {
     await _db.collection('transacciones').doc(transaccionId).delete();
   }
 
+  /// Verifica si una cuenta está asociada a una meta
+  Future<bool> cuentaEstaAsociadaAMeta(String cuentaId) async {
+    final snapshot =
+        await _db
+            .collection('metas')
+            .where('cuentaId', isEqualTo: cuentaId)
+            .limit(1)
+            .get();
+
+    return snapshot.docs.isNotEmpty;
+  }
+
   /// Eliminar cuenta (soft delete)
   Future<void> eliminarCuenta(String cuentaId) async {
     await _db.collection('cuentas').doc(cuentaId).delete();
+  }
+
+  // ==================== CATEGORÍAS ====================
+
+  /// Obtiene categorías en tiempo real
+  Stream<List<Map<String, dynamic>>> obtenerCategorias({String? usuarioId}) {
+    final uid = usuarioId ?? defaultUserId;
+
+    return _db
+        .collection('categorias')
+        .where('usuarioId', isEqualTo: uid)
+        .orderBy('categoria')
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => {'id': doc.id, ...doc.data()})
+                  .toList(),
+        );
+  }
+
+  /// Crea una nueva categoría
+  Future<String> crearCategoria({
+    required String nombre,
+    required String imagen,
+    required String tipoTransaccion,
+    String? usuarioId,
+  }) async {
+    final uid = usuarioId ?? defaultUserId;
+
+    final docRef = await _db.collection('categorias').add({
+      'categoria': nombre,
+      'imagen': imagen,
+      'tipoTransaccion': tipoTransaccion,
+      'usuarioId': uid,
+      'fechaCreacion': FieldValue.serverTimestamp(),
+    });
+
+    return docRef.id;
+  }
+
+  /// Actualiza una categoría existente
+  Future<void> actualizarCategoria({
+    required String categoriaId,
+    required String nombre,
+    required String imagen,
+    required String tipoTransaccion,
+  }) async {
+    await _db.collection('categorias').doc(categoriaId).update({
+      'categoria': nombre,
+      'imagen': imagen,
+      'tipoTransaccion': tipoTransaccion,
+      'fechaActualizacion': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Elimina una categoría
+  Future<void> eliminarCategoria(String categoriaId) async {
+    await _db.collection('categorias').doc(categoriaId).delete();
+  }
+
+  /// Verifica si una categoría está en uso
+  Future<bool> categoriaEnUso(String nombreCategoria) async {
+    final transacciones =
+        await _db
+            .collection('transacciones')
+            .where('categoria', isEqualTo: nombreCategoria)
+            .limit(1)
+            .get();
+
+    return transacciones.docs.isNotEmpty;
   }
 }

@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:notificaciones/ajustes_screen.dart';
+import 'package:notificaciones/categorias_screen.dart';
 import 'package:notificaciones/cuentas_screen.dart';
 import 'package:notificaciones/dynamic_form_screen.dart';
 import 'package:notificaciones/graficas_screen.dart';
@@ -17,7 +18,8 @@ import 'package:notificaciones/transacciones_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
-import 'dart:convert';
+import 'dart:async';
+import 'services/firestore_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -35,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isScrollingDown = false;
   String _userName = '';
   int _cantidadMetas = 0;
+  StreamSubscription? _metasSubscription;
 
   late TutorialCoachMark _tutorialCoachMark;
   final List<TargetFocus> _targets = [];
@@ -68,6 +71,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _metasSubscription?.cancel();
     super.dispose();
   }
 
@@ -93,22 +97,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _cargarCantidadMetas() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? metasJson = prefs.getString('metas_ahorro');
-
-      if (metasJson != null) {
-        final List<dynamic> decoded = json.decode(metasJson);
-        if (mounted) {
-          setState(() {
-            _cantidadMetas = decoded.length;
-          });
-        }
+  void _cargarCantidadMetas() {
+    final firestoreService = FirestoreService();
+    _metasSubscription = firestoreService.obtenerMetas().listen((metas) {
+      if (mounted) {
+        setState(() {
+          _cantidadMetas = metas.length;
+        });
       }
-    } catch (e) {
-      debugPrint('Error al cargar metas: $e');
-    }
+    });
   }
 
   void _promptUserName() {
@@ -747,7 +744,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         title: "Categorías",
         subtitle: "Organiza tus gastos",
         color: const Color(0xFF667eea),
-        onTap: () => Navigator.pop(context),
+        onTap: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const CategoriasScreen()),
+          );
+        },
       ),
       _DrawerItem(
         icon: Icons.account_balance_rounded,
@@ -768,13 +771,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         subtitle: "Alcanza tus objetivos",
         color: const Color(0xFF4CAF50),
         badge: _cantidadMetas > 0 ? _cantidadMetas.toString() : null,
-        onTap: () async {
+        onTap: () {
           Navigator.pop(context);
-          await Navigator.push(
+          Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const MetasScreen()),
           );
-          _cargarCantidadMetas(); // Recargar al volver
         },
       ),
       _DrawerItem(

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_multi_formatter/formatters/money_input_enums.dart';
@@ -10,6 +11,7 @@ import 'package:notificaciones/models/Account.dart';
 import 'package:notificaciones/models/Categoria.dart';
 import 'package:notificaciones/models/Transaccion.dart' as models;
 import 'package:notificaciones/models/Transaccion.dart';
+import 'package:notificaciones/services/firestore_service.dart';
 import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'utils/animation_utils.dart';
@@ -48,6 +50,10 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
   Account? selectedAccountFrom;
   Account? selectedAccountTo;
 
+  // Categorías cargadas desde Firebase
+  List<Categoria> _categorias = [];
+  StreamSubscription<List<Map<String, dynamic>>>? _categoriasSubscription;
+
   String? amountError;
   String? descriptionError;
   String? categoryError;
@@ -56,6 +62,144 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
   String? accountToError;
 
   final Map<String, IconData> categoryIconsMap = {
+    // Iconos de Firebase (actualizados con todos los disponibles)
+    'shopping_cart': Icons.shopping_cart,
+    'shopping_bag': Icons.shopping_bag,
+    'store': Icons.store,
+    'local_mall': Icons.local_mall,
+    'local_grocery_store': Icons.local_grocery_store,
+    'restaurant': Icons.restaurant,
+    'fastfood': Icons.fastfood,
+    'local_cafe': Icons.local_cafe,
+    'local_bar': Icons.local_bar,
+    'local_pizza': Icons.local_pizza,
+    'lunch_dining': Icons.lunch_dining,
+    'dinner_dining': Icons.dinner_dining,
+    'breakfast_dining': Icons.breakfast_dining,
+    'cake': Icons.cake,
+    'liquor': Icons.liquor,
+    'local_gas_station': Icons.local_gas_station,
+    'directions_car': Icons.directions_car,
+    'directions_bus': Icons.directions_bus,
+    'train': Icons.train,
+    'flight': Icons.flight,
+    'two_wheeler': Icons.two_wheeler,
+    'local_taxi': Icons.local_taxi,
+    'directions_bike': Icons.directions_bike,
+    'directions_subway': Icons.directions_subway,
+    'airport_shuttle': Icons.airport_shuttle,
+    'home': Icons.home,
+    'house': Icons.house,
+    'apartment': Icons.apartment,
+    'bed': Icons.bed,
+    'weekend': Icons.weekend,
+    'chair': Icons.chair,
+    'roofing': Icons.roofing,
+    'electric_bolt': Icons.electric_bolt,
+    'water_drop': Icons.water_drop,
+    'wifi': Icons.wifi,
+    'phone_android': Icons.phone_android,
+    'phone': Icons.phone,
+    'tv': Icons.tv,
+    'router': Icons.router,
+    'cable': Icons.cable,
+    'power': Icons.power,
+    'medical_services': Icons.medical_services,
+    'local_hospital': Icons.local_hospital,
+    'local_pharmacy': Icons.local_pharmacy,
+    'healing': Icons.healing,
+    'favorite': Icons.favorite,
+    'psychology': Icons.psychology,
+    'spa': Icons.spa,
+    'clean_hands': Icons.clean_hands,
+    'medication': Icons.medication,
+    'vaccines': Icons.vaccines,
+    'school': Icons.school,
+    'menu_book': Icons.menu_book,
+    'library_books': Icons.library_books,
+    'auto_stories': Icons.auto_stories,
+    'science': Icons.science,
+    'calculate': Icons.calculate,
+    'edit_note': Icons.edit_note,
+    'movie': Icons.movie,
+    'theaters': Icons.theaters,
+    'live_tv': Icons.live_tv,
+    'music_note': Icons.music_note,
+    'headphones': Icons.headphones,
+    'videogame_asset': Icons.videogame_asset,
+    'casino': Icons.casino,
+    'celebration': Icons.celebration,
+    'festival': Icons.festival,
+    'sports_soccer': Icons.sports_soccer,
+    'sports_basketball': Icons.sports_basketball,
+    'sports_tennis': Icons.sports_tennis,
+    'sports_baseball': Icons.sports_baseball,
+    'sports_football': Icons.sports_football,
+    'fitness_center': Icons.fitness_center,
+    'pool': Icons.pool,
+    'surfing': Icons.surfing,
+    'snowboarding': Icons.snowboarding,
+    'sailing': Icons.sailing,
+    'attach_money': Icons.attach_money,
+    'savings': Icons.savings,
+    'account_balance': Icons.account_balance,
+    'credit_card': Icons.credit_card,
+    'payment': Icons.payment,
+    'currency_exchange': Icons.currency_exchange,
+    'paid': Icons.paid,
+    'money': Icons.money,
+    'account_balance_wallet': Icons.account_balance_wallet,
+    'work': Icons.work,
+    'business': Icons.business,
+    'business_center': Icons.business_center,
+    'badge': Icons.badge,
+    'engineering': Icons.engineering,
+    'construction': Icons.construction,
+    'precision_manufacturing': Icons.precision_manufacturing,
+    'agriculture': Icons.agriculture,
+    'handyman': Icons.handyman,
+    'card_giftcard': Icons.card_giftcard,
+    'redeem': Icons.redeem,
+    'volunteer_activism': Icons.volunteer_activism,
+    'emoji_events': Icons.emoji_events,
+    'computer': Icons.computer,
+    'laptop': Icons.laptop,
+    'tablet': Icons.tablet,
+    'watch': Icons.watch,
+    'headset': Icons.headset,
+    'keyboard': Icons.keyboard,
+    'mouse': Icons.mouse,
+    'print': Icons.print,
+    'pets': Icons.pets,
+    'cruelty_free': Icons.cruelty_free,
+    'child_care': Icons.child_care,
+    'baby_changing_station': Icons.baby_changing_station,
+    'face': Icons.face,
+    'elderly': Icons.elderly,
+    'people': Icons.people,
+    'groups': Icons.groups,
+    'family_restroom': Icons.family_restroom,
+    'airplane_ticket': Icons.airplane_ticket,
+    'luggage': Icons.luggage,
+    'hotel': Icons.hotel,
+    'beach_access': Icons.beach_access,
+    'place': Icons.place,
+    'map': Icons.map,
+    'explore': Icons.explore,
+    'tour': Icons.tour,
+    'category': Icons.category,
+    'more_horiz': Icons.more_horiz,
+    'star': Icons.star,
+    'bolt': Icons.bolt,
+    'local_fire_department': Icons.local_fire_department,
+    'eco': Icons.eco,
+    'recycling': Icons.recycling,
+    'brush': Icons.brush,
+    'palette': Icons.palette,
+    'photo_camera': Icons.photo_camera,
+    'notifications': Icons.notifications,
+    'alarm': Icons.alarm,
+    // Iconos legacy (con sufijo _outlined) para compatibilidad
     'airplanemode_active_outlined': Icons.flight_outlined,
     'checkroom_outlined': Icons.checkroom_outlined,
     'pets_outlined': Icons.pets_outlined,
@@ -80,29 +224,29 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
     'school_outlined': Icons.school_outlined,
     'help_outline': Icons.category_outlined,
     'local_hospital_outlined': Icons.local_hospital_outlined,
-    'shopping_cart': Icons.shopping_cart_outlined,
-    'fastfood': Icons.fastfood_outlined,
-    'local_grocery_store': Icons.local_grocery_store_outlined,
-    'fitness_center': Icons.fitness_center_outlined,
-    'sports_soccer': Icons.sports_soccer_outlined,
-    'phone_android': Icons.phone_android_outlined,
-    'laptop': Icons.laptop_outlined,
+    'shopping_cart_outlined': Icons.shopping_cart_outlined,
+    'fastfood_outlined': Icons.fastfood_outlined,
+    'local_grocery_store_outlined': Icons.local_grocery_store_outlined,
+    'fitness_center_outlined': Icons.fitness_center_outlined,
+    'sports_soccer_outlined': Icons.sports_soccer_outlined,
+    'phone_android_outlined': Icons.phone_android_outlined,
+    'laptop_outlined': Icons.laptop_outlined,
     'coffee': Icons.coffee_outlined,
-    'local_gas_station': Icons.local_gas_station_outlined,
-    'beach_access': Icons.beach_access_outlined,
-    'hotel': Icons.hotel_outlined,
-    'music_note': Icons.music_note_outlined,
-    'palette': Icons.palette_outlined,
+    'local_gas_station_outlined': Icons.local_gas_station_outlined,
+    'beach_access_outlined': Icons.beach_access_outlined,
+    'hotel_outlined': Icons.hotel_outlined,
+    'music_note_outlined': Icons.music_note_outlined,
+    'palette_outlined': Icons.palette_outlined,
     'book': Icons.menu_book_outlined,
-    'train': Icons.train_outlined,
-    'directions_bus': Icons.directions_bus_outlined,
+    'train_outlined': Icons.train_outlined,
+    'directions_bus_outlined': Icons.directions_bus_outlined,
     'sports': Icons.sports_basketball_outlined,
-    'celebration': Icons.celebration_outlined,
-    'spa': Icons.spa_outlined,
-    'local_pharmacy': Icons.local_pharmacy_outlined,
+    'celebration_outlined': Icons.celebration_outlined,
+    'spa_outlined': Icons.spa_outlined,
+    'local_pharmacy_outlined': Icons.local_pharmacy_outlined,
     'local_laundry_service': Icons.local_laundry_service_outlined,
     'self_improvement': Icons.self_improvement_outlined,
-    'volunteer_activism': Icons.volunteer_activism_outlined,
+    'volunteer_activism_outlined': Icons.volunteer_activism_outlined,
     // Iconos adicionales sugeridos
     'medical_services_outlined': Icons.medical_services_outlined,
     'house_outlined': Icons.house_outlined,
@@ -120,13 +264,13 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
     'handyman_outlined': Icons.handyman_outlined,
     'currency_bitcoin_outlined': Icons.currency_bitcoin_outlined,
     'currency_exchange_outlined': Icons.currency_exchange_outlined,
-    'account_balance': Icons.account_balance_outlined,
+    'account_balance_outlined': Icons.account_balance_outlined,
     'workspace_premium_outlined': Icons.workspace_premium_outlined,
     'casino_outlined': Icons.casino_outlined,
     'real_estate_outlined': Icons.real_estate_agent_outlined,
     'propane_tank': Icons.propane_tank_outlined,
     'emergency_outlined': Icons.emergency_outlined,
-    'more_horiz': Icons.more_horiz,
+    'more_horiz_outlined': Icons.more_horiz,
   };
 
   @override
@@ -151,14 +295,12 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
         if (mounted) {
           setState(() {
             try {
-              selectedCategory = dataProvider.categorias.firstWhere(
+              selectedCategory = _categorias.firstWhere(
                 (c) => c.categoria == widget.transaction!.categoria,
               );
             } catch (e) {
               selectedCategory =
-                  dataProvider.categorias.isNotEmpty
-                      ? dataProvider.categorias.first
-                      : null;
+                  _categorias.isNotEmpty ? _categorias.first : null;
             }
 
             if (widget.transactionType != 'Traspasos') {
@@ -207,6 +349,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
     _animationController.dispose();
     _amountController.dispose();
     _descriptionController.dispose();
+    _categoriasSubscription?.cancel();
     super.dispose();
   }
 
@@ -262,7 +405,20 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
     });
   }
 
-  void _loadInitialData() {
+  void _loadInitialData() async {
+    // Cargar categorías desde Firebase
+    final firestoreService = FirestoreService();
+    _categoriasSubscription = firestoreService.obtenerCategorias().listen((
+      categoriasData,
+    ) {
+      if (mounted) {
+        setState(() {
+          _categorias =
+              categoriasData.map((cat) => Categoria.fromJson(cat)).toList();
+        });
+      }
+    });
+
     if (widget.transaction != null) {
       _amountController.text = widget.transaction!.monto.toString();
       _descriptionController.text = widget.transaction!.descripcion;
@@ -896,29 +1052,14 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
               ],
             ),
           ),
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [widget.color, widget.color.withOpacity(0.7)],
-              ),
-              borderRadius: BorderRadius.circular(10.r),
-              boxShadow: [
-                BoxShadow(
-                  color: widget.color.withOpacity(0.3),
-                  blurRadius: 4.r,
-                  offset: Offset(0, 2.h),
-                ),
-              ],
+          IconButton(
+            icon: Icon(
+              Icons.edit_calendar_rounded,
+              color: Colors.white,
+              size: 20.sp,
             ),
-            child: IconButton(
-              icon: Icon(
-                Icons.edit_calendar_rounded,
-                color: Colors.white,
-                size: 18.sp,
-              ),
-              onPressed: () => _selectDate(context),
-              padding: EdgeInsets.all(6.r),
-            ),
+            onPressed: () => _selectDate(context),
+            padding: EdgeInsets.all(8.r),
           ),
         ],
       ),
@@ -1019,8 +1160,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                             ],
                           ),
                           child: Icon(
-                            categoryIconsMap[category.imagen] ??
-                                Icons.help_outline,
+                            categoryIconsMap[category.imagen] ?? Icons.category,
                             size: 14.sp,
                             color: Colors.white,
                           ),
@@ -1126,30 +1266,43 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(6.r),
-                          child: Image.asset(
-                            'assets/images/${account.imagen}.png',
-                            width: 24.w,
-                            height: 24.h,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                width: 24.w,
-                                height: 24.h,
-                                decoration: BoxDecoration(
-                                  color: widget.color.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(6.r),
-                                ),
-                                child: Icon(
+                        Container(
+                          padding: EdgeInsets.all(6.r),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                widget.color,
+                                widget.color.withOpacity(0.7),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(8.r),
+                            boxShadow: [
+                              BoxShadow(
+                                color: widget.color.withOpacity(0.3),
+                                blurRadius: 4.r,
+                                offset: Offset(0, 2.h),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4.r),
+                            child: Image.asset(
+                              'assets/images/${account.imagen}.png',
+                              width: 20.w,
+                              height: 20.h,
+                              color: Colors.white,
+                              colorBlendMode: BlendMode.srcIn,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(
                                   Icons.account_balance_wallet,
-                                  color: widget.color,
-                                  size: 16.sp,
-                                ),
-                              );
-                            },
+                                  color: Colors.white,
+                                  size: 20.sp,
+                                );
+                              },
+                            ),
                           ),
                         ),
-                        SizedBox(width: 10.w),
+                        SizedBox(width: 12.w),
                         Flexible(
                           child: Text(
                             account.nombre,
@@ -1255,11 +1408,17 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
             : cuentasDisponibles >= 1;
 
     final filteredCategories =
-        dataProvider.categorias.where((category) {
+        _categorias.where((category) {
+          // Mapear el tipo de transacción al formato de Firebase
+          String tipoFiltro = widget.transactionType;
+          if (tipoFiltro == 'Gastos') tipoFiltro = 'Gasto';
+          if (tipoFiltro == 'Pagos') tipoFiltro = 'Pago';
+          if (tipoFiltro == 'Ingresos') tipoFiltro = 'Ingreso';
+
           return category.tipoTransaccion
               .split(',')
               .map((e) => e.trim())
-              .contains(widget.transactionType);
+              .contains(tipoFiltro);
         }).toList();
 
     if (selectedCategory != null &&
@@ -1425,6 +1584,59 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
 
                                 if (widget.transactionType != 'Traspasos' &&
                                     widget.transactionType != 'Reembolsos') ...[
+                                  // Advertencia si no hay categorías disponibles
+                                  if (filteredCategories.isEmpty) ...[
+                                    Container(
+                                      padding: EdgeInsets.all(16.r),
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange.shade50,
+                                        border: Border.all(
+                                          color: Colors.orange.shade300,
+                                          width: 1.5,
+                                        ),
+                                        borderRadius: BorderRadius.circular(
+                                          12.r,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.warning_amber_rounded,
+                                            color: Colors.orange.shade700,
+                                            size: 28.sp,
+                                          ),
+                                          SizedBox(width: 12.w),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'No hay categorías disponibles',
+                                                  style: GoogleFonts.lato(
+                                                    fontSize: 14.sp,
+                                                    fontWeight: FontWeight.bold,
+                                                    color:
+                                                        Colors.orange.shade900,
+                                                  ),
+                                                ),
+                                                SizedBox(height: 4.h),
+                                                Text(
+                                                  'Crea categorías desde el menú de Categorías para poder registrar ${widget.transactionType.toLowerCase()}.',
+                                                  style: GoogleFonts.openSans(
+                                                    fontSize: 12.sp,
+                                                    color:
+                                                        Colors.orange.shade800,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    SizedBox(height: 16.h),
+                                  ],
                                   _buildCategorySelector(
                                     themeManager,
                                     filteredCategories,

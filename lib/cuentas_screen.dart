@@ -9,6 +9,7 @@ import 'models/Account.dart';
 import 'data_provider.dart';
 import 'theme_provider.dart';
 import 'api_service.dart';
+import 'services/firestore_service.dart';
 
 class CuentasScreen extends StatefulWidget {
   const CuentasScreen({Key? key}) : super(key: key);
@@ -418,6 +419,104 @@ class _CuentasScreenState extends State<CuentasScreen> {
 
   Future<void> _confirmarEliminarCuenta(Account cuenta) async {
     final themeManager = Provider.of<ThemeManager>(context, listen: false);
+
+    // Verificar si la cuenta está asociada a una meta
+    final firestoreService = FirestoreService();
+    final estaAsociada = await firestoreService.cuentaEstaAsociadaAMeta(
+      cuenta.id,
+    );
+
+    if (estaAsociada) {
+      // Mostrar mensaje informativo
+      await showDialog(
+        context: context,
+        builder:
+            (context) => AlertDialog(
+              backgroundColor:
+                  themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24.r),
+              ),
+              contentPadding: EdgeInsets.zero,
+              content: Container(
+                width: 340.w,
+                padding: EdgeInsets.all(28.r),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 80.w,
+                      height: 80.h,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFFf59e0b).withOpacity(0.2),
+                            const Color(0xFFd97706).withOpacity(0.3),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.warning_amber_rounded,
+                        size: 40.sp,
+                        color: const Color(0xFFf59e0b),
+                      ),
+                    ),
+                    SizedBox(height: 24.h),
+                    Text(
+                      'Cuenta asociada a meta',
+                      style: GoogleFonts.lato(
+                        fontSize: 20.sp,
+                        fontWeight: FontWeight.bold,
+                        color:
+                            themeManager.isDarkMode
+                                ? Colors.white
+                                : Colors.black87,
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+                    Text(
+                      'Esta cuenta está asociada a una meta de ahorro. Si deseas eliminarla, elimina la meta desde la pantalla de Metas y la cuenta se eliminará automáticamente.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.openSans(
+                        fontSize: 14.sp,
+                        color: Colors.grey.shade600,
+                        height: 1.5,
+                      ),
+                    ),
+                    SizedBox(height: 24.h),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFf59e0b),
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 14.h),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Entendido',
+                          style: GoogleFonts.lato(
+                            fontSize: 15.sp,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+      );
+      return;
+    }
 
     final confirmar = await showDialog<bool>(
       context: context,

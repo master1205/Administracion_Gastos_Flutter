@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:notificaciones/models/Account.dart';
-import 'package:notificaciones/models/Categoria.dart';
 import 'package:notificaciones/models/Reporte.dart';
 import 'package:notificaciones/models/Transaccion.dart';
 import 'package:notificaciones/services/firestore_service.dart';
@@ -17,7 +16,6 @@ class DataProvider extends ChangeNotifier {
   List<Account> cuentas = [];
   late Map<String, double> transaccionesCategorizadas;
   List<Reporte> reportes = [];
-  List<Categoria> categorias = [];
   List<Transaction> transacciones = [];
 
   // Subscripciones a streams
@@ -45,15 +43,8 @@ class DataProvider extends ChangeNotifier {
         notifyListeners();
       });
 
-      // Cargar reportes y categorías (estos no cambian frecuentemente)
-      //Future<List<Reporte>> reportesFuture = apiService.fetchReportes();
-      Future<List<Categoria>> categoriasFuture = apiService.fetchCategories();
-
-      // Esperamos que todas las peticiones se completen en paralelo
-      var results = await Future.wait([categoriasFuture]);
-
-      // Asignamos los resultados una vez que todas las peticiones se completaron
-      categorias = results[0];
+      // Cargar reportes (estos no cambian frecuentemente y siguen en Google Sheets)
+      // Future<List<Reporte>> reportesFuture = apiService.fetchReportes();
     } catch (e) {
       print("Error al cargar datos: $e");
     }

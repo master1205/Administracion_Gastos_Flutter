@@ -132,6 +132,22 @@ class _LoadingScreenState extends State<LoadingScreen>
 
       if (!mounted) return;
 
+      // Paso 0: Inicializar categorías por defecto (DESHABILITADO)
+      // final prefs = await SharedPreferences.getInstance();
+      // final categoriasInicializadas =
+      //     prefs.getBool('categorias_inicializadas') ?? false;
+
+      // if (!categoriasInicializadas) {
+      //   setState(() {
+      //     _currentStep = 0;
+      //     _progress = 0.1;
+      //   });
+      //   await inicializarCategoriasDefecto();
+      //   await prefs.setBool('categorias_inicializadas', true);
+      // }
+
+      if (!mounted) return;
+
       // Paso 1: Cargar datos principales
       setState(() {
         _currentStep = 1;

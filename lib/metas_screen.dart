@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_multi_formatter/formatters/money_input_enums.dart';
@@ -5,13 +6,12 @@ import 'package:flutter_multi_formatter/formatters/money_input_formatter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import 'api_service.dart';
 import 'models/Meta.dart';
 import 'models/Account.dart';
 import 'models/api_response.dart';
 import 'theme_provider.dart';
+import 'services/firestore_service.dart';
 
 class MetasScreen extends StatefulWidget {
   const MetasScreen({Key? key}) : super(key: key);
@@ -27,6 +27,8 @@ class _MetasScreenState extends State<MetasScreen> {
   final ValueNotifier<bool> _isLoadingNotifier = ValueNotifier<bool>(true);
   bool _isManualRefresh = false;
   List<Account> cuentas = [];
+  StreamSubscription<List<Meta>>? _metasSubscription;
+  final FirestoreService _firestoreService = FirestoreService();
 
   @override
   void initState() {
@@ -36,90 +38,31 @@ class _MetasScreenState extends State<MetasScreen> {
 
   @override
   void dispose() {
+    _metasSubscription?.cancel();
     _metasNotifier.dispose();
     _isLoadingNotifier.dispose();
     super.dispose();
   }
 
   Future<void> _cargarDatos() async {
-    final startTime = DateTime.now();
-    final shouldShowProgress = _isManualRefresh;
+    _isLoadingNotifier.value = true;
 
-    if (!_isManualRefresh) {
-      _isLoadingNotifier.value = true;
-    }
-    try {
-      // Solo cargar metas (ya vienen sincronizadas del backend)
-      await _cargarMetas();
-
-      if (shouldShowProgress) {
-        final elapsed = DateTime.now().difference(startTime).inMilliseconds;
-        if (elapsed < 800) {
-          await Future.delayed(Duration(milliseconds: 800 - elapsed));
-        }
-        if (mounted && _isManualRefresh) {
+    // Configurar el Stream de Firebase
+    _metasSubscription?.cancel();
+    _metasSubscription = _firestoreService.obtenerMetas().listen((metas) {
+      if (mounted) {
+        _metasNotifier.value = metas;
+        _isLoadingNotifier.value = false;
+        if (_isManualRefresh) {
           setState(() => _isManualRefresh = false);
         }
       }
-    } catch (e) {
-      print('Error al cargar datos: $e');
-      await _cargarMetasLocales();
-    } finally {
-      if (!shouldShowProgress) {
-        _isLoadingNotifier.value = false;
-      }
-    }
+    });
   }
 
   Future<void> refreshData() async {
     setState(() => _isManualRefresh = true);
-    await _cargarDatos();
-  }
-
-  Future<void> _cargarMetas() async {
-    try {
-      // Cargar del servidor con caché (ya vienen sincronizadas por el backend)
-      final apiService = ApiService();
-      final metasServidor = await apiService.getMetas();
-
-      // Guardar localmente como fallback
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-        'metas_ahorro',
-        json.encode(metasServidor.map((m) => m.toJson()).toList()),
-      );
-
-      _metasNotifier.value = metasServidor;
-    } catch (e) {
-      print('Error al cargar metas: $e');
-      // Cargar desde local si falla el servidor
-      await _cargarMetasLocales();
-    }
-  }
-
-  Future<void> _cargarMetasLocales() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? metasJson = prefs.getString('metas_ahorro');
-
-      if (metasJson != null) {
-        final List<dynamic> decoded = json.decode(metasJson);
-        _metasNotifier.value =
-            decoded.map((json) => Meta.fromJson(json)).toList();
-      }
-    } catch (e) {
-      print('Error al cargar metas locales: $e');
-    }
-  }
-
-  Future<void> _guardarMetasLocalmente() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final jsonList = _metasNotifier.value.map((m) => m.toJson()).toList();
-      await prefs.setString('metas_ahorro', json.encode(jsonList));
-    } catch (e) {
-      print('Error al guardar metas localmente: $e');
-    }
+    // El Stream se actualizará automáticamente
   }
 
   Future<void> _crearMeta() async {
@@ -176,13 +119,7 @@ class _MetasScreenState extends State<MetasScreen> {
         final metaConCuenta = resultado.copyWith(cuentaId: cuentaId);
         await apiService.saveMeta(metaConCuenta);
 
-        // Actualizar lista de metas en memoria (sin guardar localmente aún)
-        final metasActuales = List<Meta>.from(_metasNotifier.value);
-        metasActuales.add(metaConCuenta);
-        _metasNotifier.value = metasActuales;
-
-        // Guardar localmente en background (sin bloquear UI)
-        _guardarMetasLocalmente();
+        // Firebase Stream actualizará automáticamente la lista
 
         if (mounted) {
           Navigator.pop(context); // Cerrar loading
@@ -248,13 +185,7 @@ class _MetasScreenState extends State<MetasScreen> {
         final apiService = ApiService();
         await apiService.saveMeta(resultado);
 
-        // Actualizar lista en memoria
-        final metasActuales = List<Meta>.from(_metasNotifier.value);
-        metasActuales[index] = resultado;
-        _metasNotifier.value = metasActuales;
-
-        // Guardar localmente en background (sin bloquear UI)
-        _guardarMetasLocalmente();
+        // Firebase Stream actualizará automáticamente la lista
 
         if (mounted) {
           Navigator.pop(context); // Cerrar loading
@@ -340,13 +271,7 @@ class _MetasScreenState extends State<MetasScreen> {
         final apiService = ApiService();
         await apiService.deleteMeta(_metasNotifier.value[index].id);
 
-        // Eliminar de la lista en memoria
-        final metasActuales = List<Meta>.from(_metasNotifier.value);
-        metasActuales.removeAt(index);
-        _metasNotifier.value = metasActuales;
-
-        // Guardar localmente en background (sin bloquear UI)
-        _guardarMetasLocalmente();
+        // Firebase Stream actualizará automáticamente la lista
 
         // Cerrar diálogo de carga
         if (mounted) Navigator.pop(context);
@@ -1359,6 +1284,9 @@ class _CrearMetaDialogState extends State<_CrearMetaDialog> {
                             icono: _iconoSeleccionado,
                             color: _colorSeleccionado,
                             completada: widget.meta?.completada ?? false,
+                            cuentaId: widget.meta?.cuentaId,
+                            cuentaNombre: widget.meta?.cuentaNombre,
+                            numeroCuenta: widget.meta?.numeroCuenta,
                           );
                           Navigator.pop(context, meta);
                         }
