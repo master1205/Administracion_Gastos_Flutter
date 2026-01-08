@@ -459,7 +459,6 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
 
   // Transaction Actions
   Future<void> _deleteTransaction(String id) async {
-    setState(() => _isLoading = true);
     try {
       await _apiService.eliminarFilaPorIdTransaccion(id);
       if (mounted) {
@@ -484,7 +483,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
           ),
         );
       }
-      await refreshData();
+      // ✅ Stream de Firebase actualiza automáticamente la UI
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -504,8 +503,6 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
           ),
         );
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 

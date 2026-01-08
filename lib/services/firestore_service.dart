@@ -7,32 +7,6 @@ class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   static const String defaultUserId = 'default_user';
 
-  /// Limpia el caché local de Firestore
-  /// IMPORTANTE: Solo puede llamarse cuando la app se inicia y no hay listeners
-  Future<void> limpiarCache() async {
-    try {
-      // Deshabilitar persistencia temporalmente
-      await _db.disableNetwork();
-      await Future.delayed(const Duration(milliseconds: 100));
-      await _db.enableNetwork();
-      print('✅ Red de Firebase reiniciada para forzar sincronización');
-    } catch (e) {
-      print('❌ Error al reiniciar red de Firebase: $e');
-    }
-  }
-
-  /// Fuerza la sincronización desde el servidor (sin caché)
-  Future<List<Account>> obtenerCuentasDesdeServidor({String? usuarioId}) async {
-    final uid = usuarioId ?? defaultUserId;
-
-    final snapshot = await _db
-        .collection('cuentas')
-        .where('usuarioId', isEqualTo: uid)
-        .get(const GetOptions(source: Source.server)); // Forzar servidor
-
-    return snapshot.docs.map((doc) => Account.fromFirestore(doc)).toList();
-  }
-
   // ==================== TRANSACCIONES ====================
 
   /// Registra o actualiza una transacción con denormalization
@@ -237,50 +211,6 @@ class FirestoreService {
         );
   }
 
-  /// Obtiene transacciones de un mes específico (ULTRA RÁPIDO con index en 'mes')
-  Stream<List<models.Transaction>> obtenerTransaccionesPorMes(
-    String mes, {
-    String? usuarioId,
-  }) {
-    final uid = usuarioId ?? defaultUserId;
-
-    return _db
-        .collection('transacciones')
-        .where('usuarioId', isEqualTo: uid)
-        .where('mes', isEqualTo: mes) // YYYY-MM
-        .orderBy('fecha', descending: true)
-        .snapshots()
-        .map(
-          (snapshot) =>
-              snapshot.docs
-                  .map((doc) => models.Transaction.fromFirestore(doc))
-                  .toList(),
-        );
-  }
-
-  /// Obtiene transacciones en un rango de fechas
-  Stream<List<models.Transaction>> obtenerTransaccionesPorRango({
-    required DateTime desde,
-    required DateTime hasta,
-    String? usuarioId,
-  }) {
-    final uid = usuarioId ?? defaultUserId;
-
-    return _db
-        .collection('transacciones')
-        .where('usuarioId', isEqualTo: uid)
-        .where('fecha', isGreaterThanOrEqualTo: Timestamp.fromDate(desde))
-        .where('fecha', isLessThanOrEqualTo: Timestamp.fromDate(hasta))
-        .orderBy('fecha', descending: true)
-        .snapshots()
-        .map(
-          (snapshot) =>
-              snapshot.docs
-                  .map((doc) => models.Transaction.fromFirestore(doc))
-                  .toList(),
-        );
-  }
-
   // ==================== CUENTAS ====================
 
   /// Obtiene todas las cuentas activas del usuario
@@ -311,22 +241,6 @@ class FirestoreService {
         .collection('cuentas')
         .add(cuenta.toFirestore(isNew: true));
     return docRef.id;
-  }
-
-  /// Actualiza una cuenta existente
-  Future<void> actualizarCuenta(Account cuenta) async {
-    await _db
-        .collection('cuentas')
-        .doc(cuenta.id)
-        .update(cuenta.toFirestore(isNew: false));
-  }
-
-  /// Desactiva una cuenta (soft delete)
-  Future<void> desactivarCuenta(String cuentaId) async {
-    await _db.collection('cuentas').doc(cuentaId).update({
-      'activa': false,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
   }
 
   // ==================== METAS ====================
@@ -420,98 +334,7 @@ class FirestoreService {
     return gastosMap;
   }
 
-  /// Obtiene total de ingresos del mes actual
-  Future<double> obtenerIngresosMesActual({String? usuarioId}) async {
-    final uid = usuarioId ?? defaultUserId;
-    final mesActual = DateTime.now().toString().substring(0, 7);
-
-    final snapshot =
-        await _db
-            .collection('transacciones')
-            .where('usuarioId', isEqualTo: uid)
-            .where('mes', isEqualTo: mesActual)
-            .where('tipo', isEqualTo: 'Ingresos')
-            .get();
-
-    double total = 0;
-    for (var doc in snapshot.docs) {
-      total += (doc.data()['monto'] as num).toDouble();
-    }
-
-    return total;
-  }
-
   // ==================== SYNC ====================
-
-  /// Marca una transacción como sincronizada con Sheets
-  Future<void> marcarComoSincronizado(String transaccionId) async {
-    await _db.collection('transacciones').doc(transaccionId).update({
-      'sincronizado': true,
-      'sincronizadoAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  /// Obtiene transacciones NO sincronizadas para enviar a Sheets
-  Future<List<models.Transaction>> obtenerTransaccionesNoSincronizadas({
-    String? usuarioId,
-  }) async {
-    final uid = usuarioId ?? defaultUserId;
-
-    final snapshot =
-        await _db
-            .collection('transacciones')
-            .where('usuarioId', isEqualTo: uid)
-            .where('sincronizado', isEqualTo: false)
-            .orderBy('createdAt')
-            .limit(50)
-            .get();
-
-    return snapshot.docs
-        .map((doc) => models.Transaction.fromFirestore(doc))
-        .toList();
-  }
-
-  /// Propaga cambio de nombre de cuenta a todas las transacciones
-  Future<void> propagarCambioNombreCuenta(
-    String cuentaId,
-    String nuevoNombre,
-  ) async {
-    // Actualizar transacciones normales
-    final transaccionesNormales =
-        await _db
-            .collection('transacciones')
-            .where('cuentaId', isEqualTo: cuentaId)
-            .get();
-
-    final batch = _db.batch();
-    for (var doc in transaccionesNormales.docs) {
-      batch.update(doc.reference, {'cuentaNombre': nuevoNombre});
-    }
-
-    // Actualizar traspasos origen
-    final traspasosOrigen =
-        await _db
-            .collection('transacciones')
-            .where('cuentaOrigenId', isEqualTo: cuentaId)
-            .get();
-
-    for (var doc in traspasosOrigen.docs) {
-      batch.update(doc.reference, {'cuentaOrigenNombre': nuevoNombre});
-    }
-
-    // Actualizar traspasos destino
-    final traspasosDestino =
-        await _db
-            .collection('transacciones')
-            .where('cuentaDestinoId', isEqualTo: cuentaId)
-            .get();
-
-    for (var doc in traspasosDestino.docs) {
-      batch.update(doc.reference, {'cuentaDestinoNombre': nuevoNombre});
-    }
-
-    await batch.commit();
-  }
 
   // ==================== ACTUALIZAR/ELIMINAR ====================
 
