@@ -176,12 +176,13 @@ class _MetasScreenState extends State<MetasScreen> {
         final metaConCuenta = resultado.copyWith(cuentaId: cuentaId);
         await apiService.saveMeta(metaConCuenta);
 
-        // Actualizar lista de metas
+        // Actualizar lista de metas en memoria (sin guardar localmente aún)
         final metasActuales = List<Meta>.from(_metasNotifier.value);
         metasActuales.add(metaConCuenta);
         _metasNotifier.value = metasActuales;
 
-        await _guardarMetasLocalmente();
+        // Guardar localmente en background (sin bloquear UI)
+        _guardarMetasLocalmente();
 
         if (mounted) {
           Navigator.pop(context); // Cerrar loading
@@ -247,12 +248,13 @@ class _MetasScreenState extends State<MetasScreen> {
         final apiService = ApiService();
         await apiService.saveMeta(resultado);
 
-        // Actualizar lista
+        // Actualizar lista en memoria
         final metasActuales = List<Meta>.from(_metasNotifier.value);
         metasActuales[index] = resultado;
         _metasNotifier.value = metasActuales;
 
-        await _guardarMetasLocalmente();
+        // Guardar localmente en background (sin bloquear UI)
+        _guardarMetasLocalmente();
 
         if (mounted) {
           Navigator.pop(context); // Cerrar loading
@@ -338,12 +340,13 @@ class _MetasScreenState extends State<MetasScreen> {
         final apiService = ApiService();
         await apiService.deleteMeta(_metasNotifier.value[index].id);
 
-        // Eliminar de la lista
+        // Eliminar de la lista en memoria
         final metasActuales = List<Meta>.from(_metasNotifier.value);
         metasActuales.removeAt(index);
         _metasNotifier.value = metasActuales;
 
-        await _guardarMetasLocalmente();
+        // Guardar localmente en background (sin bloquear UI)
+        _guardarMetasLocalmente();
 
         // Cerrar diálogo de carga
         if (mounted) Navigator.pop(context);

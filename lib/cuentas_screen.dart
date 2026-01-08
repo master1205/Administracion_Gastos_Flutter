@@ -587,14 +587,9 @@ class _CuentasScreenState extends State<CuentasScreen> {
         final apiService = ApiService();
         await apiService.eliminarCuenta(cuenta.id);
 
-        if (mounted) {
-          // Recargar datos
-          final dataProvider = Provider.of<DataProvider>(
-            context,
-            listen: false,
-          );
-          await dataProvider.loadData();
+        // Firebase notifica automáticamente vía Stream, no necesitamos recargar manualmente
 
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
@@ -934,11 +929,9 @@ class _CuentasScreenState extends State<CuentasScreen> {
         nuevoSaldo: nuevoSaldo,
       );
 
-      if (mounted) {
-        // Recargar datos
-        final dataProvider = Provider.of<DataProvider>(context, listen: false);
-        await dataProvider.loadData();
+      // Firebase notifica automáticamente vía Stream, no necesitamos recargar manualmente
 
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -1470,13 +1463,7 @@ class _CuentasScreenState extends State<CuentasScreen> {
                                               numeroTarjeta: numeroTarjeta,
                                             );
 
-                                            // Recargar datos
-                                            final dataProvider =
-                                                Provider.of<DataProvider>(
-                                                  scaffoldContext,
-                                                  listen: false,
-                                                );
-                                            await dataProvider.loadData();
+                                            // Firebase notifica automáticamente vía Stream, no necesitamos recargar manualmente
 
                                             if (mounted) {
                                               Navigator.of(
