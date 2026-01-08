@@ -75,12 +75,7 @@ class GraficasScreenState extends State<GraficasScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      setState(() => _isLoading = true);
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) setState(() => _isLoading = false);
-      });
-    }
+    // Los Streams de Firebase se actualizan automáticamente
   }
 
   Future<void> _loadData() async {
@@ -633,169 +628,164 @@ class GraficasScreenState extends State<GraficasScreen>
       index++;
     });
 
-    return RefreshIndicator(
-      onRefresh: refreshData,
-      color: const Color(0xFF667eea),
-      strokeWidth: 2.5.w,
-      child: ListView(
-        padding: EdgeInsets.all(14.r),
-        children: [
-          _buildSectionHeader(
-            title: 'Total de Gastos',
-            total: _currencyFormat.format(totalGastos),
-            icon: Icons.trending_down_rounded,
-            gradientColors: const [Color(0xFFfa709a), Color(0xFFfee140)],
-          ),
-          SizedBox(height: 16.h),
-          AnimationUtils.slideFromBottom(
-            Container(
-              key: _chartKey,
-              padding: EdgeInsets.all(14.r),
-              decoration: BoxDecoration(
-                color:
-                    themeManager.isDarkMode
-                        ? Colors.grey.shade800.withOpacity(0.5)
-                        : Colors.white,
-                borderRadius: BorderRadius.circular(14.r),
-                boxShadow: [
-                  BoxShadow(
-                    color:
-                        themeManager.isDarkMode
-                            ? Colors.black.withOpacity(0.2)
-                            : Colors.grey.withOpacity(0.1),
-                    blurRadius: 10.r,
-                    offset: Offset(0, 3.h),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(6.r),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                          ),
-                          borderRadius: BorderRadius.circular(8.r),
+    return ListView(
+      padding: EdgeInsets.all(14.r),
+      children: [
+        _buildSectionHeader(
+          title: 'Total de Gastos',
+          total: _currencyFormat.format(totalGastos),
+          icon: Icons.trending_down_rounded,
+          gradientColors: const [Color(0xFFfa709a), Color(0xFFfee140)],
+        ),
+        SizedBox(height: 16.h),
+        AnimationUtils.slideFromBottom(
+          Container(
+            key: _chartKey,
+            padding: EdgeInsets.all(14.r),
+            decoration: BoxDecoration(
+              color:
+                  themeManager.isDarkMode
+                      ? Colors.grey.shade800.withOpacity(0.5)
+                      : Colors.white,
+              borderRadius: BorderRadius.circular(14.r),
+              boxShadow: [
+                BoxShadow(
+                  color:
+                      themeManager.isDarkMode
+                          ? Colors.black.withOpacity(0.2)
+                          : Colors.grey.withOpacity(0.1),
+                  blurRadius: 10.r,
+                  offset: Offset(0, 3.h),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(6.r),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
                         ),
-                        child: Icon(
-                          Icons.bar_chart_rounded,
-                          color: Colors.white,
-                          size: 16.sp,
-                        ),
+                        borderRadius: BorderRadius.circular(8.r),
                       ),
-                      SizedBox(width: 8.w),
-                      Text(
-                        'Distribución por Categoría',
-                        style: GoogleFonts.lato(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 14.h),
-                  SizedBox(
-                    height: 200.h,
-                    child: BarChart(
-                      BarChartData(
-                        minY: 0,
-                        barGroups: barGroups,
-                        borderData: FlBorderData(show: false),
-                        titlesData: FlTitlesData(show: false),
-                        barTouchData: BarTouchData(
-                          enabled: true,
-                          touchTooltipData: BarTouchTooltipData(
-                            getTooltipColor: (group) => Colors.black87,
-                            tooltipRoundedRadius: 8,
-                            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                              return BarTooltipItem(
-                                _currencyFormat.format(rod.toY),
-                                TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 11.sp,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        gridData: FlGridData(show: false),
+                      child: Icon(
+                        Icons.bar_chart_rounded,
+                        color: Colors.white,
+                        size: 16.sp,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SizedBox(height: 16.h),
-          AnimationUtils.slideFromBottom(
-            Container(
-              padding: EdgeInsets.all(14.r),
-              decoration: BoxDecoration(
-                color:
-                    themeManager.isDarkMode
-                        ? Colors.grey.shade800.withOpacity(0.5)
-                        : Colors.white,
-                borderRadius: BorderRadius.circular(14.r),
-                boxShadow: [
-                  BoxShadow(
-                    color:
-                        themeManager.isDarkMode
-                            ? Colors.black.withOpacity(0.2)
-                            : Colors.grey.withOpacity(0.1),
-                    blurRadius: 10.r,
-                    offset: Offset(0, 3.h),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(6.r),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                          ),
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        child: Icon(
-                          Icons.list_rounded,
-                          color: Colors.white,
-                          size: 16.sp,
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Distribución por Categoría',
+                      style: GoogleFonts.lato(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 14.h),
+                SizedBox(
+                  height: 200.h,
+                  child: BarChart(
+                    BarChartData(
+                      minY: 0,
+                      barGroups: barGroups,
+                      borderData: FlBorderData(show: false),
+                      titlesData: FlTitlesData(show: false),
+                      barTouchData: BarTouchData(
+                        enabled: true,
+                        touchTooltipData: BarTouchTooltipData(
+                          getTooltipColor: (group) => Colors.black87,
+                          tooltipRoundedRadius: 8,
+                          getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                            return BarTooltipItem(
+                              _currencyFormat.format(rod.toY),
+                              TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11.sp,
+                              ),
+                            );
+                          },
                         ),
                       ),
-                      SizedBox(width: 8.w),
-                      Text(
-                        'Desglose Detallado',
-                        style: GoogleFonts.lato(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                      gridData: FlGridData(show: false),
+                    ),
                   ),
-                  SizedBox(height: 10.h),
-                  ...legendItems.asMap().entries.map((entry) {
-                    return AnimationUtils.staggeredAnimation(
-                      index: entry.key,
-                      type: AnimationType.fadeIn,
-                      child: entry.value,
-                    );
-                  }).toList(),
-                ],
-              ),
+                ),
+              ],
             ),
-            delay: 100,
           ),
-        ],
-      ),
+        ),
+        SizedBox(height: 16.h),
+        AnimationUtils.slideFromBottom(
+          Container(
+            padding: EdgeInsets.all(14.r),
+            decoration: BoxDecoration(
+              color:
+                  themeManager.isDarkMode
+                      ? Colors.grey.shade800.withOpacity(0.5)
+                      : Colors.white,
+              borderRadius: BorderRadius.circular(14.r),
+              boxShadow: [
+                BoxShadow(
+                  color:
+                      themeManager.isDarkMode
+                          ? Colors.black.withOpacity(0.2)
+                          : Colors.grey.withOpacity(0.1),
+                  blurRadius: 10.r,
+                  offset: Offset(0, 3.h),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(6.r),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                        ),
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                      child: Icon(
+                        Icons.list_rounded,
+                        color: Colors.white,
+                        size: 16.sp,
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Desglose Detallado',
+                      style: GoogleFonts.lato(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 10.h),
+                ...legendItems.asMap().entries.map((entry) {
+                  return AnimationUtils.staggeredAnimation(
+                    index: entry.key,
+                    type: AnimationType.fadeIn,
+                    child: entry.value,
+                  );
+                }).toList(),
+              ],
+            ),
+          ),
+          delay: 100,
+        ),
+      ],
     );
   }
 
@@ -858,163 +848,158 @@ class GraficasScreenState extends State<GraficasScreen>
       index++;
     }
 
-    return RefreshIndicator(
-      onRefresh: refreshData,
-      color: const Color(0xFF667eea),
-      strokeWidth: 2.5.w,
-      child: ListView(
-        padding: EdgeInsets.all(14.r),
-        children: [
-          _buildSectionHeader(
-            title: 'Balance Total',
-            total: _currencyFormat.format(totalSaldo),
-            icon: Icons.account_balance_wallet_rounded,
-            gradientColors: const [Color(0xFF4facfe), Color(0xFF00f2fe)],
+    return ListView(
+      padding: EdgeInsets.all(14.r),
+      children: [
+        _buildSectionHeader(
+          title: 'Balance Total',
+          total: _currencyFormat.format(totalSaldo),
+          icon: Icons.account_balance_wallet_rounded,
+          gradientColors: const [Color(0xFF4facfe), Color(0xFF00f2fe)],
+        ),
+        SizedBox(height: 16.h),
+        Container(
+          padding: EdgeInsets.all(14.r),
+          decoration: BoxDecoration(
+            color:
+                themeManager.isDarkMode
+                    ? Colors.grey.shade800.withOpacity(0.5)
+                    : Colors.white,
+            borderRadius: BorderRadius.circular(14.r),
+            boxShadow: [
+              BoxShadow(
+                color:
+                    themeManager.isDarkMode
+                        ? Colors.black.withOpacity(0.2)
+                        : Colors.grey.withOpacity(0.1),
+                blurRadius: 10.r,
+                offset: Offset(0, 3.h),
+              ),
+            ],
           ),
-          SizedBox(height: 16.h),
-          Container(
-            padding: EdgeInsets.all(14.r),
-            decoration: BoxDecoration(
-              color:
-                  themeManager.isDarkMode
-                      ? Colors.grey.shade800.withOpacity(0.5)
-                      : Colors.white,
-              borderRadius: BorderRadius.circular(14.r),
-              boxShadow: [
-                BoxShadow(
-                  color:
-                      themeManager.isDarkMode
-                          ? Colors.black.withOpacity(0.2)
-                          : Colors.grey.withOpacity(0.1),
-                  blurRadius: 10.r,
-                  offset: Offset(0, 3.h),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(6.r),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF4facfe), Color(0xFF00f2fe)],
-                        ),
-                        borderRadius: BorderRadius.circular(8.r),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(6.r),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF4facfe), Color(0xFF00f2fe)],
                       ),
-                      child: Icon(
-                        Icons.pie_chart_rounded,
-                        color: Colors.white,
-                        size: 16.sp,
-                      ),
+                      borderRadius: BorderRadius.circular(8.r),
                     ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Distribución por Cuenta',
-                      style: GoogleFonts.lato(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 14.h),
-                SizedBox(
-                  height: 200.h,
-                  child: BarChart(
-                    BarChartData(
-                      minY: 0,
-                      barGroups: barGroups,
-                      borderData: FlBorderData(show: false),
-                      titlesData: FlTitlesData(show: false),
-                      barTouchData: BarTouchData(
-                        enabled: true,
-                        touchTooltipData: BarTouchTooltipData(
-                          getTooltipColor: (group) => Colors.black87,
-                          tooltipRoundedRadius: 8,
-                          getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                            return BarTooltipItem(
-                              _currencyFormat.format(rod.toY),
-                              TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11.sp,
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      gridData: FlGridData(show: false),
+                    child: Icon(
+                      Icons.pie_chart_rounded,
+                      color: Colors.white,
+                      size: 16.sp,
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 16.h),
-          Container(
-            padding: EdgeInsets.all(14.r),
-            decoration: BoxDecoration(
-              color:
-                  themeManager.isDarkMode
-                      ? Colors.grey.shade800.withOpacity(0.5)
-                      : Colors.white,
-              borderRadius: BorderRadius.circular(14.r),
-              boxShadow: [
-                BoxShadow(
-                  color:
-                      themeManager.isDarkMode
-                          ? Colors.black.withOpacity(0.2)
-                          : Colors.grey.withOpacity(0.1),
-                  blurRadius: 10.r,
-                  offset: Offset(0, 3.h),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(6.r),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF4facfe), Color(0xFF00f2fe)],
-                        ),
-                        borderRadius: BorderRadius.circular(8.r),
-                      ),
-                      child: Icon(
-                        Icons.credit_card_rounded,
-                        color: Colors.white,
-                        size: 16.sp,
+                  SizedBox(width: 8.w),
+                  Text(
+                    'Distribución por Cuenta',
+                    style: GoogleFonts.lato(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 14.h),
+              SizedBox(
+                height: 200.h,
+                child: BarChart(
+                  BarChartData(
+                    minY: 0,
+                    barGroups: barGroups,
+                    borderData: FlBorderData(show: false),
+                    titlesData: FlTitlesData(show: false),
+                    barTouchData: BarTouchData(
+                      enabled: true,
+                      touchTooltipData: BarTouchTooltipData(
+                        getTooltipColor: (group) => Colors.black87,
+                        tooltipRoundedRadius: 8,
+                        getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                          return BarTooltipItem(
+                            _currencyFormat.format(rod.toY),
+                            TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11.sp,
+                            ),
+                          );
+                        },
                       ),
                     ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Detalle de Cuentas',
-                      style: GoogleFonts.lato(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+                    gridData: FlGridData(show: false),
+                  ),
                 ),
-                SizedBox(height: 10.h),
-                ...legendItems.asMap().entries.map((entry) {
-                  return AnimationUtils.staggeredAnimation(
-                    index: entry.key,
-                    type: AnimationType.fadeIn,
-                    child: entry.value,
-                  );
-                }).toList(),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        SizedBox(height: 16.h),
+        Container(
+          padding: EdgeInsets.all(14.r),
+          decoration: BoxDecoration(
+            color:
+                themeManager.isDarkMode
+                    ? Colors.grey.shade800.withOpacity(0.5)
+                    : Colors.white,
+            borderRadius: BorderRadius.circular(14.r),
+            boxShadow: [
+              BoxShadow(
+                color:
+                    themeManager.isDarkMode
+                        ? Colors.black.withOpacity(0.2)
+                        : Colors.grey.withOpacity(0.1),
+                blurRadius: 10.r,
+                offset: Offset(0, 3.h),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(6.r),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF4facfe), Color(0xFF00f2fe)],
+                      ),
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                    child: Icon(
+                      Icons.credit_card_rounded,
+                      color: Colors.white,
+                      size: 16.sp,
+                    ),
+                  ),
+                  SizedBox(width: 8.w),
+                  Text(
+                    'Detalle de Cuentas',
+                    style: GoogleFonts.lato(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 10.h),
+              ...legendItems.asMap().entries.map((entry) {
+                return AnimationUtils.staggeredAnimation(
+                  index: entry.key,
+                  type: AnimationType.fadeIn,
+                  child: entry.value,
+                );
+              }).toList(),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

@@ -92,11 +92,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    debugPrint('📱 Lifecycle cambió a: $state');
-    if (state == AppLifecycleState.resumed && mounted) {
-      debugPrint('🔄 App resumed - reactivando streams');
-      _setupStreams();
-    }
+    // Los Streams de Firebase se mantienen activos automáticamente
   }
 
   // Initialization
@@ -1685,25 +1681,20 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
               )
               : Stack(
                 children: [
-                  RefreshIndicator(
-                    onRefresh: refreshData,
-                    color: const Color(0xFF667eea),
-                    child: SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: EdgeInsets.all(14.r),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildBalanceCard(),
-                          SizedBox(height: 18.h),
-                          _buildMetasCard(),
-                          SizedBox(height: 18.h),
-                          _buildAccountsCarousel(),
-                          SizedBox(height: 18.h),
-                          _buildTransactionsList(),
-                          SizedBox(height: 14.h),
-                        ],
-                      ),
+                  SingleChildScrollView(
+                    padding: EdgeInsets.all(14.r),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildBalanceCard(),
+                        SizedBox(height: 18.h),
+                        _buildMetasCard(),
+                        SizedBox(height: 18.h),
+                        _buildAccountsCarousel(),
+                        SizedBox(height: 18.h),
+                        _buildTransactionsList(),
+                        SizedBox(height: 14.h),
+                      ],
                     ),
                   ),
                   // Indicador sutil de recarga (solo refresh manual)

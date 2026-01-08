@@ -6,9 +6,6 @@ import 'package:lottie/lottie.dart';
 import 'package:notificaciones/home_screen.dart';
 import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
-import 'api_service.dart';
 import 'data_provider.dart';
 
 class LoadingScreen extends StatefulWidget {
@@ -29,18 +26,7 @@ class _LoadingScreenState extends State<LoadingScreen>
   // State
   int _dotsCount = 0;
   bool _isLoading = true;
-  double _progress = 0.0;
-
-  // Loading steps
-  final List<String> _loadingSteps = [
-    'Inicializando...',
-    'Cargando cuentas...',
-    'Obteniendo transacciones...',
-    'Sincronizando metas...',
-    'Preparando dashboard...',
-    'Casi listo...',
-  ];
-  int _currentStep = 0;
+  String _loadingMessage = 'Cargando datos...';
 
   @override
   void initState() {
@@ -48,7 +34,6 @@ class _LoadingScreenState extends State<LoadingScreen>
     _setupAnimations();
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadData());
     _startLoadingAnimation();
-    _startProgressAnimation();
   }
 
   @override
@@ -105,78 +90,27 @@ class _LoadingScreenState extends State<LoadingScreen>
     });
   }
 
-  void _startProgressAnimation() {
-    Future.doWhile(() async {
-      await Future.delayed(const Duration(milliseconds: 300));
-      if (_isLoading && mounted) {
-        setState(() {
-          if (_progress < 0.95) {
-            _progress += 0.05;
-            // Cambiar mensaje cada 20% de progreso
-            int newStep = (_progress * _loadingSteps.length).floor();
-            if (newStep != _currentStep && newStep < _loadingSteps.length) {
-              _currentStep = newStep;
-            }
-          }
-        });
-        return true;
-      }
-      return false;
-    });
-  }
-
   // Data Loading
   Future<void> _loadData() async {
+    final startTime = DateTime.now();
+
     try {
       await initializeDateFormatting('es_ES', null);
 
       if (!mounted) return;
-
-      // Paso 0: Inicializar categorías por defecto (DESHABILITADO)
-      // final prefs = await SharedPreferences.getInstance();
-      // final categoriasInicializadas =
-      //     prefs.getBool('categorias_inicializadas') ?? false;
-
-      // if (!categoriasInicializadas) {
-      //   setState(() {
-      //     _currentStep = 0;
-      //     _progress = 0.1;
-      //   });
-      //   await inicializarCategoriasDefecto();
-      //   await prefs.setBool('categorias_inicializadas', true);
-      // }
-
-      if (!mounted) return;
-
-      // Paso 1: Cargar datos principales
-      setState(() {
-        _currentStep = 1;
-        _progress = 0.2;
-      });
 
       final dataProvider = Provider.of<DataProvider>(context, listen: false);
       await dataProvider.loadData();
 
       if (!mounted) return;
 
-      // Paso 2: Sincronizar metas de ahorro
-      setState(() {
-        _currentStep = 3;
-        _progress = 0.7;
-      });
-
-      await _sincronizarMetas();
-
-      if (!mounted) return;
-
-      // Asegurar que llegue al 100%
-      setState(() {
-        _progress = 1.0;
-        _currentStep = _loadingSteps.length - 1;
-      });
-
-      // Pequeña pausa para mostrar el 100%
-      await Future.delayed(const Duration(milliseconds: 100));
+      // Garantizar mínimo 2 segundos de visualización del loading
+      final elapsed = DateTime.now().difference(startTime);
+      if (elapsed.inMilliseconds < 2000) {
+        await Future.delayed(
+          Duration(milliseconds: 2000 - elapsed.inMilliseconds),
+        );
+      }
 
       if (!mounted) return;
 
@@ -205,28 +139,6 @@ class _LoadingScreenState extends State<LoadingScreen>
       });
 
       _showErrorDialog(e.toString());
-    }
-  }
-
-  Future<void> _sincronizarMetas() async {
-    try {
-      print('🔄 Sincronizando metas de ahorro...');
-
-      // 1. Obtener metas del servidor
-      final apiService = ApiService();
-      final metasServidor = await apiService.getMetas();
-
-      // 2. Guardar localmente
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-        'metas_ahorro',
-        json.encode(metasServidor.map((m) => m.toJson()).toList()),
-      );
-
-      print('✅ Metas sincronizadas: ${metasServidor.length} metas');
-    } catch (e) {
-      print('⚠️ Error al sincronizar metas: $e');
-      // No detenemos la carga si falla la sincronización
     }
   }
 
@@ -295,8 +207,6 @@ class _LoadingScreenState extends State<LoadingScreen>
                           Navigator.pop(context);
                           setState(() {
                             _isLoading = true;
-                            _progress = 0.0;
-                            _currentStep = 0;
                           });
                           _loadData();
                         },
@@ -435,105 +345,30 @@ class _LoadingScreenState extends State<LoadingScreen>
               ),
               child: Column(
                 children: [
-                  // Barra de progreso moderna
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10.r),
-                    child: Stack(
-                      children: [
-                        Container(
-                          height: 7.h, // ✅ REDUCIDO de 8
-                          decoration: BoxDecoration(
-                            color:
-                                themeManager.isDarkMode
-                                    ? Colors.grey.shade700
-                                    : Colors.grey.shade200,
-                            borderRadius: BorderRadius.circular(10.r),
-                          ),
-                        ),
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          height: 7.h,
-                          width:
-                              MediaQuery.of(context).size.width *
-                              _progress *
-                              0.7,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                            ),
-                            borderRadius: BorderRadius.circular(10.r),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF667eea).withOpacity(0.5),
-                                blurRadius: 6.r, // ✅ REDUCIDO de 8
-                                offset: Offset(0, 1.5.h), // ✅ REDUCIDO de 2
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                  // Mensaje de carga
+                  Text(
+                    _loadingMessage,
+                    style: GoogleFonts.lato(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          themeManager.isDarkMode
+                              ? Colors.white
+                              : const Color(0xFF2D3436),
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
 
-                  SizedBox(height: 16.h), // ✅ REDUCIDO de 20
-                  // Porcentaje y mensaje
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _currentStep < _loadingSteps.length
-                              ? _loadingSteps[_currentStep]
-                              : 'Cargando',
-                          style: GoogleFonts.lato(
-                            fontSize: 13.sp, // ✅ REDUCIDO de 15
-                            fontWeight: FontWeight.w600,
-                            color:
-                                themeManager.isDarkMode
-                                    ? Colors.white
-                                    : const Color(0xFF2D3436),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 10.w, // ✅ REDUCIDO de 12
-                          vertical: 5.h, // ✅ REDUCIDO de 6
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                          ),
-                          borderRadius: BorderRadius.circular(
-                            6.r,
-                          ), // ✅ REDUCIDO de 8
-                        ),
-                        child: Text(
-                          '${(_progress * 100).toInt()}%',
-                          style: GoogleFonts.lato(
-                            fontSize: 12.sp, // ✅ REDUCIDO de 14
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  SizedBox(height: 10.h), // ✅ REDUCIDO de 12
+                  SizedBox(height: 10.h),
                   // Puntos animados
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(3, (index) {
                       return AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
-                        margin: EdgeInsets.symmetric(
-                          horizontal: 3.w,
-                        ), // ✅ REDUCIDO de 4
-                        width:
-                            _dotsCount > index ? 7.w : 5.w, // ✅ REDUCIDO de 8/6
+                        margin: EdgeInsets.symmetric(horizontal: 3.w),
+                        width: _dotsCount > index ? 7.w : 5.w,
                         height: _dotsCount > index ? 7.h : 5.h,
                         decoration: BoxDecoration(
                           color:

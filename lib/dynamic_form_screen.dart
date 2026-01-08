@@ -355,12 +355,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      setState(() => isLoading = true);
-      Future.delayed(const Duration(milliseconds: 250), () {
-        if (mounted) setState(() => isLoading = false);
-      });
-    }
+    // Los Streams de Firebase se actualizan automáticamente
   }
 
   void _setupAnimations() {

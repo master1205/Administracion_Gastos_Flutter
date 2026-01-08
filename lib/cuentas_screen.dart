@@ -55,21 +55,15 @@ class _CuentasScreenState extends State<CuentasScreen> {
               )
               : cuentas.isEmpty
               ? _buildEmptyState()
-              : RefreshIndicator(
-                onRefresh: () async {
-                  await dataProvider.loadData();
-                },
-                color: const Color(0xFF4facfe),
-                child: ListView(
-                  padding: EdgeInsets.all(16.r),
-                  children: [
-                    _buildResumenTotal(cuentas, themeManager),
-                    SizedBox(height: 20.h),
-                    ...cuentas.map(
-                      (cuenta) => _buildCuentaCard(cuenta, themeManager),
-                    ),
-                  ],
-                ),
+              : ListView(
+                padding: EdgeInsets.all(16.r),
+                children: [
+                  _buildResumenTotal(cuentas, themeManager),
+                  SizedBox(height: 20.h),
+                  ...cuentas.map(
+                    (cuenta) => _buildCuentaCard(cuenta, themeManager),
+                  ),
+                ],
               ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _mostrarDialogoCrearCuenta(context),

@@ -280,77 +280,70 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                   ),
                 ),
               )
-              : RefreshIndicator(
-                onRefresh: () async {
-                  await _cargarNotificaciones();
-                  await _cargarEstadoSistema();
-                },
-                color: const Color(0xFFf093fb),
-                child: ListView(
-                  padding: EdgeInsets.all(16.r),
-                  children: [
-                    _buildInfoCard(themeManager),
-                    SizedBox(height: 16.h),
+              : ListView(
+                padding: EdgeInsets.all(16.r),
+                children: [
+                  _buildInfoCard(themeManager),
+                  SizedBox(height: 16.h),
 
-                    // Notificaciones del Sistema
+                  // Notificaciones del Sistema
+                  _buildSeccionHeader(
+                    'Notificaciones del Sistema',
+                    Icons.schedule_rounded,
+                    themeManager,
+                  ),
+                  SizedBox(height: 12.h),
+                  _buildNotificacionSistema(
+                    'Recordatorio Matutino',
+                    'Revisa tus gastos matutinos',
+                    '10:00 AM',
+                    morningEnabled,
+                    const Color(0xFFFF9800),
+                    Icons.wb_sunny_rounded,
+                    themeManager,
+                  ),
+                  SizedBox(height: 12.h),
+                  _buildNotificacionSistema(
+                    'Recordatorio de Tarde',
+                    'No olvides registrar tus compras',
+                    '3:00 PM',
+                    afternoonEnabled,
+                    const Color(0xFF2196F3),
+                    Icons.wb_twilight_rounded,
+                    themeManager,
+                  ),
+                  SizedBox(height: 12.h),
+                  _buildNotificacionSistema(
+                    'Resumen Nocturno',
+                    'Cierra el día revisando tu resumen',
+                    '9:30 PM',
+                    nightEnabled,
+                    const Color(0xFF9C27B0),
+                    Icons.nightlight_round_rounded,
+                    themeManager,
+                  ),
+
+                  if (notificaciones.isNotEmpty) ...[
+                    SizedBox(height: 24.h),
                     _buildSeccionHeader(
-                      'Notificaciones del Sistema',
-                      Icons.schedule_rounded,
+                      'Notificaciones Personalizadas',
+                      Icons.notifications_active_rounded,
                       themeManager,
                     ),
                     SizedBox(height: 12.h),
-                    _buildNotificacionSistema(
-                      'Recordatorio Matutino',
-                      'Revisa tus gastos matutinos',
-                      '10:00 AM',
-                      morningEnabled,
-                      const Color(0xFFFF9800),
-                      Icons.wb_sunny_rounded,
-                      themeManager,
-                    ),
-                    SizedBox(height: 12.h),
-                    _buildNotificacionSistema(
-                      'Recordatorio de Tarde',
-                      'No olvides registrar tus compras',
-                      '3:00 PM',
-                      afternoonEnabled,
-                      const Color(0xFF2196F3),
-                      Icons.wb_twilight_rounded,
-                      themeManager,
-                    ),
-                    SizedBox(height: 12.h),
-                    _buildNotificacionSistema(
-                      'Resumen Nocturno',
-                      'Cierra el día revisando tu resumen',
-                      '9:30 PM',
-                      nightEnabled,
-                      const Color(0xFF9C27B0),
-                      Icons.nightlight_round_rounded,
-                      themeManager,
-                    ),
-
-                    if (notificaciones.isNotEmpty) ...[
-                      SizedBox(height: 24.h),
-                      _buildSeccionHeader(
-                        'Notificaciones Personalizadas',
-                        Icons.notifications_active_rounded,
+                    ...List.generate(
+                      notificaciones.length,
+                      (index) => _buildNotificacionCard(
+                        notificaciones[index],
+                        index,
                         themeManager,
                       ),
-                      SizedBox(height: 12.h),
-                      ...List.generate(
-                        notificaciones.length,
-                        (index) => _buildNotificacionCard(
-                          notificaciones[index],
-                          index,
-                          themeManager,
-                        ),
-                      ),
-                    ] else ...[
-                      SizedBox(height: 24.h),
-                      _buildEmptyPersonalizadas(),
-                    ],
+                    ),
+                  ] else ...[
+                    SizedBox(height: 24.h),
+                    _buildEmptyPersonalizadas(),
                   ],
-                ),
+                ],
               ),
     );
   }

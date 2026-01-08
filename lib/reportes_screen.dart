@@ -44,12 +44,7 @@ class ReportesScreenState extends State<ReportesScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      setState(() => _isLoading = true);
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) setState(() => _isLoading = false);
-      });
-    }
+    // Los Streams de Firebase se actualizan automáticamente
   }
 
   // Initialization
@@ -430,57 +425,51 @@ class ReportesScreenState extends State<ReportesScreen>
         children: [
           _isLoading
               ? _buildLoadingIndicator(themeManager)
-              : RefreshIndicator(
-                onRefresh: refreshData,
-                color: const Color(0xFF667eea),
-                strokeWidth: 2.3.w, // ✅ REDUCIDO de 2.5
-                child: FutureBuilder<List<Reporte>>(
-                  future: _futureReportes,
-                  builder: (context, snapshot) {
-                    // Si está en waiting y es refresh manual, mostrar datos anteriores si existen
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      if (_isManualRefresh && snapshot.hasData) {
-                        // Continuar mostrando los datos anteriores
-                      } else if (!_isManualRefresh) {
-                        return _buildLoadingIndicator(themeManager);
-                      }
+              : FutureBuilder<List<Reporte>>(
+                future: _futureReportes,
+                builder: (context, snapshot) {
+                  // Si está en waiting y es refresh manual, mostrar datos anteriores si existen
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    if (_isManualRefresh && snapshot.hasData) {
+                      // Continuar mostrando los datos anteriores
+                    } else if (!_isManualRefresh) {
+                      return _buildLoadingIndicator(themeManager);
                     }
+                  }
 
-                    if (snapshot.hasError) {
-                      return _buildErrorState(snapshot.error);
-                    }
+                  if (snapshot.hasError) {
+                    return _buildErrorState(snapshot.error);
+                  }
 
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return _buildEmptyState();
-                    }
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return _buildEmptyState();
+                  }
 
-                    final reportes = snapshot.data!;
-                    final reportesPorAno = _agruparReportesPorAno(reportes);
+                  final reportes = snapshot.data!;
+                  final reportesPorAno = _agruparReportesPorAno(reportes);
 
-                    // Inicializar _expandedYears si es necesario
-                    for (var ano in reportesPorAno.keys) {
-                      _expandedYears.putIfAbsent(ano, () => false);
-                    }
+                  // Inicializar _expandedYears si es necesario
+                  for (var ano in reportesPorAno.keys) {
+                    _expandedYears.putIfAbsent(ano, () => false);
+                  }
 
-                    return ListView.builder(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: EdgeInsets.symmetric(
-                        vertical: 12.h,
-                      ), // ✅ REDUCIDO de 14
-                      itemCount: reportesPorAno.keys.length,
-                      itemBuilder: (context, index) {
-                        final year = reportesPorAno.keys.elementAt(index);
-                        final reportesDelAno = reportesPorAno[year]!;
+                  return ListView.builder(
+                    padding: EdgeInsets.symmetric(
+                      vertical: 12.h,
+                    ), // ✅ REDUCIDO de 14
+                    itemCount: reportesPorAno.keys.length,
+                    itemBuilder: (context, index) {
+                      final year = reportesPorAno.keys.elementAt(index);
+                      final reportesDelAno = reportesPorAno[year]!;
 
-                        return _buildYearCard(
-                          year: year,
-                          reportes: reportesDelAno,
-                          themeManager: themeManager,
-                        );
-                      },
-                    );
-                  },
-                ),
+                      return _buildYearCard(
+                        year: year,
+                        reportes: reportesDelAno,
+                        themeManager: themeManager,
+                      );
+                    },
+                  );
+                },
               ),
           // Indicador sutil de recarga (solo refresh manual)
           if (_isManualRefresh)

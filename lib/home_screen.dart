@@ -1085,21 +1085,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         builder:
             (context) => TrasaccionScreen(transactionType: type, color: color),
       ),
-    ).then((_) => _refreshCurrentScreen());
-  }
-
-  void _refreshCurrentScreen() {
-    switch (_selectedIndex) {
-      case 0:
-        _dashboardKey.currentState?.refreshData();
-        break;
-      case 1:
-        _transaccionesKey.currentState?.refreshData();
-        break;
-      case 2:
-        _graficasKey.currentState?.refreshData();
-        break;
-    }
+    );
   }
 
   @override

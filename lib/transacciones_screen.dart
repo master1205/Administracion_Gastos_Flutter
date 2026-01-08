@@ -67,12 +67,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      setState(() => _isLoading = true);
-      Future.delayed(const Duration(milliseconds: 400), () {
-        if (mounted) setState(() => _isLoading = false);
-      });
-    }
+    // Los Streams de Firebase se actualizan automáticamente
   }
 
   // Initialization
@@ -525,7 +520,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
               color: _getColorForType(transaccion.tipoTransaccion),
             ),
       ),
-    ).then((_) => refreshData());
+    );
   }
 
   // Helpers
@@ -1196,17 +1191,11 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
       backgroundColor: bgColor,
       body: Stack(
         children: [
-          RefreshIndicator(
-            onRefresh: refreshData,
-            color: const Color(0xFF667eea),
-            strokeWidth: 2.3.w,
-            child:
-                _isLoading
-                    ? const TransactionListShimmer(itemCount: 8)
-                    : _transacciones.isEmpty
-                    ? _buildEmptyState()
-                    : _buildTransactionsList(_transacciones),
-          ),
+          _isLoading
+              ? const TransactionListShimmer(itemCount: 8)
+              : _transacciones.isEmpty
+              ? _buildEmptyState()
+              : _buildTransactionsList(_transacciones),
           // Indicador sutil de recarga (solo refresh manual)
           if (_isManualRefresh)
             Positioned(
