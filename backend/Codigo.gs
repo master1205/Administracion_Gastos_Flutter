@@ -36,7 +36,8 @@ function doPost(e) {
     'deleteMeta':deleteMeta,
     'updateMetaProgress': updateMetaProgress,
     'crearCuenta':crearCuenta,
-    'eliminarCuenta':eliminarCuenta
+    'eliminarCuenta':eliminarCuenta,
+    'registrarCorteMensual': registrarCorteMensual  // ← CORTE MENSUAL
   });
 }
 

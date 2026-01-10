@@ -35,32 +35,33 @@ function listReportes() {
 const GeneradorReportes = {
   /**
    * Genera el reporte mensual completo
+   * @param {Object} resumen - Objeto con totalIngresos, totalGastos, saldoTotal desde Flutter
+   * @param {Array} transacciones - Array de transacciones desde Flutter
    */
-  corteMensual: function() {
+  corteMensual: function(resumen, transacciones) {
     try {
-      Logger.info('GeneradorReportes', 'Iniciando corte mensual');
+      Logger.info('GeneradorReportes', 'Iniciando corte mensual', { 
+        resumen: resumen,
+        transacciones: transacciones.length 
+      });
       
       const fechaCorte = FormatoUtil.mesAnterior();
       
       // Crear documento desde plantilla
       const documento = this._crearDocumentoDesdePlantilla(fechaCorte);
       
-      // Obtener datos y analizar
-      const data = SheetManager.getNuevasTransacciones().getDataRange().getValues();
-      const analisis = AnalizadorTransacciones.analizar(data);
+      // Analizar transacciones desde el array (sin leer Sheets)
+      const analisis = AnalizadorTransacciones.analizarArray(transacciones);
       
       // Llenar documento
-      this._llenarDatosBasicos(documento.body, fechaCorte);
+      this._llenarDatosBasicos(documento.body, fechaCorte, resumen);
       this._agregarTop3Gastos(documento.body, analisis);
       this._agregarDistribucionCategorias(documento.body, analisis);
       this._agregarEstadisticas(documento.body, analisis);
-      this._agregarTablaTransacciones(documento.body, data);
+      this._agregarTablaTransacciones(documento.body, transacciones);
       
       // Guardar y convertir a PDF
       const pdfFile = this._convertirAPDF(documento, fechaCorte);
-      
-      // Limpiar transacciones
-      this._limpiarTransacciones();
       
       // Enviar notificación
       EmailSender.enviarReporteMensual(fechaCorte, analisis);
@@ -97,14 +98,16 @@ const GeneradorReportes = {
 
   /**
    * Llena los datos básicos del reporte
+   * @param {Object} resumen - Objeto con totalIngresos, totalGastos, saldoTotal
    */
-  _llenarDatosBasicos: function(body, fechaCorte) {
-    const sheet = SheetManager.getCuentas();
-    
-    body.replaceText("{{saldoCorte}}", FormatoUtil.currency(sheet.getRange(2, 3).getValue()));
-    body.replaceText("{{gastos}}", FormatoUtil.currency(sheet.getRange(2, 2).getValue()));
-    body.replaceText("{{ingresos}}", FormatoUtil.currency(sheet.getRange(2, 1).getValue()));
+  _llenarDatosBasicos: function(body, fechaCorte, resumen) {
+    // Usar datos del resumen enviado desde Flutter (Firebase)
+    body.replaceText("{{saldoCorte}}", FormatoUtil.currency(resumen.saldoTotal || 0));
+    body.replaceText("{{gastos}}", FormatoUtil.currency(resumen.totalGastos || 0));
+    body.replaceText("{{ingresos}}", FormatoUtil.currency(resumen.totalIngresos || 0));
     body.replaceText("{{mesCorte}}", fechaCorte);
+    
+    Logger.info('_llenarDatosBasicos', 'Datos básicos llenados desde Flutter', resumen);
   },
 
   /**
@@ -202,8 +205,9 @@ const GeneradorReportes = {
 
   /**
    * Agrega tabla de todas las transacciones
+   * @param {Array} transacciones - Array de objetos transacción desde Flutter
    */
-  _agregarTablaTransacciones: function(body, data) {
+  _agregarTablaTransacciones: function(body, transacciones) {
     body.appendParagraph('\n').setSpacingAfter(10);
     
     const titulo = body.appendParagraph('📋 Detalle de Transacciones');
@@ -213,17 +217,16 @@ const GeneradorReportes = {
     titulo.setSpacingBefore(20);
     titulo.setSpacingAfter(10);
 
-    const tabla = [["Fecha", "Categoría", "Descripción", "Monto", "Tipo"]];
+    const tabla = [["Fecha", "Descripción", "Monto", "Tipo"]];
 
-    for (let i = 1; i < data.length; i++) {
+    transacciones.forEach(function(t) {
       tabla.push([
-        FormatoUtil.diaEnLetra(data[i][COLUMNAS_TRANSACCIONES.FECHA]),
-        data[i][COLUMNAS_TRANSACCIONES.CATEGORIA],
-        data[i][COLUMNAS_TRANSACCIONES.DESCRIPCION].toString(),
-        FormatoUtil.currency(data[i][COLUMNAS_TRANSACCIONES.MONTO]),
-        data[i][COLUMNAS_TRANSACCIONES.TIPO]
+        t.fecha || 'Sin fecha',
+        (t.descripcion || 'Sin descripción').toString(),
+        FormatoUtil.currency(t.monto || 0),
+        t.tipoTransaccion || 'Sin tipo'
       ]);
-    }
+    });
 
     const tableElement = body.appendTable(tabla);
     FormateadorTablas.formatearTablaTransacciones(tableElement);

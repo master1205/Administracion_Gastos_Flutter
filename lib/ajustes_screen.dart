@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:notificaciones/services/cortes_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -18,6 +19,8 @@ class _AjustesScreenState extends State<AjustesScreen> {
   bool sonidoActivo = true;
   bool vibracionActiva = true;
   bool ocultarSaldos = false;
+  bool corteSemanalAutomatico = false;
+  bool corteMensualAutomatico = false;
   String moneda = 'MXN';
   String idioma = 'Español';
   String versionApp = '1.0.0';
@@ -36,6 +39,10 @@ class _AjustesScreenState extends State<AjustesScreen> {
       sonidoActivo = prefs.getBool('sonido_activo') ?? true;
       vibracionActiva = prefs.getBool('vibracion_activa') ?? true;
       ocultarSaldos = prefs.getBool('ocultar_saldos') ?? false;
+      corteSemanalAutomatico =
+          prefs.getBool('corte_semanal_automatico') ?? false;
+      corteMensualAutomatico =
+          prefs.getBool('corte_mensual_automatico') ?? false;
       moneda = prefs.getString('moneda') ?? 'MXN';
       idioma = prefs.getString('idioma') ?? 'Español';
     });
@@ -198,6 +205,98 @@ class _AjustesScreenState extends State<AjustesScreen> {
           _buildCard(
             themeManager,
             children: [
+              _buildSwitchTile(
+                'Dispositivo Maestro - Corte Semanal',
+                'Ejecutar corte semanal automático',
+                Icons.schedule_outlined,
+                corteSemanalAutomatico,
+                (value) async {
+                  setState(() {
+                    corteSemanalAutomatico = value;
+                  });
+                  await _guardarConfiguracion(
+                    'corte_semanal_automatico',
+                    value,
+                  );
+
+                  if (value) {
+                    await CortesService.programarCorteSemanal();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Corte semanal automático activado'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } else {
+                    await CortesService.cancelarCorteSemanal();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Corte semanal automático desactivado'),
+                        ),
+                      );
+                    }
+                  }
+                },
+                themeManager,
+              ),
+              Divider(height: 1.h),
+              _buildSwitchTile(
+                'Dispositivo Maestro - Corte Mensual',
+                'Ejecutar corte mensual automático',
+                Icons.calendar_month_outlined,
+                corteMensualAutomatico,
+                (value) async {
+                  setState(() {
+                    corteMensualAutomatico = value;
+                  });
+                  await _guardarConfiguracion(
+                    'corte_mensual_automatico',
+                    value,
+                  );
+
+                  if (value) {
+                    await CortesService.programarCorteMensual();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Corte mensual automático activado'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } else {
+                    await CortesService.cancelarCorteMensual();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Corte mensual automático desactivado'),
+                        ),
+                      );
+                    }
+                  }
+                },
+                themeManager,
+              ),
+              Divider(height: 1.h),
+              _buildListTile(
+                'Corte Semanal',
+                '',
+                Icons.play_circle_outline,
+                () => _ejecutarCorteManual(),
+                themeManager,
+              ),
+              Divider(height: 1.h),
+              _buildListTile(
+                'Corte Mensual',
+                '',
+                Icons.play_circle_outline,
+                () => _ejecutarCorteMensualManual(),
+                themeManager,
+              ),
+              Divider(height: 1.h),
               _buildListTile(
                 'Exportar datos',
                 'CSV, Excel, PDF',
@@ -740,6 +839,409 @@ class _AjustesScreenState extends State<AjustesScreen> {
         backgroundColor: Colors.blue.shade600,
       ),
     );
+  }
+
+  void _ejecutarCorteManual() async {
+    final themeManager = Provider.of<ThemeManager>(context, listen: false);
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor:
+              themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.r),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.schedule_outlined,
+                color: const Color(0xFF30cfd0),
+                size: 24.sp,
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Text(
+                  'Ejecutar Corte Semanal',
+                  style: GoogleFonts.lato(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18.sp,
+                    color:
+                        themeManager.isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            '¿Ejecutar el corte semanal ahora?\n\n'
+            '• Se calculará el total de la semana\n'
+            '• Se eliminarán las transacciones\n'
+            '• Recibirás una notificación con el resultado',
+            style: GoogleFonts.openSans(
+              fontSize: 14.sp,
+              color: themeManager.isDarkMode ? Colors.white70 : Colors.black87,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(
+                'Cancelar',
+                style: GoogleFonts.openSans(
+                  color:
+                      themeManager.isDarkMode
+                          ? Colors.grey.shade400
+                          : Colors.grey.shade600,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF30cfd0),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+              ),
+              child: Text(
+                'Ejecutar',
+                style: GoogleFonts.lato(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmar == true) {
+      // Mostrar loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder:
+            (context) => Center(
+              child: Container(
+                padding: EdgeInsets.all(24.r),
+                decoration: BoxDecoration(
+                  color:
+                      themeManager.isDarkMode
+                          ? Colors.grey.shade800
+                          : Colors.white,
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(
+                      color: const Color(0xFF30cfd0),
+                      strokeWidth: 3.w,
+                    ),
+                    SizedBox(height: 16.h),
+                    Text(
+                      'Ejecutando corte...',
+                      style: GoogleFonts.lato(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                        color:
+                            themeManager.isDarkMode
+                                ? Colors.white
+                                : Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+      );
+
+      try {
+        final resultado = await CortesService.ejecutarCorteSemanal();
+
+        if (mounted) {
+          Navigator.pop(context); // Cerrar loading
+
+          final success = resultado['success'] as bool;
+          final message = resultado['message'] as String;
+          final count = resultado['count'] as int?;
+          final total = resultado['total'] as double?;
+
+          // Construir mensaje completo
+          String mensajeCompleto = message;
+          if (success && count != null && count > 0 && total != null) {
+            mensajeCompleto =
+                'Corte ejecutado: \$${total.toStringAsFixed(2)} en $count transacciones';
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(
+                    success
+                        ? (count == 0 ? Icons.info_outline : Icons.check_circle)
+                        : Icons.error_outline,
+                    color: Colors.white,
+                    size: 20.sp,
+                  ),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: Text(
+                      mensajeCompleto,
+                      style: GoogleFonts.lato(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor:
+                  success
+                      ? (count == 0
+                          ? Colors.orange.shade600
+                          : Colors.green.shade600)
+                      : Colors.red.shade600,
+              duration: Duration(seconds: success ? 3 : 4),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          Navigator.pop(context); // Cerrar loading
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.white, size: 20.sp),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: Text(
+                      'Error inesperado: $e',
+                      style: GoogleFonts.lato(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.red.shade600,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  void _ejecutarCorteMensualManual() async {
+    final themeManager = Provider.of<ThemeManager>(context, listen: false);
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor:
+              themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.r),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.calendar_month_outlined,
+                color: const Color(0xFF30cfd0),
+                size: 24.sp,
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Text(
+                  'Ejecutar Corte Mensual',
+                  style: GoogleFonts.lato(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18.sp,
+                    color:
+                        themeManager.isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            '¿Ejecutar el corte mensual ahora?\n\n'
+            '• Se registrarán TODAS las transacciones del mes anterior\n'
+            '• Se enviarán a Google Sheets\n'
+            '• Se eliminarán de Firebase\n'
+            '• Recibirás una notificación con el resultado',
+            style: GoogleFonts.openSans(
+              fontSize: 14.sp,
+              color: themeManager.isDarkMode ? Colors.white70 : Colors.black87,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(
+                'Cancelar',
+                style: GoogleFonts.openSans(
+                  color:
+                      themeManager.isDarkMode
+                          ? Colors.grey.shade400
+                          : Colors.grey.shade600,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF30cfd0),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+              ),
+              child: Text(
+                'Ejecutar',
+                style: GoogleFonts.lato(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmar == true) {
+      // Mostrar loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder:
+            (context) => Center(
+              child: Container(
+                padding: EdgeInsets.all(24.r),
+                decoration: BoxDecoration(
+                  color:
+                      themeManager.isDarkMode
+                          ? Colors.grey.shade800
+                          : Colors.white,
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(
+                      color: const Color(0xFF30cfd0),
+                      strokeWidth: 3.w,
+                    ),
+                    SizedBox(height: 16.h),
+                    Text(
+                      'Ejecutando corte mensual...',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.lato(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.none,
+                        color:
+                            themeManager.isDarkMode
+                                ? Colors.white
+                                : Colors.black87,
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      'Esto puede tardar unos segundos',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.lato(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w400,
+                        decoration: TextDecoration.none,
+                        color:
+                            themeManager.isDarkMode
+                                ? Colors.white70
+                                : Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+      );
+
+      try {
+        final resultado = await CortesService.ejecutarCorteMensual();
+
+        if (mounted) {
+          Navigator.pop(context); // Cerrar loading
+
+          final success = resultado['success'] as bool;
+          final message = resultado['message'] as String;
+          final count = resultado['count'] as int?;
+          final total = resultado['total'] as double?;
+
+          // Construir mensaje completo
+          String mensajeCompleto = message;
+          if (success && count != null && count > 0 && total != null) {
+            mensajeCompleto =
+                'Corte mensual: $count transacciones registradas en Sheets';
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(
+                    success
+                        ? (count == 0 ? Icons.info_outline : Icons.check_circle)
+                        : Icons.error_outline,
+                    color: Colors.white,
+                    size: 20.sp,
+                  ),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: Text(
+                      mensajeCompleto,
+                      style: GoogleFonts.lato(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor:
+                  success
+                      ? (count == 0
+                          ? Colors.orange.shade600
+                          : Colors.green.shade600)
+                      : Colors.red.shade600,
+              duration: Duration(seconds: success ? 3 : 4),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          Navigator.pop(context); // Cerrar loading
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.white, size: 20.sp),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: Text(
+                      'Error inesperado: $e',
+                      style: GoogleFonts.lato(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.red.shade600,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+    }
   }
 
   void _cerrarSesion() async {

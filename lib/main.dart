@@ -8,6 +8,7 @@ import 'package:notificaciones/loading_screen.dart';
 import 'package:notificaciones/local_notifications.dart';
 import 'package:notificaciones/onboarding_screen.dart';
 import 'package:notificaciones/permission_handler.dart';
+import 'package:notificaciones/services/cortes_service.dart';
 import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,6 +27,21 @@ void main() async {
   );
 
   await LocalNotifications.initialize();
+
+  // ✅ Programar cortes automáticos solo si el dispositivo está configurado como maestro
+  final prefs = await SharedPreferences.getInstance();
+  final corteSemanalActivo = prefs.getBool('corte_semanal_automatico') ?? false;
+  final corteMensualActivo = prefs.getBool('corte_mensual_automatico') ?? false;
+
+  if (corteSemanalActivo) {
+    await CortesService.programarCorteSemanal(); // Domingos 1 AM
+    print('✅ Dispositivo maestro: Corte semanal programado');
+  }
+
+  if (corteMensualActivo) {
+    await CortesService.programarCorteMensual(); // 1º del mes 1 AM
+    print('✅ Dispositivo maestro: Corte mensual programado');
+  }
 
   runApp(
     MultiProvider(

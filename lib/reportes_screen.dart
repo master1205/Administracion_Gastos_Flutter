@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:notificaciones/api_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:notificaciones/models/Reporte.dart';
 import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
@@ -23,7 +23,7 @@ class ReportesScreenState extends State<ReportesScreen>
   static const Duration _animationDuration = Duration(milliseconds: 300);
 
   // State
-  late Future<List<Reporte>> _futureReportes;
+  late Stream<List<Reporte>> _reportesStream;
   bool _isLoading = false;
   bool _isManualRefresh = false;
   final Map<String, bool> _expandedYears = {};
@@ -32,7 +32,6 @@ class ReportesScreenState extends State<ReportesScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _futureReportes = Future.value([]);
     _initializeData();
   }
 
@@ -52,22 +51,34 @@ class ReportesScreenState extends State<ReportesScreen>
     setState(() => _isLoading = true);
     try {
       await initializeDateFormatting('es_ES', null);
-      _futureReportes = ApiService().fetchReportes();
-      await _futureReportes;
+      _reportesStream = _obtenerReportesDesdeFirebase();
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  /// Obtiene reportes desde Firebase en tiempo real
+  Stream<List<Reporte>> _obtenerReportesDesdeFirebase() {
+    return FirebaseFirestore.instance
+        .collection('reportes')
+        .orderBy('fechaCreacion', descending: true)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs.map((doc) {
+            final data = doc.data();
+            return Reporte(
+              name: data['nombre'] ?? 'Reporte Mensual.pdf',
+              file: data['urlReporte'] ?? '',
+              fechaCorte: '${data['mes']} ${data['año']}',
+            );
+          }).toList();
+        });
+  }
+
   Future<void> refreshData() async {
     setState(() => _isManualRefresh = true);
 
-    // Iniciar la carga
-    setState(() {
-      _futureReportes = ApiService().fetchReportes();
-    });
-
-    // Esperar mínimo 800ms para mostrar la barra de progreso
+    // Firebase Stream se actualiza automáticamente, solo esperamos para feedback visual
     await Future.delayed(const Duration(milliseconds: 800));
 
     if (mounted) {
@@ -425,16 +436,13 @@ class ReportesScreenState extends State<ReportesScreen>
         children: [
           _isLoading
               ? _buildLoadingIndicator(themeManager)
-              : FutureBuilder<List<Reporte>>(
-                future: _futureReportes,
+              : StreamBuilder<List<Reporte>>(
+                stream: _reportesStream,
                 builder: (context, snapshot) {
-                  // Si está en waiting y es refresh manual, mostrar datos anteriores si existen
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    if (_isManualRefresh && snapshot.hasData) {
-                      // Continuar mostrando los datos anteriores
-                    } else if (!_isManualRefresh) {
-                      return _buildLoadingIndicator(themeManager);
-                    }
+                  // Si está en waiting y no hay datos, mostrar loading
+                  if (snapshot.connectionState == ConnectionState.waiting &&
+                      !snapshot.hasData) {
+                    return _buildLoadingIndicator(themeManager);
                   }
 
                   if (snapshot.hasError) {

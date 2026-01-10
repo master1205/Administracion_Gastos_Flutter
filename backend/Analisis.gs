@@ -84,6 +84,87 @@ const AnalizadorTransacciones = {
   },
 
   /**
+   * Analiza transacciones desde un array (para corte mensual optimizado)
+   * @param {Array} transacciones - Array de objetos transacción desde Flutter
+   */
+  analizarArray: function(transacciones) {
+    try {
+      const gastos = [];
+      const gastosPorCategoria = {};
+      const gastosPorCuenta = {};
+      const diasConGastos = {};
+      let totalGastos = 0;
+
+      // Analizar cada transacción
+      transacciones.forEach(function(t) {
+        const tipoTransaccion = t.tipoTransaccion;
+        const monto = parseFloat(t.monto) || 0;
+        const descripcion = t.descripcion || 'Sin descripción';
+        const fecha = t.fecha;
+        const categoria = t.categoria || 'Sin categoría';
+        const cuenta = t.cuenta || 'Sin cuenta';
+
+        if (tipoTransaccion === TIPOS_TRANSACCION.GASTOS || 
+            tipoTransaccion === TIPOS_TRANSACCION.PAGOS) {
+          
+          // Agregar a lista de gastos
+          gastos.push({
+            monto: monto,
+            descripcion: descripcion,
+            fecha: fecha,
+            categoria: categoria,
+            cuenta: cuenta
+          });
+
+          // Acumular por categoría
+          if (!gastosPorCategoria[categoria]) {
+            gastosPorCategoria[categoria] = 0;
+          }
+          gastosPorCategoria[categoria] += monto;
+
+          // Acumular por cuenta
+          if (!gastosPorCuenta[cuenta]) {
+            gastosPorCuenta[cuenta] = 0;
+          }
+          gastosPorCuenta[cuenta] += monto;
+
+          // Contar días únicos con gastos
+          if (fecha) {
+            const fechaStr = fecha.toString();
+            diasConGastos[fechaStr] = true;
+          }
+
+          totalGastos += monto;
+        }
+      });
+
+      // Calcular métricas
+      const resultados = {
+        top3Gastos: this._calcularTop3(gastos),
+        gastosPorCategoria: this._ordenarPorMonto(gastosPorCategoria),
+        totalGastos: totalGastos,
+        totalTransacciones: gastos.length,
+        gastoPromedio: gastos.length > 0 ? totalGastos / gastos.length : 0,
+        categoriaPrincipal: this._obtenerCategoriaPrincipal(gastosPorCategoria),
+        cuentaMasUtilizada: this._obtenerCuentaMasUtilizada(gastosPorCuenta),
+        diasConGastos: Object.keys(diasConGastos).length,
+        diasDelMes: this._obtenerDiasDelMes()
+      };
+
+      Logger.info('AnalizadorTransacciones', 'Análisis completado', {
+        transacciones: resultados.totalTransacciones,
+        total: resultados.totalGastos
+      });
+
+      return resultados;
+      
+    } catch (error) {
+      Logger.error('AnalizadorTransacciones.analizarArray', error);
+      return this._resultadosVacios();
+    }
+  },
+
+  /**
    * Calcula el top 3 de gastos más grandes
    */
   _calcularTop3: function(gastos) {

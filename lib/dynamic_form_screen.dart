@@ -294,14 +294,8 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
 
         if (mounted) {
           setState(() {
-            try {
-              selectedCategory = _categorias.firstWhere(
-                (c) => c.categoria == widget.transaction!.categoria,
-              );
-            } catch (e) {
-              selectedCategory =
-                  _categorias.isNotEmpty ? _categorias.first : null;
-            }
+            // ❌ REMOVIDO: La categoría ahora se selecciona en _loadInitialData()
+            // después de cargar desde Firebase
 
             if (widget.transactionType != 'Traspasos') {
               try {
@@ -410,6 +404,19 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
         setState(() {
           _categorias =
               categoriasData.map((cat) => Categoria.fromJson(cat)).toList();
+
+          // ✅ Seleccionar categoría inicial DESPUÉS de cargar las categorías
+          if (widget.transaction != null &&
+              selectedCategory == null &&
+              _categorias.isNotEmpty) {
+            try {
+              selectedCategory = _categorias.firstWhere(
+                (c) => c.categoria == widget.transaction!.categoria,
+              );
+            } catch (e) {
+              selectedCategory = _categorias.first;
+            }
+          }
         });
       }
     });

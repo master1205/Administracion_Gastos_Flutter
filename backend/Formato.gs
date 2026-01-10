@@ -102,15 +102,16 @@ const FormateadorTablas = {
           row.getCell(1).editAsText().setBold(true);
           row.getCell(2).editAsText().setForegroundColor(COLORES.PRIMARIO);
 
-          // Ajustar anchos
-          row.getCell(0).setWidth(110); // Categoría
-          row.getCell(1).setWidth(90);  // Total
+          // Ajustar anchos para ocupar todo el ancho (total ~468 puntos)
+          row.getCell(0).setWidth(140); // Categoría
+          row.getCell(1).setWidth(100); // Total
           row.getCell(2).setWidth(70);  // Porcentaje
-          row.getCell(3).setWidth(150); // Gráfica
+          row.getCell(3).setWidth(158); // Gráfica
         }
       }
 
       this.aplicarBordes(table);
+      table.setAttributes({ WIDTH: 468 }); // Ancho total de la tabla
       
       Logger.info('FormateadorTablas', 'Tabla de categorías formateada', { filas: numRows });
       
@@ -143,25 +144,25 @@ const FormateadorTablas = {
              
           this.aplicarFilasAlternadas(row, i);
 
-          // Formateo especial por columna
+          // Formateo especial por columna (sin Categoría)
           row.getCell(0).editAsText().setFontSize(8); // Fecha
-          row.getCell(3).editAsText()
+          row.getCell(2).editAsText()
              .setBold(true)
              .setForegroundColor("#2D3436"); // Monto
-          row.getCell(4).editAsText()
+          row.getCell(3).editAsText()
              .setFontSize(8)
              .setItalic(true); // Tipo
 
-          // Ajustar anchos
+          // Ajustar anchos para ocupar todo el ancho (total ~468 puntos)
           row.getCell(0).setWidth(100); // Fecha
-          row.getCell(1).setWidth(90);  // Categoría
-          row.getCell(2).setWidth(130); // Descripción
-          row.getCell(3).setWidth(80);  // Monto
-          row.getCell(4).setWidth(80);  // Tipo
+          row.getCell(1).setWidth(228); // Descripción (más ancha)
+          row.getCell(2).setWidth(70);  // Monto
+          row.getCell(3).setWidth(70);  // Tipo
         }
       }
 
       this.aplicarBordes(table);
+      table.setAttributes({ WIDTH: 468 }); // Ancho total de la tabla
       
       Logger.info('FormateadorTablas', 'Tabla de transacciones formateada', { filas: numRows });
       
