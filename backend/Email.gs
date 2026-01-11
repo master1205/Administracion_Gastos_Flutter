@@ -104,7 +104,7 @@ const EmailTemplates = {
         '</td>' +
         '<td style="padding: 10px; border-bottom: 1px solid #eee;">' +
           '<strong>' + gasto.descripcion + '</strong><br>' +
-          '<small style="color: #666;">' + gasto.categoria + '</small>' +
+          '<small style="color: #666;">📁 ' + gasto.categoria + ' • 📅 ' + gasto.fecha + '</small>' +
         '</td>' +
         '<td style="padding: 10px; text-align: right; border-bottom: 1px solid #eee;">' +
           '<strong style="color: ' + COLORES.ERROR + ';">' + FormatoUtil.currency(gasto.monto) + '</strong>' +

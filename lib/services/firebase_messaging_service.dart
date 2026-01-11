@@ -17,7 +17,7 @@ class FirebaseMessagingService {
       FlutterLocalNotificationsPlugin();
 
   static const String _fcmTokenCollection = 'fcm_tokens';
-  static const String defaultUserId = 'default_user';
+  static String? _lastSavedToken; // Caché del último token guardado
 
   /// Inicializar servicio de FCM
   static Future<void> initialize() async {
@@ -41,15 +41,22 @@ class FirebaseMessagingService {
       return;
     }
 
-    // 2. Obtener y guardar el token FCM
+    // 2. Obtener y guardar el token FCM (solo si cambió)
     final token = await _messaging.getToken();
-    if (token != null) {
-      print('📱 FCM Token: $token');
+    if (token != null && token != _lastSavedToken) {
+      print('📱 FCM Token nuevo o actualizado: $token');
       await _guardarTokenEnFirestore(token);
+      _lastSavedToken = token;
+    } else if (token != null) {
+      print('✓ Token FCM sin cambios');
+      _lastSavedToken = token; // Actualizar caché sin escribir a Firestore
     }
 
     // 3. Escuchar cambios de token (cuando se regenera)
-    _messaging.onTokenRefresh.listen(_guardarTokenEnFirestore);
+    _messaging.onTokenRefresh.listen((newToken) {
+      _lastSavedToken = newToken; // Actualizar caché
+      _guardarTokenEnFirestore(newToken);
+    });
 
     // 4. Configurar handler para mensajes en foreground
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
@@ -70,10 +77,17 @@ class FirebaseMessagingService {
   /// Guardar token FCM en Firestore
   static Future<void> _guardarTokenEnFirestore(String token) async {
     try {
-      await _db.collection(_fcmTokenCollection).doc(defaultUserId).set({
+      // Usar el token como ID del documento (cada dispositivo tendrá su propio documento)
+      final docId = token.substring(
+        0,
+        20,
+      ); // Usar primeros 20 caracteres como ID
+
+      await _db.collection(_fcmTokenCollection).doc(docId).set({
         'token': token,
         'timestamp': FieldValue.serverTimestamp(),
         'platform': 'android',
+        'activo': true, // Útil para identificar dispositivos activos
       }, SetOptions(merge: true));
 
       print('✅ Token FCM guardado en Firestore');
@@ -134,8 +148,16 @@ class FirebaseMessagingService {
   /// Eliminar el token cuando el usuario cierra sesión
   static Future<void> deleteToken() async {
     try {
+      final token = await _messaging.getToken();
       await _messaging.deleteToken();
-      await _db.collection(_fcmTokenCollection).doc(defaultUserId).delete();
+
+      // Eliminar de Firestore usando el token como ID
+      if (token != null) {
+        final docId = token.substring(0, 20);
+        await _db.collection(_fcmTokenCollection).doc(docId).delete();
+      }
+
+      _lastSavedToken = null;
       print('✅ Token FCM eliminado');
     } catch (e) {
       print('❌ Error al eliminar token FCM: $e');

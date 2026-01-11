@@ -61,6 +61,10 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
   String? accountFromError;
   String? accountToError;
 
+  // Caché para categorías filtradas
+  List<Categoria>? _filteredCategoriesCache;
+  String? _lastFilteredType;
+
   final Map<String, IconData> categoryIconsMap = {
     // Iconos de Firebase (actualizados con todos los disponibles)
     'shopping_cart': Icons.shopping_cart,
@@ -372,6 +376,30 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
     _animationController.forward();
   }
 
+  List<Categoria> _getFilteredCategories() {
+    // Mapear el tipo de transacción al formato de Firebase
+    String tipoFiltro = widget.transactionType;
+    if (tipoFiltro == 'Gastos') tipoFiltro = 'Gasto';
+    if (tipoFiltro == 'Pagos') tipoFiltro = 'Pago';
+    if (tipoFiltro == 'Ingresos') tipoFiltro = 'Ingreso';
+
+    // Usar caché si el tipo no ha cambiado
+    if (_lastFilteredType == tipoFiltro && _filteredCategoriesCache != null) {
+      return _filteredCategoriesCache!;
+    }
+
+    _lastFilteredType = tipoFiltro;
+    _filteredCategoriesCache =
+        _categorias.where((category) {
+          return category.tipoTransaccion
+              .split(',')
+              .map((e) => e.trim())
+              .contains(tipoFiltro);
+        }).toList();
+
+    return _filteredCategoriesCache!;
+  }
+
   void _setupControllers() {
     _descriptionController.addListener(() {
       final text = _descriptionController.text;
@@ -404,6 +432,10 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
         setState(() {
           _categorias =
               categoriasData.map((cat) => Categoria.fromJson(cat)).toList();
+
+          // Invalidar caché de categorías filtradas
+          _filteredCategoriesCache = null;
+          _lastFilteredType = null;
 
           // ✅ Seleccionar categoría inicial DESPUÉS de cargar las categorías
           if (widget.transaction != null &&
@@ -1399,8 +1431,8 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
 
   @override
   Widget build(BuildContext context) {
-    final dataProvider = Provider.of<DataProvider>(context);
-    final themeManager = Provider.of<ThemeManager>(context);
+    final dataProvider = Provider.of<DataProvider>(context, listen: false);
+    final themeManager = Provider.of<ThemeManager>(context, listen: false);
 
     // Validar que hay suficientes cuentas
     final int cuentasDisponibles = dataProvider.cuentas.length;
@@ -1409,39 +1441,45 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
             ? cuentasDisponibles >= 2
             : cuentasDisponibles >= 1;
 
-    final filteredCategories =
-        _categorias.where((category) {
-          // Mapear el tipo de transacción al formato de Firebase
-          String tipoFiltro = widget.transactionType;
-          if (tipoFiltro == 'Gastos') tipoFiltro = 'Gasto';
-          if (tipoFiltro == 'Pagos') tipoFiltro = 'Pago';
-          if (tipoFiltro == 'Ingresos') tipoFiltro = 'Ingreso';
+    // Usar método optimizado con caché
+    final filteredCategories = _getFilteredCategories();
 
-          return category.tipoTransaccion
-              .split(',')
-              .map((e) => e.trim())
-              .contains(tipoFiltro);
-        }).toList();
+    // Validar selecciones (mover a un método separado si es necesario en el futuro)
+    // Nota: Estas validaciones son necesarias pero deberían evitarse modificar estado aquí
+    // En una optimización futura, considerar usar un ValueNotifier o similar
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        bool needsUpdate = false;
 
-    if (selectedCategory != null &&
-        !filteredCategories.contains(selectedCategory)) {
-      selectedCategory = null;
-    }
+        if (selectedCategory != null &&
+            !filteredCategories.contains(selectedCategory)) {
+          selectedCategory = null;
+          needsUpdate = true;
+        }
 
-    if (selectedAccount != null &&
-        !dataProvider.cuentas.contains(selectedAccount)) {
-      selectedAccount = null;
-    }
+        if (selectedAccount != null &&
+            !dataProvider.cuentas.contains(selectedAccount)) {
+          selectedAccount = null;
+          needsUpdate = true;
+        }
 
-    if (selectedAccountFrom != null &&
-        !dataProvider.cuentas.contains(selectedAccountFrom)) {
-      selectedAccountFrom = null;
-    }
+        if (selectedAccountFrom != null &&
+            !dataProvider.cuentas.contains(selectedAccountFrom)) {
+          selectedAccountFrom = null;
+          needsUpdate = true;
+        }
 
-    if (selectedAccountTo != null &&
-        !dataProvider.cuentas.contains(selectedAccountTo)) {
-      selectedAccountTo = null;
-    }
+        if (selectedAccountTo != null &&
+            !dataProvider.cuentas.contains(selectedAccountTo)) {
+          selectedAccountTo = null;
+          needsUpdate = true;
+        }
+
+        if (needsUpdate) {
+          setState(() {});
+        }
+      }
+    });
 
     return Scaffold(
       backgroundColor:

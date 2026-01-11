@@ -111,7 +111,7 @@ const AnalizadorTransacciones = {
           gastos.push({
             monto: monto,
             descripcion: descripcion,
-            fecha: fecha,
+            fecha: FormatoUtil.diaEnLetra(fecha),
             categoria: categoria,
             cuenta: cuenta
           });
