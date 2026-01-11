@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart'; // ✅ AGREGADO
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:notificaciones/data_provider.dart';
 import 'package:notificaciones/firebase_options.dart';
@@ -8,7 +9,7 @@ import 'package:notificaciones/loading_screen.dart';
 import 'package:notificaciones/local_notifications.dart';
 import 'package:notificaciones/onboarding_screen.dart';
 import 'package:notificaciones/permission_handler.dart';
-import 'package:notificaciones/services/cortes_service.dart';
+import 'package:notificaciones/services/firebase_messaging_service.dart';
 import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,30 +19,26 @@ void main() async {
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  // ✅ Configurar handler para notificaciones en background
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
   // ✅ Habilitar cache offline de Firebase
-  // Reduce lecturas en ~70% y mejora rendimiento
-  // NO afecta notificaciones en tiempo real de Streams activos
   FirebaseFirestore.instance.settings = const Settings(
-    persistenceEnabled: true, // Cache automático offline
-    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED, // Sin límite de cache
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
 
   await LocalNotifications.initialize();
 
-  // ✅ Programar cortes automáticos solo si el dispositivo está configurado como maestro
-  final prefs = await SharedPreferences.getInstance();
-  final corteSemanalActivo = prefs.getBool('corte_semanal_automatico') ?? false;
-  final corteMensualActivo = prefs.getBool('corte_mensual_automatico') ?? false;
+  // ✅ Inicializar Firebase Cloud Messaging
+  await FirebaseMessagingService.initialize();
 
-  if (corteSemanalActivo) {
-    await CortesService.programarCorteSemanal(); // Domingos 1 AM
-    print('✅ Dispositivo maestro: Corte semanal programado');
-  }
-
-  if (corteMensualActivo) {
-    await CortesService.programarCorteMensual(); // 1º del mes 1 AM
-    print('✅ Dispositivo maestro: Corte mensual programado');
-  }
+  print(
+    '✅ App inicializada - Los cortes se ejecutan automáticamente desde Google Apps Script',
+  );
+  print(
+    '✅ App inicializada - Los cortes se ejecutan automáticamente desde Google Apps Script',
+  );
 
   runApp(
     MultiProvider(

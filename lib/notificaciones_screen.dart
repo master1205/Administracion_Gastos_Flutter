@@ -23,6 +23,8 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
   bool morningEnabled = false;
   bool afternoonEnabled = false;
   bool nightEnabled = false;
+  bool saturdayEnabled = false;
+  bool monthEndEnabled = false;
 
   @override
   void initState() {
@@ -39,12 +41,16 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
       final afternoon =
           await LocalNotifications.isAfternoonNotificationEnabled();
       final night = await LocalNotifications.isNightNotificationEnabled();
+      final saturday = await LocalNotifications.isSaturdayNotificationEnabled();
+      final monthEnd = await LocalNotifications.isMonthEndNotificationEnabled();
 
       if (mounted) {
         setState(() {
           morningEnabled = morning;
           afternoonEnabled = afternoon;
           nightEnabled = night;
+          saturdayEnabled = saturday;
+          monthEndEnabled = monthEnd;
         });
       }
     } catch (e) {
@@ -320,6 +326,26 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                     nightEnabled,
                     const Color(0xFF9C27B0),
                     Icons.nightlight_round_rounded,
+                    themeManager,
+                  ),
+                  SizedBox(height: 12.h),
+                  _buildNotificacionSistema(
+                    'Recordatorio Semanal',
+                    'Registra tus compras antes del corte semanal',
+                    'Sábados 9:00 PM',
+                    saturdayEnabled,
+                    const Color(0xFF4CAF50),
+                    Icons.calendar_today_rounded,
+                    themeManager,
+                  ),
+                  SizedBox(height: 12.h),
+                  _buildNotificacionSistema(
+                    'Recordatorio Mensual',
+                    'Revisa transacciones antes del corte mensual',
+                    'Último día de mes 9:00 PM',
+                    monthEndEnabled,
+                    const Color(0xFFE91E63),
+                    Icons.event_available_rounded,
                     themeManager,
                   ),
 

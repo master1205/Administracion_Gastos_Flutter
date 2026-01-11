@@ -171,6 +171,12 @@ class OnboardingScreenState extends State<OnboardingScreen>
       await LocalNotifications.scheduleDailyNightNotification(
         username: username,
       );
+      await LocalNotifications.scheduleWeeklySaturdayNotification(
+        username: username,
+      );
+      await LocalNotifications.scheduleMonthlyEndNotification(
+        username: username,
+      );
 
       setState(() {
         _notificationsActivated = true;

@@ -107,6 +107,22 @@ const FormatoUtil = {
     }
   },
 
+  formatearFechaISO: function (fechaISO) {
+    try {
+      if (!fechaISO) return 'Sin fecha';
+      
+      const fecha = new Date(fechaISO);
+      const dia = fecha.getDate().toString().padStart(2, '0');
+      const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
+      const anio = fecha.getFullYear();
+      
+      return dia + '/' + mes + '/' + anio;
+    } catch (error) {
+      Logger.error('FormatoUtil.formatearFechaISO', error);
+      return fechaISO;
+    }
+  },
+
   generarId: function () {
     const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let id = '';

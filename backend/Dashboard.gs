@@ -176,3 +176,4 @@ function calcularSaldosConsolidados(cuentasData, transaccionesData) {
     saldoCuentas: saldoCuentas
   };
 }
+

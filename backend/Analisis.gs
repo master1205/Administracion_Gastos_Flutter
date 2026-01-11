@@ -97,7 +97,7 @@ const AnalizadorTransacciones = {
 
       // Analizar cada transacción
       transacciones.forEach(function(t) {
-        const tipoTransaccion = t.tipoTransaccion;
+        const tipoTransaccion = t.tipo;
         const monto = parseFloat(t.monto) || 0;
         const descripcion = t.descripcion || 'Sin descripción';
         const fecha = t.fecha;

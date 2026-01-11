@@ -41,11 +41,37 @@ function registrarCorteMensual(e) {
     
     if (resultadoReporte.exito) {
       Logger.info('registrarCorteMensual', 'Reporte PDF generado exitosamente');
+      
+      // ✅ NUEVO: Enviar notificación push a todos los dispositivos
+      let notificacionesEnviadas = 0;
+      try {
+        Logger.info('registrarCorteMensual', 'Enviando notificación push...');
+        const notificacionResultado = notificarCorteMensualCompletado(
+          resumen,
+          transacciones.length,
+          resultadoReporte.archivo
+        );
+        
+        if (notificacionResultado.exito) {
+          notificacionesEnviadas = notificacionResultado.enviados || 0;
+          Logger.info('registrarCorteMensual', 
+            'Notificaciones enviadas: ' + notificacionesEnviadas);
+        } else {
+          Logger.error('registrarCorteMensual', 
+            'Error al enviar notificaciones: ' + notificacionResultado.error);
+        }
+      } catch (notifError) {
+        // No fallar todo el proceso si la notificación falla
+        Logger.error('registrarCorteMensual', 
+          'Error al enviar notificación push: ' + notifError.message);
+      }
+      
       return ResponseBuilder.success({
         mensaje: "Corte mensual completado y reporte generado exitosamente",
         registradas: transacciones.length,
         total: transacciones.length,
-        reporteUrl: resultadoReporte.archivo
+        reporteUrl: resultadoReporte.archivo,
+        notificacionEnviada: notificacionesEnviadas
       });
     } else {
       Logger.error('registrarCorteMensual', 'Error al generar reporte: ' + resultadoReporte.error);
@@ -63,3 +89,4 @@ function registrarCorteMensual(e) {
 // NOTA: Este endpoint ya NO escribe en Google Sheets.
 // Las transacciones se usan directamente del payload para generar el PDF.
 // Sheets queda solo para propósitos legacy o respaldo manual.
+

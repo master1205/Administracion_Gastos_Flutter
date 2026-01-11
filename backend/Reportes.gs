@@ -221,10 +221,10 @@ const GeneradorReportes = {
 
     transacciones.forEach(function(t) {
       tabla.push([
-        t.fecha || 'Sin fecha',
+        FormatoUtil.formatearFechaISO(t.fecha) || 'Sin fecha',
         (t.descripcion || 'Sin descripción').toString(),
         FormatoUtil.currency(t.monto || 0),
-        t.tipoTransaccion || 'Sin tipo'
+        t.tipo || 'Sin tipo'
       ]);
     });
 
