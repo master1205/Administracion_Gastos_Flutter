@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:notificaciones/local_notifications.dart';
 import 'package:notificaciones/loading_screen.dart';
+import 'package:notificaciones/services/firebase_messaging_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
@@ -158,10 +159,21 @@ class OnboardingScreenState extends State<OnboardingScreen>
       final prefs = await SharedPreferences.getInstance();
       final username = prefs.getString('username') ?? 'Usuario';
 
+      // 1. Solicitar permisos de notificaciones locales
       await LocalNotifications.requestNotificationPermission();
       await LocalNotifications.requestAlarmExactPermission();
 
-      // ✅ Programar notificaciones con el nombre
+      // 2. Solicitar permisos de notificaciones push (FCM)
+      final pushPermitido =
+          await FirebaseMessagingService.requestPermissionsAndSetup();
+
+      if (pushPermitido) {
+        print('✅ Notificaciones push configuradas correctamente');
+      } else {
+        print('⚠️ No se pudieron configurar las notificaciones push');
+      }
+
+      // 3. Programar notificaciones locales con el nombre
       await LocalNotifications.scheduleDailyMorningNotification(
         username: username,
       );

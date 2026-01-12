@@ -18,39 +18,21 @@ class FirebaseMessagingService {
 
   static const String _fcmTokenCollection = 'fcm_tokens';
 
-  /// Inicializar servicio de FCM
+  /// Inicializar servicio de FCM (sin solicitar permisos)
   static Future<void> initialize() async {
     print('🔄 Inicializando Firebase Cloud Messaging...');
 
-    // 1. Solicitar permisos
-    final settings = await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-      provisional: false,
-    );
-
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('✅ Permisos de notificaciones concedidos');
-    } else if (settings.authorizationStatus ==
-        AuthorizationStatus.provisional) {
-      print('⚠️ Permisos de notificaciones provisionales');
-    } else {
-      print('❌ Permisos de notificaciones denegados');
-      return;
-    }
-
-    // 2. Obtener token inicial y guardarlo solo si cambió
-    print('📡 Obteniendo token FCM...');
+    // Intentar obtener token (solo funciona si ya hay permisos del onboarding)
+    print('📡 Verificando token FCM...');
     final token = await _messaging.getToken();
     if (token != null) {
       print('✅ Token obtenido: ${token.substring(0, 30)}...');
       await _guardarTokenSiCambio(token);
     } else {
-      print('⚠️ No se pudo obtener el token');
+      print('ℹ️ Sin token - Permisos se solicitarán en onboarding');
     }
 
-    // 3. Configurar listener para regeneraciones futuras de token
+    // Configurar listener para regeneraciones futuras de token
     print('📡 Configurando listener de onTokenRefresh...');
     _messaging.onTokenRefresh.listen(
       (newToken) async {
@@ -64,13 +46,13 @@ class FirebaseMessagingService {
     );
     print('✅ Listener de onTokenRefresh configurado');
 
-    // 4. Configurar handler para mensajes en foreground
+    // Configurar handler para mensajes en foreground
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
-    // 5. Configurar handler para cuando el usuario toca la notificación
+    // Configurar handler para cuando el usuario toca la notificación
     FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageOpenedApp);
 
-    // 6. Verificar si la app se abrió desde una notificación
+    // Verificar si la app se abrió desde una notificación
     final initialMessage = await _messaging.getInitialMessage();
     if (initialMessage != null) {
       print('📱 App abierta desde notificación: ${initialMessage.messageId}');
@@ -78,6 +60,46 @@ class FirebaseMessagingService {
     }
 
     print('✅ Firebase Cloud Messaging inicializado correctamente');
+  }
+
+  /// Solicitar permisos y configurar token (llamar desde onboarding)
+  static Future<bool> requestPermissionsAndSetup() async {
+    print('🔔 Solicitando permisos de notificaciones push...');
+
+    try {
+      // 1. Solicitar permisos
+      final settings = await _messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
+
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        print('✅ Permisos de notificaciones push concedidos');
+      } else if (settings.authorizationStatus ==
+          AuthorizationStatus.provisional) {
+        print('⚠️ Permisos de notificaciones push provisionales');
+      } else {
+        print('❌ Permisos de notificaciones push denegados');
+        return false;
+      }
+
+      // 2. Obtener token inicial y guardarlo
+      print('📡 Obteniendo token FCM...');
+      final token = await _messaging.getToken();
+      if (token != null) {
+        print('✅ Token obtenido: ${token.substring(0, 30)}...');
+        await _guardarTokenSiCambio(token);
+        return true;
+      } else {
+        print('⚠️ No se pudo obtener el token');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Error al solicitar permisos: $e');
+      return false;
+    }
   }
 
   /// Guardar token FCM en Firestore solo si cambió
