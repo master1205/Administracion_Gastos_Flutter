@@ -17,7 +17,6 @@ class FirebaseMessagingService {
       FlutterLocalNotificationsPlugin();
 
   static const String _fcmTokenCollection = 'fcm_tokens';
-  static String? _lastSavedToken; // Caché del último token guardado
 
   /// Inicializar servicio de FCM
   static Future<void> initialize() async {
@@ -41,22 +40,29 @@ class FirebaseMessagingService {
       return;
     }
 
-    // 2. Obtener y guardar el token FCM (solo si cambió)
+    // 2. Obtener token inicial y guardarlo solo si cambió
+    print('📡 Obteniendo token FCM...');
     final token = await _messaging.getToken();
-    if (token != null && token != _lastSavedToken) {
-      print('📱 FCM Token nuevo o actualizado: $token');
-      await _guardarTokenEnFirestore(token);
-      _lastSavedToken = token;
-    } else if (token != null) {
-      print('✓ Token FCM sin cambios');
-      _lastSavedToken = token; // Actualizar caché sin escribir a Firestore
+    if (token != null) {
+      print('✅ Token obtenido: ${token.substring(0, 30)}...');
+      await _guardarTokenSiCambio(token);
+    } else {
+      print('⚠️ No se pudo obtener el token');
     }
 
-    // 3. Escuchar cambios de token (cuando se regenera)
-    _messaging.onTokenRefresh.listen((newToken) {
-      _lastSavedToken = newToken; // Actualizar caché
-      _guardarTokenEnFirestore(newToken);
-    });
+    // 3. Configurar listener para regeneraciones futuras de token
+    print('📡 Configurando listener de onTokenRefresh...');
+    _messaging.onTokenRefresh.listen(
+      (newToken) async {
+        print('🔄 onTokenRefresh disparado - Token regenerado');
+        print('📱 Nuevo token: ${newToken.substring(0, 30)}...');
+        await _guardarTokenSiCambio(newToken);
+      },
+      onError: (error) {
+        print('❌ Error en onTokenRefresh: $error');
+      },
+    );
+    print('✅ Listener de onTokenRefresh configurado');
 
     // 4. Configurar handler para mensajes en foreground
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
@@ -74,23 +80,33 @@ class FirebaseMessagingService {
     print('✅ Firebase Cloud Messaging inicializado correctamente');
   }
 
-  /// Guardar token FCM en Firestore
-  static Future<void> _guardarTokenEnFirestore(String token) async {
+  /// Guardar token FCM en Firestore solo si cambió
+  static Future<void> _guardarTokenSiCambio(String newToken) async {
     try {
-      // Usar el token como ID del documento (cada dispositivo tendrá su propio documento)
-      final docId = token.substring(
-        0,
-        20,
-      ); // Usar primeros 20 caracteres como ID
+      final docId = newToken.substring(0, 20);
+      print('🔍 Verificando si el token cambió...');
+      print('🔑 Document ID: $docId');
 
-      await _db.collection(_fcmTokenCollection).doc(docId).set({
-        'token': token,
-        'timestamp': FieldValue.serverTimestamp(),
-        'platform': 'android',
-        'activo': true, // Útil para identificar dispositivos activos
-      }, SetOptions(merge: true));
+      // Verificar token actual en Firestore
+      final docRef = _db.collection(_fcmTokenCollection).doc(docId);
+      final snapshot = await docRef.get();
+      final currentToken = snapshot.data()?['token'];
 
-      print('✅ Token FCM guardado en Firestore');
+      if (currentToken != newToken) {
+        print('💾 Token cambió - Guardando en Firestore...');
+        await docRef.set({
+          'token': newToken,
+          'timestamp': FieldValue.serverTimestamp(),
+          'platform': 'android',
+          'activo': true,
+        }, SetOptions(merge: true));
+
+        print('✅ Token FCM guardado exitosamente');
+        print('📍 Colección: $_fcmTokenCollection');
+        print('📍 Documento: $docId');
+      } else {
+        print('ℹ️ Token no cambió - No se actualiza Firestore');
+      }
     } catch (e) {
       print('❌ Error al guardar token FCM: $e');
     }
@@ -156,8 +172,6 @@ class FirebaseMessagingService {
         final docId = token.substring(0, 20);
         await _db.collection(_fcmTokenCollection).doc(docId).delete();
       }
-
-      _lastSavedToken = null;
       print('✅ Token FCM eliminado');
     } catch (e) {
       print('❌ Error al eliminar token FCM: $e');

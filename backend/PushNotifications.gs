@@ -243,11 +243,16 @@ function obtenerTokensDispositivos() {
     const tokens = [];
     documents.forEach(doc => {
       if (doc.fields.token && doc.fields.token.stringValue) {
-        tokens.push(doc.fields.token.stringValue);
+        const activo = doc.fields.activo && doc.fields.activo.booleanValue !== false;
+        
+        // Solo incluir tokens activos
+        if (activo) {
+          tokens.push(doc.fields.token.stringValue);
+        }
       }
     });
 
-    Logger.info('obtenerTokensDispositivos', 'Tokens obtenidos: ' + tokens.length);
+    Logger.info('obtenerTokensDispositivos', 'Tokens activos obtenidos: ' + tokens.length);
     return tokens;
 
   } catch (error) {
