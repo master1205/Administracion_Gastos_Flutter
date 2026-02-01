@@ -147,10 +147,13 @@ function calcularResumen(transacciones) {
   let totalGastos = 0;
   
   transacciones.forEach(t => {
+    // Convertir monto a número para evitar concatenación de strings
+    const monto = parseFloat(t.monto) || 0;
+    
     if (t.tipo === 'Ingresos') {
-      totalIngresos += t.monto;
+      totalIngresos += monto;
     } else if (t.tipo === 'Gastos' || t.tipo === 'Pagos') {
-      totalGastos += t.monto;
+      totalGastos += monto;
     }
   });
   
@@ -158,9 +161,9 @@ function calcularResumen(transacciones) {
   const saldoTotal = obtenerSaldoTotalCuentas();
   
   return {
-    totalIngresos: totalIngresos,
-    totalGastos: totalGastos,
-    saldoTotal: saldoTotal
+    totalIngresos: Number(totalIngresos) || 0,
+    totalGastos: Number(totalGastos) || 0,
+    saldoTotal: Number(saldoTotal) || 0
   };
 }
 
@@ -186,11 +189,11 @@ function obtenerSaldoTotalCuentas() {
       if (data.usuarioId && data.usuarioId.stringValue === 'default_user' &&
           data.activa && data.activa.booleanValue === true) {
         const saldo = data.saldo ? (data.saldo.doubleValue || data.saldo.integerValue || 0) : 0;
-        saldoTotal += saldo;
+        saldoTotal += parseFloat(saldo) || 0;
       }
     });
     
-    return saldoTotal;
+    return Number(saldoTotal) || 0;
     
   } catch (error) {
     Logger.error('obtenerSaldoTotalCuentas', error);
