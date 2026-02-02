@@ -427,7 +427,7 @@ class ReportesScreenState extends State<ReportesScreen>
     final themeManager = Provider.of<ThemeManager>(context);
     final bgColor =
         themeManager.isDarkMode
-            ? themeManager.themeData.scaffoldBackgroundColor
+            ? Theme.of(context).scaffoldBackgroundColor
             : const Color(0xFFF5F7FA);
 
     return Scaffold(
@@ -462,8 +462,10 @@ class ReportesScreenState extends State<ReportesScreen>
                   }
 
                   return ListView.builder(
-                    padding: EdgeInsets.symmetric(
-                      vertical: 12.h,
+                    padding: EdgeInsets.only(
+                      top: 12.h,
+                      bottom:
+                          12.h + MediaQuery.of(context).padding.bottom + 80.h,
                     ), // ✅ REDUCIDO de 14
                     itemCount: reportesPorAno.keys.length,
                     itemBuilder: (context, index) {

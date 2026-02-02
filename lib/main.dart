@@ -74,9 +74,15 @@ class MyApp extends StatelessWidget {
       splitScreenMode: true,
       builder: (context, child) {
         return MaterialApp(
+          key: ValueKey(
+            themeProvider.accentColor.value,
+          ), // ✅ Fuerza reconstrucción al cambiar color
           debugShowCheckedModeBanner: false,
           title: 'Administración de Gastos',
-          theme: themeProvider.themeData,
+          theme: themeProvider.lightTheme,
+          darkTheme: themeProvider.darkTheme,
+          themeMode:
+              themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
           home: FutureBuilder<bool>(
             future: _checkOnboardingStatus(),
             builder: (context, snapshot) {

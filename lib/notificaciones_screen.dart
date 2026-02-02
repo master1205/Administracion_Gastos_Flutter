@@ -287,7 +287,12 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                 ),
               )
               : ListView(
-                padding: EdgeInsets.all(16.r),
+                padding: EdgeInsets.only(
+                  left: 16.r,
+                  right: 16.r,
+                  top: 16.r,
+                  bottom: 16.r + MediaQuery.of(context).padding.bottom,
+                ),
                 children: [
                   _buildInfoCard(themeManager),
                   SizedBox(height: 16.h),

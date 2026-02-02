@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_multi_formatter/formatters/money_input_enums.dart';
-import 'package:flutter_multi_formatter/formatters/money_input_formatter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:notificaciones/api_service.dart';
@@ -13,6 +11,8 @@ import 'package:notificaciones/models/Transaccion.dart' as models;
 import 'package:notificaciones/models/Transaccion.dart';
 import 'package:notificaciones/services/firestore_service.dart';
 import 'package:notificaciones/theme_provider.dart';
+import 'package:notificaciones/widgets/select_amount.dart';
+import 'package:notificaciones/widgets/discard_changes_dialog.dart';
 import 'package:provider/provider.dart';
 import 'utils/animation_utils.dart';
 
@@ -64,6 +64,15 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
   // Caché para categorías filtradas
   List<Categoria>? _filteredCategoriesCache;
   String? _lastFilteredType;
+
+  // Variables para detectar cambios
+  late String _initialAmount;
+  late String _initialDescription;
+  late DateTime _initialDate;
+  late Categoria? _initialCategory;
+  late Account? _initialAccount;
+  late Account? _initialAccountFrom;
+  late Account? _initialAccountTo;
 
   // Convertir el código del icono guardado en IconData
   IconData _getIconFromString(String iconString) {
@@ -260,6 +269,9 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
               selectedCategory = _categorias.first;
             }
           }
+
+          // Guardar estado inicial después de cargar datos
+          _saveInitialState();
         });
       }
     });
@@ -268,7 +280,37 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
       _amountController.text = widget.transaction!.monto.toString();
       _descriptionController.text = widget.transaction!.descripcion;
       selectedDate = DateTime.parse(widget.transaction!.fecha);
+    } else {
+      // Guardar estado inicial para nuevo registro
+      _saveInitialState();
     }
+  }
+
+  void _saveInitialState() {
+    _initialAmount = _amountController.text;
+    _initialDescription = _descriptionController.text;
+    _initialDate = selectedDate;
+    _initialCategory = selectedCategory;
+    _initialAccount = selectedAccount;
+    _initialAccountFrom = selectedAccountFrom;
+    _initialAccountTo = selectedAccountTo;
+  }
+
+  bool _hasChanges() {
+    return _amountController.text != _initialAmount ||
+        _descriptionController.text != _initialDescription ||
+        selectedDate != _initialDate ||
+        selectedCategory != _initialCategory ||
+        selectedAccount != _initialAccount ||
+        selectedAccountFrom != _initialAccountFrom ||
+        selectedAccountTo != _initialAccountTo;
+  }
+
+  Future<bool> _onWillPop() async {
+    if (_hasChanges()) {
+      return await DiscardChangesDialog.show(context);
+    }
+    return true;
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -613,7 +655,12 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                       color: Colors.white,
                       size: 20.sp,
                     ),
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () async {
+                      final shouldPop = await _onWillPop();
+                      if (shouldPop && mounted) {
+                        Navigator.of(context).pop();
+                      }
+                    },
                     padding: EdgeInsets.all(6.r),
                   ),
                 ),
@@ -705,65 +752,98 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
   }
 
   Widget _buildAmountField(ThemeManager themeManager) {
-    return Container(
-      decoration: BoxDecoration(
-        color: themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8.r,
-            offset: Offset(0, 3.h),
-          ),
-        ],
-      ),
-      child: TextFormField(
-        controller: _amountController,
-        keyboardType: TextInputType.number,
-        inputFormatters: [
-          MoneyInputFormatter(
-            leadingSymbol: '',
-            thousandSeparator: ThousandSeparator.Comma,
-            mantissaLength: 2,
-          ),
-        ],
-        style: GoogleFonts.lato(
-          fontSize: 24.sp,
-          fontWeight: FontWeight.bold,
-          color:
-              themeManager.isDarkMode ? Colors.white : const Color(0xFF2D3436),
+    final currentAmount =
+        _amountController.text.isNotEmpty
+            ? double.tryParse(_amountController.text.replaceAll(',', '')) ?? 0.0
+            : 0.0;
+
+    final formatter = NumberFormat.currency(
+      locale: 'es_MX',
+      symbol: '\$',
+      decimalDigits: 2,
+    );
+
+    final displayText =
+        currentAmount > 0 ? formatter.format(currentAmount) : '';
+
+    return GestureDetector(
+      onTap: () async {
+        final result = await showSelectAmountBottomSheet(
+          context,
+          title: 'Ingresa el monto',
+          initialAmount: currentAmount,
+          allowZero: false,
+          currencySymbol: '\$',
+        );
+
+        if (result != null) {
+          setState(() {
+            _amountController.text = result.toStringAsFixed(2);
+            amountError = null;
+          });
+        }
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+          borderRadius: BorderRadius.circular(12.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8.r,
+              offset: Offset(0, 3.h),
+            ),
+          ],
         ),
-        decoration: InputDecoration(
-          labelText: 'Monto',
-          labelStyle: GoogleFonts.openSans(
-            fontSize: 12.sp,
-            color: Colors.grey.shade600,
-          ),
-          prefixIcon: Container(
-            margin: EdgeInsets.all(10.r),
-            padding: EdgeInsets.all(6.r),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [widget.color, widget.color.withOpacity(0.7)],
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+          child: Row(
+            children: [
+              Container(
+                margin: EdgeInsets.only(right: 12.w),
+                padding: EdgeInsets.all(6.r),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [widget.color, widget.color.withOpacity(0.7)],
+                  ),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Icon(
+                  Icons.attach_money_rounded,
+                  color: Colors.white,
+                  size: 20.sp,
+                ),
               ),
-              borderRadius: BorderRadius.circular(10.r),
-            ),
-            child: Icon(
-              Icons.attach_money_rounded,
-              color: Colors.white,
-              size: 20.sp,
-            ),
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12.r),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor:
-              themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
-          contentPadding: EdgeInsets.symmetric(
-            horizontal: 16.w,
-            vertical: 16.h,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Monto',
+                      style: GoogleFonts.openSans(
+                        fontSize: 12.sp,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      displayText.isNotEmpty ? displayText : '\$0.00',
+                      style: GoogleFonts.lato(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.bold,
+                        color:
+                            displayText.isNotEmpty
+                                ? (themeManager.isDarkMode
+                                    ? Colors.white
+                                    : const Color(0xFF2D3436))
+                                : Colors.grey.shade400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -1292,151 +1372,46 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
       }
     });
 
-    return Scaffold(
-      backgroundColor:
-          themeManager.isDarkMode ? Colors.grey.shade900 : Colors.grey.shade50,
-      body:
-          isLoading
-              ? Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 3.w,
-                  valueColor: AlwaysStoppedAnimation<Color>(widget.color),
-                ),
-              )
-              : Column(
-                children: [
-                  _buildHeader(themeManager),
-                  Expanded(
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: SlideTransition(
-                        position: _slideAnimation,
-                        child: SingleChildScrollView(
-                          padding: EdgeInsets.all(14.r),
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                // Advertencia si no hay suficientes cuentas
-                                if (!puedeCrearTransaccion) ...[
-                                  Container(
-                                    padding: EdgeInsets.all(16.r),
-                                    decoration: BoxDecoration(
-                                      color: Colors.orange.shade50,
-                                      border: Border.all(
-                                        color: Colors.orange.shade300,
-                                        width: 1.5,
-                                      ),
-                                      borderRadius: BorderRadius.circular(12.r),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          Icons.warning_amber_rounded,
-                                          color: Colors.orange.shade700,
-                                          size: 28.sp,
-                                        ),
-                                        SizedBox(width: 12.w),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                widget.transactionType ==
-                                                        'Traspasos'
-                                                    ? 'Se necesitan al menos 2 cuentas'
-                                                    : 'Se necesita al menos 1 cuenta',
-                                                style: GoogleFonts.lato(
-                                                  fontSize: 14.sp,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.orange.shade900,
-                                                ),
-                                              ),
-                                              SizedBox(height: 4.h),
-                                              Text(
-                                                'Crea cuentas desde el menú de Cuentas para poder registrar transacciones.',
-                                                style: GoogleFonts.openSans(
-                                                  fontSize: 12.sp,
-                                                  color: Colors.orange.shade800,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  SizedBox(height: 16.h),
-                                ],
-                                _buildAmountField(themeManager),
-                                if (amountError != null) ...[
-                                  SizedBox(height: 6.h),
-                                  Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 4.w,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          Icons.error_outline,
-                                          color: Colors.red.shade400,
-                                          size: 16.sp,
-                                        ),
-                                        SizedBox(width: 6.w),
-                                        Expanded(
-                                          child: Text(
-                                            amountError!,
-                                            style: GoogleFonts.openSans(
-                                              fontSize: 11.sp,
-                                              color: Colors.red.shade400,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                                SizedBox(height: 12.h),
-                                _buildDescriptionField(themeManager),
-                                if (descriptionError != null) ...[
-                                  SizedBox(height: 6.h),
-                                  Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 4.w,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          Icons.error_outline,
-                                          color: Colors.red.shade400,
-                                          size: 16.sp,
-                                        ),
-                                        SizedBox(width: 6.w),
-                                        Expanded(
-                                          child: Text(
-                                            descriptionError!,
-                                            style: GoogleFonts.openSans(
-                                              fontSize: 11.sp,
-                                              color: Colors.red.shade400,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                                SizedBox(height: 12.h),
-                                _buildDateSelector(themeManager),
-                                SizedBox(height: 16.h),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
 
-                                if (widget.transactionType != 'Traspasos' &&
-                                    widget.transactionType != 'Reembolsos') ...[
-                                  // Advertencia si no hay categorías disponibles
-                                  if (filteredCategories.isEmpty) ...[
+        final shouldPop = await _onWillPop();
+        if (shouldPop && mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor:
+            themeManager.isDarkMode
+                ? Colors.grey.shade900
+                : Colors.grey.shade50,
+        body:
+            isLoading
+                ? Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3.w,
+                    valueColor: AlwaysStoppedAnimation<Color>(widget.color),
+                  ),
+                )
+                : Column(
+                  children: [
+                    _buildHeader(themeManager),
+                    Expanded(
+                      child: FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: SlideTransition(
+                          position: _slideAnimation,
+                          child: SingleChildScrollView(
+                            padding: EdgeInsets.all(14.r),
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  // Advertencia si no hay suficientes cuentas
+                                  if (!puedeCrearTransaccion) ...[
                                     Container(
                                       padding: EdgeInsets.all(16.r),
                                       decoration: BoxDecoration(
@@ -1463,7 +1438,10 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                                   CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                  'No hay categorías disponibles',
+                                                  widget.transactionType ==
+                                                          'Traspasos'
+                                                      ? 'Se necesitan al menos 2 cuentas'
+                                                      : 'Se necesita al menos 1 cuenta',
                                                   style: GoogleFonts.lato(
                                                     fontSize: 14.sp,
                                                     fontWeight: FontWeight.bold,
@@ -1473,7 +1451,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                                 ),
                                                 SizedBox(height: 4.h),
                                                 Text(
-                                                  'Crea categorías desde el menú de Categorías para poder registrar ${widget.transactionType.toLowerCase()}.',
+                                                  'Crea cuentas desde el menú de Cuentas para poder registrar transacciones.',
                                                   style: GoogleFonts.openSans(
                                                     fontSize: 12.sp,
                                                     color:
@@ -1488,11 +1466,8 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                     ),
                                     SizedBox(height: 16.h),
                                   ],
-                                  _buildCategorySelector(
-                                    themeManager,
-                                    filteredCategories,
-                                  ),
-                                  if (categoryError != null) ...[
+                                  _buildAmountField(themeManager),
+                                  if (amountError != null) ...[
                                     SizedBox(height: 6.h),
                                     Padding(
                                       padding: EdgeInsets.symmetric(
@@ -1508,7 +1483,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                           SizedBox(width: 6.w),
                                           Expanded(
                                             child: Text(
-                                              categoryError!,
+                                              amountError!,
                                               style: GoogleFonts.openSans(
                                                 fontSize: 11.sp,
                                                 color: Colors.red.shade400,
@@ -1521,19 +1496,8 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                     ),
                                   ],
                                   SizedBox(height: 12.h),
-                                ],
-
-                                if (widget.transactionType != 'Traspasos') ...[
-                                  _buildAccountSelector(
-                                    themeManager,
-                                    dataProvider.cuentas,
-                                    'Cuenta',
-                                    selectedAccount,
-                                    (account) => setState(
-                                      () => selectedAccount = account,
-                                    ),
-                                  ),
-                                  if (accountError != null) ...[
+                                  _buildDescriptionField(themeManager),
+                                  if (descriptionError != null) ...[
                                     SizedBox(height: 6.h),
                                     Padding(
                                       padding: EdgeInsets.symmetric(
@@ -1549,47 +1513,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                           SizedBox(width: 6.w),
                                           Expanded(
                                             child: Text(
-                                              accountError!,
-                                              style: GoogleFonts.openSans(
-                                                fontSize: 11.sp,
-                                                color: Colors.red.shade400,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ],
-
-                                if (widget.transactionType == 'Traspasos') ...[
-                                  _buildAccountSelector(
-                                    themeManager,
-                                    dataProvider.cuentas,
-                                    'Cuenta Origen',
-                                    selectedAccountFrom,
-                                    (account) => setState(
-                                      () => selectedAccountFrom = account,
-                                    ),
-                                  ),
-                                  if (accountFromError != null) ...[
-                                    SizedBox(height: 6.h),
-                                    Padding(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 4.w,
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            Icons.error_outline,
-                                            color: Colors.red.shade400,
-                                            size: 16.sp,
-                                          ),
-                                          SizedBox(width: 6.w),
-                                          Expanded(
-                                            child: Text(
-                                              accountFromError!,
+                                              descriptionError!,
                                               style: GoogleFonts.openSans(
                                                 fontSize: 11.sp,
                                                 color: Colors.red.shade400,
@@ -1602,59 +1526,240 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                     ),
                                   ],
                                   SizedBox(height: 12.h),
-                                  _buildAccountSelector(
-                                    themeManager,
-                                    dataProvider.cuentas,
-                                    'Cuenta Destino',
-                                    selectedAccountTo,
-                                    (account) => setState(
-                                      () => selectedAccountTo = account,
-                                    ),
-                                  ),
-                                  if (accountToError != null) ...[
-                                    SizedBox(height: 6.h),
-                                    Padding(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 4.w,
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            Icons.error_outline,
-                                            color: Colors.red.shade400,
-                                            size: 16.sp,
+                                  _buildDateSelector(themeManager),
+                                  SizedBox(height: 16.h),
+
+                                  if (widget.transactionType != 'Traspasos' &&
+                                      widget.transactionType !=
+                                          'Reembolsos') ...[
+                                    // Advertencia si no hay categorías disponibles
+                                    if (filteredCategories.isEmpty) ...[
+                                      Container(
+                                        padding: EdgeInsets.all(16.r),
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange.shade50,
+                                          border: Border.all(
+                                            color: Colors.orange.shade300,
+                                            width: 1.5,
                                           ),
-                                          SizedBox(width: 6.w),
-                                          Expanded(
-                                            child: Text(
-                                              accountToError!,
-                                              style: GoogleFonts.openSans(
-                                                fontSize: 11.sp,
-                                                color: Colors.red.shade400,
-                                                fontWeight: FontWeight.w500,
+                                          borderRadius: BorderRadius.circular(
+                                            12.r,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.warning_amber_rounded,
+                                              color: Colors.orange.shade700,
+                                              size: 28.sp,
+                                            ),
+                                            SizedBox(width: 12.w),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    'No hay categorías disponibles',
+                                                    style: GoogleFonts.lato(
+                                                      fontSize: 14.sp,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color:
+                                                          Colors
+                                                              .orange
+                                                              .shade900,
+                                                    ),
+                                                  ),
+                                                  SizedBox(height: 4.h),
+                                                  Text(
+                                                    'Crea categorías desde el menú de Categorías para poder registrar ${widget.transactionType.toLowerCase()}.',
+                                                    style: GoogleFonts.openSans(
+                                                      fontSize: 12.sp,
+                                                      color:
+                                                          Colors
+                                                              .orange
+                                                              .shade800,
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
+                                      ),
+                                      SizedBox(height: 16.h),
+                                    ],
+                                    _buildCategorySelector(
+                                      themeManager,
+                                      filteredCategories,
+                                    ),
+                                    if (categoryError != null) ...[
+                                      SizedBox(height: 6.h),
+                                      Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 4.w,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.error_outline,
+                                              color: Colors.red.shade400,
+                                              size: 16.sp,
+                                            ),
+                                            SizedBox(width: 6.w),
+                                            Expanded(
+                                              child: Text(
+                                                categoryError!,
+                                                style: GoogleFonts.openSans(
+                                                  fontSize: 11.sp,
+                                                  color: Colors.red.shade400,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                    SizedBox(height: 12.h),
+                                  ],
+
+                                  if (widget.transactionType !=
+                                      'Traspasos') ...[
+                                    _buildAccountSelector(
+                                      themeManager,
+                                      dataProvider.cuentas,
+                                      'Cuenta',
+                                      selectedAccount,
+                                      (account) => setState(
+                                        () => selectedAccount = account,
                                       ),
                                     ),
+                                    if (accountError != null) ...[
+                                      SizedBox(height: 6.h),
+                                      Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 4.w,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.error_outline,
+                                              color: Colors.red.shade400,
+                                              size: 16.sp,
+                                            ),
+                                            SizedBox(width: 6.w),
+                                            Expanded(
+                                              child: Text(
+                                                accountError!,
+                                                style: GoogleFonts.openSans(
+                                                  fontSize: 11.sp,
+                                                  color: Colors.red.shade400,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ],
-                                ],
 
-                                SizedBox(height: 20.h),
-                                _buildSubmitButton(
-                                  enabled: puedeCrearTransaccion,
-                                ),
-                                SizedBox(height: 12.h),
-                              ],
+                                  if (widget.transactionType ==
+                                      'Traspasos') ...[
+                                    _buildAccountSelector(
+                                      themeManager,
+                                      dataProvider.cuentas,
+                                      'Cuenta Origen',
+                                      selectedAccountFrom,
+                                      (account) => setState(
+                                        () => selectedAccountFrom = account,
+                                      ),
+                                    ),
+                                    if (accountFromError != null) ...[
+                                      SizedBox(height: 6.h),
+                                      Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 4.w,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.error_outline,
+                                              color: Colors.red.shade400,
+                                              size: 16.sp,
+                                            ),
+                                            SizedBox(width: 6.w),
+                                            Expanded(
+                                              child: Text(
+                                                accountFromError!,
+                                                style: GoogleFonts.openSans(
+                                                  fontSize: 11.sp,
+                                                  color: Colors.red.shade400,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                    SizedBox(height: 12.h),
+                                    _buildAccountSelector(
+                                      themeManager,
+                                      dataProvider.cuentas,
+                                      'Cuenta Destino',
+                                      selectedAccountTo,
+                                      (account) => setState(
+                                        () => selectedAccountTo = account,
+                                      ),
+                                    ),
+                                    if (accountToError != null) ...[
+                                      SizedBox(height: 6.h),
+                                      Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 4.w,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.error_outline,
+                                              color: Colors.red.shade400,
+                                              size: 16.sp,
+                                            ),
+                                            SizedBox(width: 6.w),
+                                            Expanded(
+                                              child: Text(
+                                                accountToError!,
+                                                style: GoogleFonts.openSans(
+                                                  fontSize: 11.sp,
+                                                  color: Colors.red.shade400,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+
+                                  SizedBox(height: 20.h),
+                                  _buildSubmitButton(
+                                    enabled: puedeCrearTransaccion,
+                                  ),
+                                  SizedBox(height: 12.h),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+      ),
     );
   }
 }

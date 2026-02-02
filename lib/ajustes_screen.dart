@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'theme_provider.dart';
+import 'services/biometric_service.dart';
 
 class AjustesScreen extends StatefulWidget {
   const AjustesScreen({Key? key}) : super(key: key);
@@ -18,15 +19,34 @@ class _AjustesScreenState extends State<AjustesScreen> {
   bool sonidoActivo = true;
   bool vibracionActiva = true;
   bool ocultarSaldos = false;
+  bool biometricEnabled = false;
+  bool biometricAvailable = false;
+  String biometricType = 'No disponible';
   String moneda = 'MXN';
   String idioma = 'Español';
   String versionApp = '1.0.0';
+
+  final BiometricService _biometricService = BiometricService();
 
   @override
   void initState() {
     super.initState();
     _cargarConfiguracion();
     _cargarVersionApp();
+    _checkBiometricAvailability();
+  }
+
+  Future<void> _checkBiometricAvailability() async {
+    final canCheck = await _biometricService.canCheckBiometrics();
+    final isSupported = await _biometricService.isDeviceSupported();
+    final isEnabled = await _biometricService.isBiometricEnabled();
+    final typeName = await _biometricService.getBiometricTypeName();
+
+    setState(() {
+      biometricAvailable = canCheck && isSupported;
+      biometricEnabled = isEnabled;
+      biometricType = typeName;
+    });
   }
 
   Future<void> _cargarConfiguracion() async {
@@ -77,7 +97,12 @@ class _AjustesScreenState extends State<AjustesScreen> {
         ),
       ),
       body: ListView(
-        padding: EdgeInsets.all(16.r),
+        padding: EdgeInsets.only(
+          left: 16.r,
+          right: 16.r,
+          top: 16.r,
+          bottom: 16.r + MediaQuery.of(context).padding.bottom,
+        ),
         children: [
           // GENERAL
           _buildSeccionTitulo('General', Icons.settings_outlined, themeManager),
@@ -188,6 +213,17 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 () => _configurarPIN(),
                 themeManager,
               ),
+              if (biometricAvailable) ...[
+                Divider(height: 1.h),
+                _buildSwitchTile(
+                  'Autenticación biométrica',
+                  biometricType,
+                  Icons.fingerprint_outlined,
+                  biometricEnabled,
+                  (value) => _toggleBiometric(value),
+                  themeManager,
+                ),
+              ],
             ],
           ),
 
@@ -357,6 +393,14 @@ class _AjustesScreenState extends State<AjustesScreen> {
         value: value,
         onChanged: enabled ? onChanged : null,
         activeColor: const Color(0xFF30cfd0),
+        inactiveTrackColor:
+            themeManager.isDarkMode
+                ? Colors.grey.shade700
+                : Colors.grey.shade300,
+        inactiveThumbColor:
+            themeManager.isDarkMode
+                ? Colors.grey.shade500
+                : Colors.grey.shade400,
       ),
     );
   }
@@ -528,6 +572,55 @@ class _AjustesScreenState extends State<AjustesScreen> {
         backgroundColor: Colors.orange,
       ),
     );
+  }
+
+  Future<void> _toggleBiometric(bool value) async {
+    if (value) {
+      // Autenticar primero antes de habilitar
+      final authenticated = await _biometricService.authenticate(
+        localizedReason:
+            'Verifica tu identidad para habilitar la autenticación biométrica',
+      );
+
+      if (authenticated) {
+        await _biometricService.setBiometricEnabled(true);
+        setState(() => biometricEnabled = true);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Autenticación biométrica activada'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('No se pudo verificar tu identidad'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } else {
+      // Desactivar sin autenticación
+      await _biometricService.setBiometricEnabled(false);
+      setState(() => biometricEnabled = false);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Autenticación biométrica desactivada'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 
   void _exportarDatos() {

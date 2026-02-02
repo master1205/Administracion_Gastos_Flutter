@@ -1090,12 +1090,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      setState(() => _isScrollingDown = true);
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) setState(() => _isScrollingDown = false);
-      });
-    }
+    // No hacemos nada - el FAB permanece siempre visible
   }
 
   String _getTimeGreeting() {
@@ -1370,15 +1365,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         ),
       ),
-      floatingActionButton: AnimatedSlide(
-        duration: const Duration(milliseconds: 300),
-        offset: _isScrollingDown ? Offset(0, 2) : Offset.zero,
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 300),
-          opacity: _isScrollingDown ? 0.0 : 1.0,
-          child: _buildExpandableFab(),
-        ),
-      ),
+      floatingActionButton: _buildExpandableFab(),
       floatingActionButtonLocation: ExpandableFab.location,
     );
   }

@@ -629,7 +629,12 @@ class GraficasScreenState extends State<GraficasScreen>
     });
 
     return ListView(
-      padding: EdgeInsets.all(14.r),
+      padding: EdgeInsets.only(
+        left: 14.r,
+        right: 14.r,
+        top: 14.r,
+        bottom: 14.r + MediaQuery.of(context).padding.bottom + 80.h,
+      ),
       children: [
         _buildSectionHeader(
           title: 'Total de Gastos',
@@ -849,7 +854,12 @@ class GraficasScreenState extends State<GraficasScreen>
     }
 
     return ListView(
-      padding: EdgeInsets.all(14.r),
+      padding: EdgeInsets.only(
+        left: 14.r,
+        right: 14.r,
+        top: 14.r,
+        bottom: 14.r + MediaQuery.of(context).padding.bottom + 80.h,
+      ),
       children: [
         _buildSectionHeader(
           title: 'Balance Total',

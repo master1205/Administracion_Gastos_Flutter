@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'utils/colors.dart';
 
 class ThemeManager extends ChangeNotifier {
   bool _isDarkMode = false;
   bool get isDarkMode => _isDarkMode;
 
+  // Color de acento actual (por defecto el morado-azul de Cashew)
+  Color _accentColor = const Color(0xFF667eea);
+  Color get accentColor => _accentColor;
+
   // ============================================================================
-  // PALETA DE COLORES MEJORADA - Material Design 3
+  // PALETA DE COLORES MEJORADA - Material Design 3 + Sistema Cashew
   // ============================================================================
 
   // 🎨 MODO CLARO
@@ -45,6 +50,13 @@ class ThemeManager extends ChangeNotifier {
   Future<void> _loadTheme() async {
     final prefs = await SharedPreferences.getInstance();
     _isDarkMode = prefs.getBool('isDarkMode') ?? false;
+
+    // Cargar color de acento guardado
+    final savedColorHex = prefs.getString('accentColor');
+    if (savedColorHex != null) {
+      _accentColor = HexColor(savedColorHex);
+    }
+
     notifyListeners();
     _updateSystemUI();
   }
@@ -53,6 +65,15 @@ class ThemeManager extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _isDarkMode = !_isDarkMode;
     await prefs.setBool('isDarkMode', _isDarkMode);
+    notifyListeners();
+    _updateSystemUI();
+  }
+
+  /// Cambia el color de acento de toda la aplicación
+  Future<void> setAccentColor(Color color) async {
+    final prefs = await SharedPreferences.getInstance();
+    _accentColor = color;
+    await prefs.setString('accentColor', toHexString(color) ?? '0xFF667eea');
     notifyListeners();
     _updateSystemUI();
   }
@@ -85,24 +106,38 @@ class ThemeManager extends ChangeNotifier {
   ThemeData get themeData => _isDarkMode ? darkTheme : lightTheme;
 
   ThemeData get lightTheme {
+    // Generar ColorScheme desde el color de acento usando Material You
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: _accentColor,
+      brightness: Brightness.light,
+      background: lightenPastel(_accentColor, amount: 0.91),
+    );
+
+    // Obtener colores personalizados del sistema Cashew
+    final appColors = getAppColors(
+      brightness: Brightness.light,
+      accentColor: _accentColor,
+    );
+
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
 
-      // Colores principales
-      primaryColor: _lightPrimary,
+      // Colores principales - usando el ColorScheme generado
+      primaryColor: colorScheme.primary,
       scaffoldBackgroundColor: _lightBackground,
-      colorScheme: const ColorScheme.light(
-        primary: _lightPrimary,
+      colorScheme: colorScheme.copyWith(
         secondary: _lightSecondary,
         error: _lightError,
         surface: _lightSurface,
-        onPrimary: Colors.white,
         onSecondary: Colors.white,
         onError: Colors.white,
         onSurface: _lightOnSurface,
         outline: _lightDivider,
       ),
+
+      // Agregar extensión de colores personalizados
+      extensions: [appColors],
 
       // Cards
       cardTheme: CardThemeData(
@@ -128,7 +163,7 @@ class ThemeManager extends ChangeNotifier {
       // Botones
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: _lightPrimary,
+          backgroundColor: colorScheme.primary,
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -140,7 +175,7 @@ class ThemeManager extends ChangeNotifier {
 
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: _lightPrimary,
+          backgroundColor: colorScheme.primary,
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -164,7 +199,7 @@ class ThemeManager extends ChangeNotifier {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _lightPrimary, width: 2),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
@@ -257,24 +292,38 @@ class ThemeManager extends ChangeNotifier {
   }
 
   ThemeData get darkTheme {
+    // Generar ColorScheme desde el color de acento usando Material You
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: _accentColor,
+      brightness: Brightness.dark,
+      background: darkenPastel(_accentColor, amount: 0.92),
+    );
+
+    // Obtener colores personalizados del sistema Cashew
+    final appColors = getAppColors(
+      brightness: Brightness.dark,
+      accentColor: _accentColor,
+    );
+
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
 
-      // Colores principales
-      primaryColor: _darkPrimary,
+      // Colores principales - usando el ColorScheme generado
+      primaryColor: colorScheme.primary,
       scaffoldBackgroundColor: _darkBackground,
-      colorScheme: const ColorScheme.dark(
-        primary: _darkPrimary,
+      colorScheme: colorScheme.copyWith(
         secondary: _darkSecondary,
         error: _darkError,
         surface: _darkSurface,
-        onPrimary: _darkBackground,
         onSecondary: _darkBackground,
         onError: Colors.white,
         onSurface: _darkOnSurface,
         outline: _darkDivider,
       ),
+
+      // Agregar extensión de colores personalizados
+      extensions: [appColors],
 
       // Cards
       cardTheme: CardThemeData(
@@ -300,7 +349,7 @@ class ThemeManager extends ChangeNotifier {
       // Botones
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: _darkPrimary,
+          backgroundColor: colorScheme.primary,
           foregroundColor: _darkBackground,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -312,7 +361,7 @@ class ThemeManager extends ChangeNotifier {
 
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: _darkPrimary,
+          backgroundColor: colorScheme.primary,
           foregroundColor: _darkBackground,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -336,7 +385,7 @@ class ThemeManager extends ChangeNotifier {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _darkPrimary, width: 2),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,

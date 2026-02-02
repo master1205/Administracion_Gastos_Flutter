@@ -48,6 +48,11 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
   // State
   List<Account> _accounts = [];
   Map<String, dynamic>? _balanceData;
+
+  bool _isDarkMode() {
+    return Provider.of<ThemeManager>(context, listen: false).isDarkMode;
+  }
+
   List<Transaction> _transactions = [];
   List<Meta> _metas = [];
   bool _isLoading = false;
@@ -295,18 +300,24 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
         TargetContent(
           align: ContentAlign.bottom,
           padding: EdgeInsets.all(16.r), // ✅ REDUCIDO de 20
-          builder:
-              (context, controller) => _buildModernTutorialCard(
-                title: "💰 Balance Total",
-                description:
-                    "Aquí puedes ver tu saldo acumulado, ingresos y gastos en un solo vistazo.",
-                icon: Icons.account_balance_wallet_rounded,
-                gradientColors: const [Color(0xFF667eea), Color(0xFF764ba2)],
-                currentStep: 1,
-                totalSteps: 3,
-                onNext: controller.next,
-                onSkip: controller.skip,
-              ),
+          builder: (context, controller) {
+            final accentColor =
+                Provider.of<ThemeManager>(context, listen: false).accentColor;
+            return _buildModernTutorialCard(
+              title: "💰 Balance Total",
+              description:
+                  "Aquí puedes ver tu saldo acumulado, ingresos y gastos en un solo vistazo.",
+              icon: Icons.account_balance_wallet_rounded,
+              gradientColors: [
+                accentColor,
+                Color.lerp(accentColor, Colors.purple, 0.3)!,
+              ],
+              currentStep: 1,
+              totalSteps: 3,
+              onNext: controller.next,
+              onSkip: controller.skip,
+            );
+          },
         ),
       ],
     );
@@ -324,19 +335,25 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
         TargetContent(
           align: ContentAlign.bottom,
           padding: EdgeInsets.all(16.r),
-          builder:
-              (context, controller) => _buildModernTutorialCard(
-                title: "💳 Tus Cuentas",
-                description:
-                    "Desliza para explorar todas tus cuentas. Cada tarjeta muestra el saldo disponible.",
-                icon: Icons.credit_card_rounded,
-                gradientColors: const [Color(0xFFf093fb), Color(0xFFF5576c)],
-                currentStep: 2,
-                totalSteps: 3,
-                onNext: controller.next,
-                onBack: controller.previous,
-                onSkip: controller.skip,
-              ),
+          builder: (context, controller) {
+            final accentColor =
+                Provider.of<ThemeManager>(context, listen: false).accentColor;
+            return _buildModernTutorialCard(
+              title: "💳 Tus Cuentas",
+              description:
+                  "Desliza para explorar todas tus cuentas. Cada tarjeta muestra el saldo disponible.",
+              icon: Icons.credit_card_rounded,
+              gradientColors: [
+                accentColor,
+                Color.lerp(accentColor, Colors.pink, 0.4)!,
+              ],
+              currentStep: 2,
+              totalSteps: 3,
+              onNext: controller.next,
+              onBack: controller.previous,
+              onSkip: controller.skip,
+            );
+          },
         ),
       ],
     );
@@ -354,19 +371,25 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
         TargetContent(
           align: ContentAlign.top,
           padding: EdgeInsets.all(16.r),
-          builder:
-              (context, controller) => _buildModernTutorialCard(
-                title: "📊 Historial Completo",
-                description:
-                    "Toca aquí para ver todas tus transacciones y analiza tus hábitos.",
-                icon: Icons.history_rounded,
-                gradientColors: const [Color(0xFF4facfe), Color(0xFF00f2fe)],
-                currentStep: 3,
-                totalSteps: 3,
-                onNext: controller.next,
-                onBack: controller.previous,
-                isLastStep: true,
-              ),
+          builder: (context, controller) {
+            final accentColor =
+                Provider.of<ThemeManager>(context, listen: false).accentColor;
+            return _buildModernTutorialCard(
+              title: "📊 Historial Completo",
+              description:
+                  "Toca aquí para ver todas tus transacciones y analiza tus hábitos.",
+              icon: Icons.history_rounded,
+              gradientColors: [
+                accentColor,
+                Color.lerp(accentColor, Colors.cyan, 0.4)!,
+              ],
+              currentStep: 3,
+              totalSteps: 3,
+              onNext: controller.next,
+              onBack: controller.previous,
+              isLastStep: true,
+            );
+          },
         ),
       ],
     );
@@ -625,7 +648,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
       Container(
         key: _balanceCardKey,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20.r), // ✅ REDUCIDO de 24
+          borderRadius: BorderRadius.circular(20.r),
           gradient: LinearGradient(
             colors:
                 themeManager.isDarkMode
@@ -640,12 +663,12 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                   themeManager.isDarkMode
                       ? Colors.black.withOpacity(0.3)
                       : const Color(0xFF667eea).withOpacity(0.3),
-              blurRadius: 15.r, // ✅ REDUCIDO de 20
-              offset: Offset(0, 8.h), // ✅ REDUCIDO de 10
+              blurRadius: 15.r,
+              offset: Offset(0, 8.h),
             ),
           ],
         ),
-        padding: EdgeInsets.all(18.r), // ✅ REDUCIDO de 20
+        padding: EdgeInsets.all(18.r),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -786,7 +809,8 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
 
   // UI Builders - Metas Card
   Widget _buildMetasCard() {
-    final themeManager = Provider.of<ThemeManager>(context);
+    final theme = Theme.of(context);
+    final accentColor = theme.colorScheme.primary;
 
     if (_metas.isEmpty) {
       // Invitación sutil para crear primera meta
@@ -801,13 +825,9 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
           margin: EdgeInsets.symmetric(horizontal: 2.w),
           padding: EdgeInsets.all(16.r),
           decoration: BoxDecoration(
-            color:
-                themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+            color: _isDarkMode() ? Colors.grey.shade800 : Colors.white,
             borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(
-              color: Colors.green.shade200.withOpacity(0.3),
-              width: 1.5,
-            ),
+            border: Border.all(color: accentColor.withOpacity(0.3), width: 1.5),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.03),
@@ -821,12 +841,12 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
               Container(
                 padding: EdgeInsets.all(12.r),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade50,
+                  color: accentColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Icon(
                   Icons.savings_outlined,
-                  color: Colors.green,
+                  color: accentColor,
                   size: 24.sp,
                 ),
               ),
@@ -1017,7 +1037,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                             .map(
                               (meta) => Padding(
                                 padding: EdgeInsets.only(bottom: 8.h),
-                                child: _buildMetaCompacta(meta, themeManager),
+                                child: _buildMetaCompacta(meta),
                               ),
                             )
                             .toList(),
@@ -1029,7 +1049,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
     );
   }
 
-  Widget _buildMetaCompacta(Meta meta, ThemeManager themeManager) {
+  Widget _buildMetaCompacta(Meta meta) {
     final colorHex = int.parse('FF${meta.color}', radix: 16);
     final color = Color(colorHex);
 
@@ -1649,7 +1669,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
       key: _scaffoldKey,
       backgroundColor:
           themeManager.isDarkMode
-              ? themeManager.themeData.scaffoldBackgroundColor
+              ? Theme.of(context).scaffoldBackgroundColor
               : const Color(0xFFF5F7FA),
       body:
           _isLoading
@@ -1682,7 +1702,13 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
               : Stack(
                 children: [
                   SingleChildScrollView(
-                    padding: EdgeInsets.all(14.r),
+                    padding: EdgeInsets.only(
+                      left: 14.r,
+                      right: 14.r,
+                      top: 14.r,
+                      bottom:
+                          14.r + MediaQuery.of(context).padding.bottom + 80.h,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1693,7 +1719,6 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                         _buildAccountsCarousel(),
                         SizedBox(height: 18.h),
                         _buildTransactionsList(),
-                        SizedBox(height: 14.h),
                       ],
                     ),
                   ),
@@ -1714,10 +1739,14 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
-                                    const Color(0xFF667eea).withOpacity(0.0),
-                                    const Color(0xFF667eea),
-                                    const Color(0xFF764ba2),
-                                    const Color(0xFF764ba2).withOpacity(0.0),
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.primary.withOpacity(0.0),
+                                    Theme.of(context).colorScheme.primary,
+                                    Theme.of(context).colorScheme.secondary,
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.secondary.withOpacity(0.0),
                                   ],
                                 ),
                               ),

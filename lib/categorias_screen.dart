@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:notificaciones/services/firestore_service.dart';
 import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
+import 'widgets/discard_changes_dialog.dart';
 
 class CategoriasScreen extends StatefulWidget {
   const CategoriasScreen({super.key});
@@ -96,7 +97,12 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
           }
 
           return ListView.builder(
-            padding: EdgeInsets.all(16.w),
+            padding: EdgeInsets.only(
+              left: 16.r,
+              right: 16.r,
+              top: 16.r,
+              bottom: 16.r + MediaQuery.of(context).padding.bottom + 80.h,
+            ),
             itemCount: categoriasFiltradas.length,
             itemBuilder: (context, index) {
               final categoria = categoriasFiltradas[index];
@@ -105,14 +111,14 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () => _mostrarDialogoCategoria(context),
-        backgroundColor: const Color(0xFF667eea),
-        icon: const Icon(Icons.add_rounded),
-        label: Text(
-          'Nueva',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
+        backgroundColor:
+            themeManager.isDarkMode
+                ? const Color(0xFF2D2D2D)
+                : const Color(0xFF667eea),
+        shape: const CircleBorder(),
+        child: Icon(Icons.add_rounded, color: Colors.white, size: 28.sp),
       ),
     );
   }
@@ -448,6 +454,27 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
       categoria?['imagen'] ?? 'shopping_cart',
     );
 
+    // Variables para detectar cambios
+    final String initialNombre = categoria?['categoria'] ?? '';
+    final String initialTipo = categoria?['tipoTransaccion'] ?? 'Gasto';
+    final IconData initialIcono = iconoSeleccionado;
+
+    // Función para verificar si hay cambios
+    bool hasChanges() {
+      return nombreController.text.trim() != initialNombre ||
+          tipoController.text != initialTipo ||
+          iconoSeleccionado != initialIcono;
+    }
+
+    // Función para manejar el cierre del diálogo
+    Future<bool> onWillPop() async {
+      if (hasChanges()) {
+        final result = await DiscardChangesDialog.show(context);
+        return result;
+      }
+      return true;
+    }
+
     final themeManager = Provider.of<ThemeManager>(context, listen: false);
     final isDark = themeManager.isDarkMode;
 
@@ -458,300 +485,355 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
       builder:
           (dialogContext) => StatefulBuilder(
             builder:
-                (context, setStateDialog) => Container(
-                  height: MediaQuery.of(context).size.height * 0.75,
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(24.r),
+                (context, setStateDialog) => PopScope(
+                  canPop: false,
+                  onPopInvoked: (didPop) async {
+                    if (didPop) return;
+                    final shouldPop = await onWillPop();
+                    if (shouldPop && context.mounted) {
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      bottom:
+                          MediaQuery.of(context).viewInsets.bottom > 0
+                              ? MediaQuery.of(context).viewInsets.bottom
+                              : MediaQuery.of(context).viewPadding.bottom,
                     ),
-                  ),
-                  child: Column(
-                    children: [
-                      // Header simple
-                      Container(
-                        padding: EdgeInsets.all(20.r),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF667eea).withOpacity(0.08),
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(24.r),
-                          ),
+                    child: Container(
+                      height: MediaQuery.of(context).size.height * 0.75,
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(24.r),
                         ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: EdgeInsets.all(14.r),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF667eea),
-                                borderRadius: BorderRadius.circular(12.r),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(
-                                      0xFF667eea,
-                                    ).withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Icon(
-                                iconoSeleccionado,
-                                color: Colors.white,
-                                size: 28.sp,
+                      ),
+                      child: Column(
+                        children: [
+                          // Header simple
+                          Container(
+                            padding: EdgeInsets.all(20.r),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF667eea).withOpacity(0.08),
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(24.r),
                               ),
                             ),
-                            SizedBox(width: 16.w),
-                            Expanded(
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(14.r),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF667eea),
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(
+                                          0xFF667eea,
+                                        ).withOpacity(0.3),
+                                        blurRadius: 8,
+                                        offset: Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    iconoSeleccionado,
+                                    color: Colors.white,
+                                    size: 28.sp,
+                                  ),
+                                ),
+                                SizedBox(width: 16.w),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        isEdit
+                                            ? 'Editar Categoría'
+                                            : 'Nueva Categoría',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 22.sp,
+                                          fontWeight: FontWeight.bold,
+                                          color:
+                                              isDark
+                                                  ? Colors.white
+                                                  : Colors.black87,
+                                        ),
+                                      ),
+                                      SizedBox(height: 2.h),
+                                      Text(
+                                        'Completa la información',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 13.sp,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: () async {
+                                    final shouldClose = await onWillPop();
+                                    if (shouldClose && dialogContext.mounted) {
+                                      Navigator.pop(dialogContext);
+                                    }
+                                  },
+                                  icon: Icon(Icons.close, size: 24.sp),
+                                  color: Colors.grey.shade600,
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Contenido
+                          Expanded(
+                            child: SingleChildScrollView(
+                              padding: EdgeInsets.all(20.r),
                               child: Column(
+                                mainAxisSize: MainAxisSize.min,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    isEdit
-                                        ? 'Editar Categoría'
-                                        : 'Nueva Categoría',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 22.sp,
-                                      fontWeight: FontWeight.bold,
+                                  // Nombre
+                                  TextField(
+                                    controller: nombreController,
+                                    decoration: InputDecoration(
+                                      labelText: 'Nombre',
+                                      labelStyle: TextStyle(
+                                        color:
+                                            isDark
+                                                ? Colors.grey.shade400
+                                                : Colors.grey.shade700,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(
+                                          12.r,
+                                        ),
+                                      ),
+                                      filled: true,
+                                      fillColor:
+                                          isDark
+                                              ? const Color(0xFF2A2A2A)
+                                              : Colors.grey.shade100,
+                                    ),
+                                    style: TextStyle(
                                       color:
                                           isDark
                                               ? Colors.white
                                               : Colors.black87,
                                     ),
                                   ),
-                                  SizedBox(height: 2.h),
-                                  Text(
-                                    'Completa la información',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 13.sp,
-                                      color: Colors.grey.shade600,
+                                  SizedBox(height: 16.h),
+
+                                  // Tipo de transacción
+                                  DropdownButtonFormField<String>(
+                                    value: tipoController.text,
+                                    decoration: InputDecoration(
+                                      labelText: 'Tipo',
+                                      labelStyle: TextStyle(
+                                        color:
+                                            isDark
+                                                ? Colors.grey.shade400
+                                                : Colors.grey.shade700,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(
+                                          12.r,
+                                        ),
+                                      ),
+                                      filled: true,
+                                      fillColor:
+                                          isDark
+                                              ? const Color(0xFF2A2A2A)
+                                              : Colors.grey.shade100,
                                     ),
+                                    dropdownColor:
+                                        isDark
+                                            ? const Color(0xFF2A2A2A)
+                                            : Colors.white,
+                                    style: TextStyle(
+                                      color:
+                                          isDark
+                                              ? Colors.white
+                                              : Colors.black87,
+                                    ),
+                                    items:
+                                        ['Gasto', 'Pago', 'Ingreso'].map((
+                                          tipo,
+                                        ) {
+                                          return DropdownMenuItem(
+                                            value: tipo,
+                                            child: Text(tipo),
+                                          );
+                                        }).toList(),
+                                    onChanged: (value) {
+                                      if (value != null) {
+                                        tipoController.text = value;
+                                      }
+                                    },
+                                  ),
+                                  SizedBox(height: 16.h),
+
+                                  // Selector de icono con búsqueda
+                                  _buildSelectorIconoConBusqueda(
+                                    context,
+                                    isDark,
+                                    iconoSeleccionado,
+                                    (icon) {
+                                      setStateDialog(() {
+                                        iconoSeleccionado = icon;
+                                      });
+                                    },
                                   ),
                                 ],
                               ),
                             ),
-                            IconButton(
-                              onPressed: () => Navigator.pop(dialogContext),
-                              icon: Icon(Icons.close, size: 24.sp),
-                              color: Colors.grey.shade600,
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Contenido
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: EdgeInsets.all(20.r),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Nombre
-                              TextField(
-                                controller: nombreController,
-                                decoration: InputDecoration(
-                                  labelText: 'Nombre',
-                                  labelStyle: TextStyle(
-                                    color:
-                                        isDark
-                                            ? Colors.grey.shade400
-                                            : Colors.grey.shade700,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12.r),
-                                  ),
-                                  filled: true,
-                                  fillColor:
-                                      isDark
-                                          ? const Color(0xFF2A2A2A)
-                                          : Colors.grey.shade100,
-                                ),
-                                style: TextStyle(
-                                  color: isDark ? Colors.white : Colors.black87,
-                                ),
-                              ),
-                              SizedBox(height: 16.h),
-
-                              // Tipo de transacción
-                              DropdownButtonFormField<String>(
-                                value: tipoController.text,
-                                decoration: InputDecoration(
-                                  labelText: 'Tipo',
-                                  labelStyle: TextStyle(
-                                    color:
-                                        isDark
-                                            ? Colors.grey.shade400
-                                            : Colors.grey.shade700,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12.r),
-                                  ),
-                                  filled: true,
-                                  fillColor:
-                                      isDark
-                                          ? const Color(0xFF2A2A2A)
-                                          : Colors.grey.shade100,
-                                ),
-                                dropdownColor:
-                                    isDark
-                                        ? const Color(0xFF2A2A2A)
-                                        : Colors.white,
-                                style: TextStyle(
-                                  color: isDark ? Colors.white : Colors.black87,
-                                ),
-                                items:
-                                    ['Gasto', 'Pago', 'Ingreso'].map((tipo) {
-                                      return DropdownMenuItem(
-                                        value: tipo,
-                                        child: Text(tipo),
-                                      );
-                                    }).toList(),
-                                onChanged: (value) {
-                                  if (value != null) {
-                                    tipoController.text = value;
-                                  }
-                                },
-                              ),
-                              SizedBox(height: 16.h),
-
-                              // Selector de icono con búsqueda
-                              _buildSelectorIconoConBusqueda(
-                                context,
-                                isDark,
-                                iconoSeleccionado,
-                                (icon) {
-                                  setStateDialog(() {
-                                    iconoSeleccionado = icon;
-                                  });
-                                },
-                              ),
-                            ],
                           ),
-                        ),
-                      ),
-                      // Footer con botones
-                      Container(
-                        padding: EdgeInsets.all(20.r),
-                        decoration: BoxDecoration(
-                          color:
-                              isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                          border: Border(
-                            top: BorderSide(
-                              color: Colors.grey.shade200,
-                              width: 1,
-                            ),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () => Navigator.pop(dialogContext),
-                                style: OutlinedButton.styleFrom(
-                                  padding: EdgeInsets.symmetric(vertical: 16.h),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12.r),
-                                  ),
-                                  side: BorderSide(color: Colors.grey.shade300),
-                                ),
-                                child: Text(
-                                  'Cancelar',
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 15.sp,
-                                  ),
+                          // Footer con botones
+                          Container(
+                            padding: EdgeInsets.all(20.r),
+                            decoration: BoxDecoration(
+                              color:
+                                  isDark
+                                      ? const Color(0xFF1E1E1E)
+                                      : Colors.white,
+                              border: Border(
+                                top: BorderSide(
+                                  color: Colors.grey.shade200,
+                                  width: 1,
                                 ),
                               ),
                             ),
-                            SizedBox(width: 12.w),
-                            Expanded(
-                              flex: 2,
-                              child: ElevatedButton(
-                                onPressed: () async {
-                                  final nombre = nombreController.text.trim();
-                                  final tipo = tipoController.text;
-                                  final iconString = _getIconStringFromData(
-                                    iconoSeleccionado,
-                                  );
-
-                                  if (nombre.isEmpty) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('El nombre es requerido'),
-                                        behavior: SnackBarBehavior.fixed,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed:
+                                        () => Navigator.pop(dialogContext),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 16.h,
                                       ),
-                                    );
-                                    return;
-                                  }
-
-                                  try {
-                                    if (isEdit) {
-                                      await _firestoreService
-                                          .actualizarCategoria(
-                                            categoriaId: categoria['id'],
-                                            nombre: nombre,
-                                            imagen: iconString,
-                                            tipoTransaccion: tipo,
-                                          );
-                                    } else {
-                                      await _firestoreService.crearCategoria(
-                                        nombre: nombre,
-                                        imagen: iconString,
-                                        tipoTransaccion: tipo,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                          12.r,
+                                        ),
+                                      ),
+                                      side: BorderSide(
+                                        color: Colors.grey.shade300,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'Cancelar',
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15.sp,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 12.w),
+                                Expanded(
+                                  flex: 2,
+                                  child: ElevatedButton(
+                                    onPressed: () async {
+                                      final nombre =
+                                          nombreController.text.trim();
+                                      final tipo = tipoController.text;
+                                      final iconString = _getIconStringFromData(
+                                        iconoSeleccionado,
                                       );
-                                    }
 
-                                    if (context.mounted) {
-                                      Navigator.pop(dialogContext);
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            isEdit
-                                                ? 'Categoría actualizada'
-                                                : 'Categoría creada',
+                                      if (nombre.isEmpty) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'El nombre es requerido',
+                                            ),
+                                            behavior: SnackBarBehavior.fixed,
                                           ),
-                                          behavior: SnackBarBehavior.fixed,
-                                          backgroundColor: Colors.green,
+                                        );
+                                        return;
+                                      }
+
+                                      try {
+                                        if (isEdit) {
+                                          await _firestoreService
+                                              .actualizarCategoria(
+                                                categoriaId: categoria['id'],
+                                                nombre: nombre,
+                                                imagen: iconString,
+                                                tipoTransaccion: tipo,
+                                              );
+                                        } else {
+                                          await _firestoreService
+                                              .crearCategoria(
+                                                nombre: nombre,
+                                                imagen: iconString,
+                                                tipoTransaccion: tipo,
+                                              );
+                                        }
+
+                                        if (context.mounted) {
+                                          Navigator.pop(dialogContext);
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                isEdit
+                                                    ? 'Categoría actualizada'
+                                                    : 'Categoría creada',
+                                              ),
+                                              behavior: SnackBarBehavior.fixed,
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Error: $e'),
+                                              behavior: SnackBarBehavior.fixed,
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF667eea),
+                                      foregroundColor: Colors.white,
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 16.h,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                          12.r,
                                         ),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Error: $e'),
-                                          behavior: SnackBarBehavior.fixed,
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF667eea),
-                                  foregroundColor: Colors.white,
-                                  padding: EdgeInsets.symmetric(vertical: 16.h),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12.r),
-                                  ),
-                                  elevation: 2,
-                                ),
-                                child: Text(
-                                  isEdit ? 'Actualizar' : 'Crear',
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15.sp,
+                                      ),
+                                      elevation: 2,
+                                    ),
+                                    child: Text(
+                                      isEdit ? 'Actualizar' : 'Crear',
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15.sp,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
           ),

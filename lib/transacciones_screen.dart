@@ -1181,7 +1181,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
     final themeManager = Provider.of<ThemeManager>(context);
     final bgColor =
         themeManager.isDarkMode
-            ? themeManager.themeData.scaffoldBackgroundColor
+            ? Theme.of(context).scaffoldBackgroundColor
             : const Color(0xFFF5F7FA);
 
     return Scaffold(
@@ -1280,7 +1280,10 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
 
     return ListView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.symmetric(vertical: 12.h),
+      padding: EdgeInsets.only(
+        top: 12.h,
+        bottom: 12.h + MediaQuery.of(context).padding.bottom + 80.h,
+      ),
       itemCount: sortedTransactions.length + groupedTransactions.keys.length,
       itemBuilder: (context, index) {
         int transactionIndex = 0;

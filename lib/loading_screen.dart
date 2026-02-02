@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:lottie/lottie.dart';
 import 'package:notificaciones/home_screen.dart';
+import 'package:notificaciones/services/biometric_service.dart';
 import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'data_provider.dart';
@@ -99,6 +100,32 @@ class _LoadingScreenState extends State<LoadingScreen>
 
       if (!mounted) return;
 
+      // Verificar autenticación biométrica
+      final biometricService = BiometricService();
+      final isBiometricEnabled = await biometricService.isBiometricEnabled();
+
+      if (isBiometricEnabled) {
+        setState(() {
+          _loadingMessage = 'Verificando identidad...';
+        });
+
+        final authenticated = await biometricService.authenticate(
+          localizedReason: 'Verifica tu identidad para acceder a la aplicación',
+        );
+
+        if (!authenticated) {
+          if (!mounted) return;
+          _showBiometricErrorDialog();
+          return;
+        }
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _loadingMessage = 'Cargando datos...';
+      });
+
       final dataProvider = Provider.of<DataProvider>(context, listen: false);
       await dataProvider.loadData();
 
@@ -140,6 +167,93 @@ class _LoadingScreenState extends State<LoadingScreen>
 
       _showErrorDialog(e.toString());
     }
+  }
+
+  void _showBiometricErrorDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        final themeManager = Provider.of<ThemeManager>(context, listen: false);
+        return Dialog(
+          backgroundColor:
+              themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.r),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(24.r),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(16.r),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.lock_outline,
+                    size: 48.sp,
+                    color: Colors.red,
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                Text(
+                  'Autenticación fallida',
+                  style: GoogleFonts.lato(
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.bold,
+                    color:
+                        themeManager.isDarkMode ? Colors.white : Colors.black,
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                Text(
+                  'No se pudo verificar tu identidad. Inténtalo de nuevo.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.lato(
+                    fontSize: 14.sp,
+                    color:
+                        themeManager.isDarkMode
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade600,
+                  ),
+                ),
+                SizedBox(height: 24.h),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _loadData();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF30cfd0),
+                          padding: EdgeInsets.symmetric(vertical: 12.h),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                        ),
+                        child: Text(
+                          'Reintentar',
+                          style: GoogleFonts.lato(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _showErrorDialog(String error) {
