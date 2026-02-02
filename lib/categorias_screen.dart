@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_iconpicker/flutter_iconpicker.dart';
+import 'package:flutter_iconpicker/Models/configuration.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:notificaciones/services/firestore_service.dart';
@@ -15,163 +17,6 @@ class CategoriasScreen extends StatefulWidget {
 class _CategoriasScreenState extends State<CategoriasScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   String _filtroTipo = 'Todas'; // Todas, Gasto, Ingreso
-
-  // Iconos disponibles para categorías
-  final List<IconData> _iconosDisponibles = [
-    // Compras y consumo
-    Icons.shopping_cart,
-    Icons.shopping_bag,
-    Icons.store,
-    Icons.local_mall,
-    Icons.local_grocery_store,
-    // Comida y bebida
-    Icons.restaurant,
-    Icons.fastfood,
-    Icons.local_cafe,
-    Icons.local_bar,
-    Icons.local_pizza,
-    Icons.lunch_dining,
-    Icons.dinner_dining,
-    Icons.breakfast_dining,
-    Icons.cake,
-    Icons.liquor,
-    // Transporte
-    Icons.local_gas_station,
-    Icons.directions_car,
-    Icons.directions_bus,
-    Icons.train,
-    Icons.flight,
-    Icons.two_wheeler,
-    Icons.local_taxi,
-    Icons.directions_bike,
-    Icons.directions_subway,
-    Icons.airport_shuttle,
-    // Hogar
-    Icons.home,
-    Icons.house,
-    Icons.apartment,
-    Icons.bed,
-    Icons.weekend,
-    Icons.chair,
-    Icons.roofing,
-    // Servicios
-    Icons.electric_bolt,
-    Icons.water_drop,
-    Icons.wifi,
-    Icons.phone_android,
-    Icons.phone,
-    Icons.tv,
-    Icons.router,
-    Icons.cable,
-    Icons.power,
-    // Salud y bienestar
-    Icons.medical_services,
-    Icons.local_hospital,
-    Icons.local_pharmacy,
-    Icons.healing,
-    Icons.favorite,
-    Icons.psychology,
-    Icons.spa,
-    Icons.clean_hands,
-    Icons.medication,
-    Icons.vaccines,
-    // Educación
-    Icons.school,
-    Icons.menu_book,
-    Icons.library_books,
-    Icons.auto_stories,
-    Icons.science,
-    Icons.calculate,
-    Icons.edit_note,
-    // Entretenimiento
-    Icons.movie,
-    Icons.theaters,
-    Icons.live_tv,
-    Icons.music_note,
-    Icons.headphones,
-    Icons.videogame_asset,
-    Icons.casino,
-    Icons.celebration,
-    Icons.festival,
-    // Deportes
-    Icons.sports_soccer,
-    Icons.sports_basketball,
-    Icons.sports_tennis,
-    Icons.sports_baseball,
-    Icons.sports_football,
-    Icons.fitness_center,
-    Icons.pool,
-    Icons.surfing,
-    Icons.snowboarding,
-    Icons.sailing,
-    // Finanzas
-    Icons.attach_money,
-    Icons.savings,
-    Icons.account_balance,
-    Icons.credit_card,
-    Icons.payment,
-    Icons.currency_exchange,
-    Icons.paid,
-    Icons.money,
-    Icons.account_balance_wallet,
-    // Trabajo y negocios
-    Icons.work,
-    Icons.business,
-    Icons.business_center,
-    Icons.badge,
-    Icons.engineering,
-    Icons.construction,
-    Icons.precision_manufacturing,
-    Icons.agriculture,
-    Icons.handyman,
-    // Regalos y celebraciones
-    Icons.card_giftcard,
-    Icons.redeem,
-    Icons.volunteer_activism,
-    Icons.emoji_events,
-    // Tecnología
-    Icons.computer,
-    Icons.laptop,
-    Icons.tablet,
-    Icons.watch,
-    Icons.headset,
-    Icons.keyboard,
-    Icons.mouse,
-    Icons.print,
-    // Mascotas y animales
-    Icons.pets,
-    Icons.cruelty_free,
-    // Familia
-    Icons.child_care,
-    Icons.baby_changing_station,
-    Icons.face,
-    Icons.elderly,
-    Icons.people,
-    Icons.groups,
-    Icons.family_restroom,
-    // Viajes
-    Icons.airplane_ticket,
-    Icons.luggage,
-    Icons.hotel,
-    Icons.beach_access,
-    Icons.place,
-    Icons.map,
-    Icons.explore,
-    Icons.tour,
-    // Otros
-    Icons.category,
-    Icons.more_horiz,
-    Icons.star,
-    Icons.bolt,
-    Icons.local_fire_department,
-    Icons.eco,
-    Icons.recycling,
-    Icons.brush,
-    Icons.palette,
-    Icons.photo_camera,
-    Icons.notifications,
-    Icons.alarm,
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -379,6 +224,13 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
   }
 
   IconData _getIconFromString(String iconString) {
+    // Si es un número (codePoint), crear el icono directamente
+    final codePoint = int.tryParse(iconString);
+    if (codePoint != null) {
+      return IconData(codePoint, fontFamily: 'MaterialIcons');
+    }
+
+    // Fallback para iconos antiguos guardados como strings
     final iconMap = {
       // Compras
       'shopping_cart': Icons.shopping_cart,
@@ -575,199 +427,9 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
   }
 
   String _getIconStringFromData(IconData icon) {
-    final iconMap = {
-      // Compras
-      Icons.shopping_cart: 'shopping_cart',
-      Icons.shopping_bag: 'shopping_bag',
-      Icons.store: 'store',
-      Icons.local_mall: 'local_mall',
-      Icons.local_grocery_store: 'local_grocery_store',
-      // Comida
-      Icons.restaurant: 'restaurant',
-      Icons.restaurant_outlined: 'restaurant_outlined',
-      Icons.fastfood: 'fastfood',
-      Icons.local_cafe: 'local_cafe',
-      Icons.local_bar: 'local_bar',
-      Icons.local_pizza: 'local_pizza',
-      Icons.lunch_dining: 'lunch_dining',
-      Icons.dinner_dining: 'dinner_dining',
-      Icons.breakfast_dining: 'breakfast_dining',
-      Icons.cake: 'cake',
-      Icons.liquor: 'liquor',
-      // Transporte
-      Icons.local_gas_station: 'local_gas_station',
-      Icons.directions_car: 'directions_car',
-      Icons.directions_car_outlined: 'directions_car_outlined',
-      Icons.directions_bus: 'directions_bus',
-      Icons.train: 'train',
-      Icons.flight: 'flight',
-      Icons.two_wheeler: 'two_wheeler',
-      Icons.local_taxi: 'local_taxi',
-      Icons.directions_bike: 'directions_bike',
-      Icons.directions_subway: 'directions_subway',
-      Icons.airport_shuttle: 'airport_shuttle',
-      // Hogar
-      Icons.home: 'home',
-      Icons.home_outlined: 'home_outlined',
-      Icons.house: 'house',
-      Icons.house_outlined: 'house_outlined',
-      Icons.apartment: 'apartment',
-      Icons.bed: 'bed',
-      Icons.weekend: 'weekend',
-      Icons.chair: 'chair',
-      Icons.roofing: 'roofing',
-      // Servicios
-      Icons.electric_bolt: 'electric_bolt',
-      Icons.electrical_services_outlined: 'electrical_services_outlined',
-      Icons.water_drop: 'water_drop',
-      Icons.water_drop_outlined: 'water_drop_outlined',
-      Icons.wifi: 'wifi',
-      Icons.wifi_outlined: 'wifi_outlined',
-      Icons.phone_android: 'phone_android',
-      Icons.phone: 'phone',
-      Icons.phone_outlined: 'phone_outlined',
-      Icons.tv: 'tv',
-      Icons.tv_outlined: 'tv_outlined',
-      Icons.router: 'router',
-      Icons.cable: 'cable',
-      Icons.power: 'power',
-      // Salud
-      Icons.medical_services: 'medical_services',
-      Icons.medical_services_outlined: 'medical_services_outlined',
-      Icons.local_hospital: 'local_hospital',
-      Icons.local_pharmacy: 'local_pharmacy',
-      Icons.healing: 'healing',
-      Icons.favorite: 'favorite',
-      Icons.psychology: 'psychology',
-      Icons.spa: 'spa',
-      Icons.clean_hands: 'clean_hands',
-      Icons.medication: 'medication',
-      Icons.vaccines: 'vaccines',
-      // Educación
-      Icons.school: 'school',
-      Icons.school_outlined: 'school_outlined',
-      Icons.menu_book: 'menu_book',
-      Icons.library_books: 'library_books',
-      Icons.auto_stories: 'auto_stories',
-      Icons.science: 'science',
-      Icons.calculate: 'calculate',
-      Icons.edit_note: 'edit_note',
-      // Entretenimiento
-      Icons.movie: 'movie',
-      Icons.movie_outlined: 'movie_outlined',
-      Icons.theaters: 'theaters',
-      Icons.live_tv: 'live_tv',
-      Icons.music_note: 'music_note',
-      Icons.headphones: 'headphones',
-      Icons.videogame_asset: 'videogame_asset',
-      Icons.casino: 'casino',
-      Icons.casino_outlined: 'casino_outlined',
-      Icons.celebration: 'celebration',
-      Icons.festival: 'festival',
-      // Ropa y accesorios
-      Icons.checkroom_outlined: 'checkroom_outlined',
-      // Deportes
-      Icons.sports: 'sports',
-      Icons.sports_soccer: 'sports_soccer',
-      Icons.sports_basketball: 'sports_basketball',
-      Icons.sports_tennis: 'sports_tennis',
-      Icons.sports_baseball: 'sports_baseball',
-      Icons.sports_football: 'sports_football',
-      Icons.fitness_center: 'fitness_center',
-      Icons.pool: 'pool',
-      Icons.surfing: 'surfing',
-      Icons.snowboarding: 'snowboarding',
-      Icons.sailing: 'sailing',
-      // Finanzas
-      Icons.attach_money: 'attach_money',
-      Icons.attach_money_outlined: 'attach_money_outlined',
-      Icons.monetization_on_outlined: 'monetization_on_outlined',
-      Icons.savings: 'savings',
-      Icons.account_balance: 'account_balance',
-      Icons.credit_card: 'credit_card',
-      Icons.payment: 'payment',
-      Icons.currency_exchange: 'currency_exchange',
-      Icons.paid: 'paid',
-      Icons.money: 'money',
-      Icons.account_balance_wallet: 'account_balance_wallet',
-      Icons.trending_up_outlined: 'trending_up_outlined',
-      Icons.sell_outlined: 'sell_outlined',
-      Icons.workspace_premium_outlined: 'workspace_premium_outlined',
-      Icons.real_estate_agent_outlined: 'real_estate_outlined',
-      Icons.location_city_outlined: 'location_city_outlined',
-      Icons.security_outlined: 'security_outlined',
-      Icons.receipt_long_outlined: 'receipt_long_outlined',
-      // Trabajo
-      Icons.work: 'work',
-      Icons.work_outlined: 'work_outlined',
-      Icons.business: 'business',
-      Icons.business_outlined: 'business_outlined',
-      Icons.business_center: 'business_center',
-      Icons.badge: 'badge',
-      Icons.engineering: 'engineering',
-      Icons.construction: 'construction',
-      Icons.precision_manufacturing: 'precision_manufacturing',
-      Icons.agriculture: 'agriculture',
-      Icons.handyman: 'handyman',
-      Icons.handyman_outlined: 'handyman_outlined',
-      // Regalos
-      Icons.card_giftcard: 'card_giftcard',
-      Icons.card_giftcard_outlined: 'card_giftcard_outlined',
-      Icons.redeem: 'redeem',
-      Icons.redeem_outlined: 'redeem_outlined',
-      Icons.volunteer_activism: 'volunteer_activism',
-      Icons.emoji_events: 'emoji_events',
-      // Tecnología
-      Icons.computer: 'computer',
-      Icons.laptop: 'laptop',
-      Icons.tablet: 'tablet',
-      Icons.watch: 'watch',
-      Icons.headset: 'headset',
-      Icons.keyboard: 'keyboard',
-      Icons.mouse: 'mouse',
-      Icons.print: 'print',
-      // Mascotas
-      Icons.pets: 'pets',
-      Icons.pets_outlined: 'pets_outlined',
-      Icons.cruelty_free: 'cruelty_free',
-      // Familia
-      Icons.child_care: 'child_care',
-      Icons.baby_changing_station: 'baby_changing_station',
-      Icons.face: 'face',
-      Icons.elderly: 'elderly',
-      Icons.elderly_outlined: 'elderly_outlined',
-      Icons.people: 'people',
-      Icons.groups: 'groups',
-      Icons.family_restroom: 'family_restroom',
-      // Viajes
-      Icons.airplanemode_active_outlined: 'airplanemode_active_outlined',
-      Icons.airplane_ticket: 'airplane_ticket',
-      Icons.luggage: 'luggage',
-      Icons.hotel: 'hotel',
-      Icons.beach_access: 'beach_access',
-      Icons.place: 'place',
-      Icons.map: 'map',
-      Icons.explore: 'explore',
-      Icons.tour: 'tour',
-      // Otros
-      Icons.category: 'category',
-      Icons.more_horiz: 'more_horiz',
-      Icons.star: 'star',
-      Icons.bolt: 'bolt',
-      Icons.local_fire_department: 'local_fire_department',
-      Icons.eco: 'eco',
-      Icons.recycling: 'recycling',
-      Icons.brush: 'brush',
-      Icons.palette: 'palette',
-      Icons.photo_camera: 'photo_camera',
-      Icons.notifications: 'notifications',
-      Icons.alarm: 'alarm',
-      Icons.propane_tank: 'propane_tank',
-      Icons.local_laundry_service: 'local_laundry_service',
-      Icons.emergency_outlined: 'emergency_outlined',
-    };
-
-    return iconMap[icon] ?? 'category';
+    // Guardar el codePoint del icono permite usar cualquier icono de Material Icons
+    // sin necesidad de mantener un mapa enorme manualmente
+    return icon.codePoint.toString();
   }
 
   Future<void> _mostrarDialogoCategoria(
@@ -789,263 +451,308 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
     final themeManager = Provider.of<ThemeManager>(context, listen: false);
     final isDark = themeManager.isDarkMode;
 
-    await showDialog(
+    await showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder:
           (dialogContext) => StatefulBuilder(
             builder:
-                (context, setStateDialog) => AlertDialog(
-                  backgroundColor:
-                      isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20.r),
-                  ),
-                  title: Text(
-                    isEdit ? 'Editar Categoría' : 'Nueva Categoría',
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : Colors.black87,
+                (context, setStateDialog) => Container(
+                  height: MediaQuery.of(context).size.height * 0.75,
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(24.r),
                     ),
                   ),
-                  content: SizedBox(
-                    width: 300.w,
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Nombre
-                          TextField(
-                            controller: nombreController,
-                            decoration: InputDecoration(
-                              labelText: 'Nombre',
-                              labelStyle: TextStyle(
-                                color:
-                                    isDark
-                                        ? Colors.grey.shade400
-                                        : Colors.grey.shade700,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12.r),
-                              ),
-                              filled: true,
-                              fillColor:
-                                  isDark
-                                      ? const Color(0xFF2A2A2A)
-                                      : Colors.grey.shade100,
-                            ),
-                            style: TextStyle(
-                              color: isDark ? Colors.white : Colors.black87,
-                            ),
+                  child: Column(
+                    children: [
+                      // Header simple
+                      Container(
+                        padding: EdgeInsets.all(20.r),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF667eea).withOpacity(0.08),
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(24.r),
                           ),
-                          SizedBox(height: 16.h),
-
-                          // Tipo de transacción
-                          DropdownButtonFormField<String>(
-                            value: tipoController.text,
-                            decoration: InputDecoration(
-                              labelText: 'Tipo',
-                              labelStyle: TextStyle(
-                                color:
-                                    isDark
-                                        ? Colors.grey.shade400
-                                        : Colors.grey.shade700,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12.r),
-                              ),
-                              filled: true,
-                              fillColor:
-                                  isDark
-                                      ? const Color(0xFF2A2A2A)
-                                      : Colors.grey.shade100,
-                            ),
-                            dropdownColor:
-                                isDark ? const Color(0xFF2A2A2A) : Colors.white,
-                            style: TextStyle(
-                              color: isDark ? Colors.white : Colors.black87,
-                            ),
-                            items:
-                                ['Gasto', 'Pago', 'Ingreso'].map((tipo) {
-                                  return DropdownMenuItem(
-                                    value: tipo,
-                                    child: Text(tipo),
-                                  );
-                                }).toList(),
-                            onChanged: (value) {
-                              if (value != null) {
-                                tipoController.text = value;
-                              }
-                            },
-                          ),
-                          SizedBox(height: 16.h),
-
-                          // Selector de icono
-                          Text(
-                            'Icono',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w600,
-                              color:
-                                  isDark
-                                      ? Colors.grey.shade400
-                                      : Colors.grey.shade700,
-                            ),
-                          ),
-                          SizedBox(height: 8.h),
-                          SizedBox(
-                            height: 180.h,
-                            child: Container(
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(14.r),
                               decoration: BoxDecoration(
-                                color:
+                                color: const Color(0xFF667eea),
+                                borderRadius: BorderRadius.circular(12.r),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(
+                                      0xFF667eea,
+                                    ).withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                iconoSeleccionado,
+                                color: Colors.white,
+                                size: 28.sp,
+                              ),
+                            ),
+                            SizedBox(width: 16.w),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isEdit
+                                        ? 'Editar Categoría'
+                                        : 'Nueva Categoría',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 22.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color:
+                                          isDark
+                                              ? Colors.white
+                                              : Colors.black87,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2.h),
+                                  Text(
+                                    'Completa la información',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 13.sp,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () => Navigator.pop(dialogContext),
+                              icon: Icon(Icons.close, size: 24.sp),
+                              color: Colors.grey.shade600,
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Contenido
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: EdgeInsets.all(20.r),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Nombre
+                              TextField(
+                                controller: nombreController,
+                                decoration: InputDecoration(
+                                  labelText: 'Nombre',
+                                  labelStyle: TextStyle(
+                                    color:
+                                        isDark
+                                            ? Colors.grey.shade400
+                                            : Colors.grey.shade700,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                  filled: true,
+                                  fillColor:
+                                      isDark
+                                          ? const Color(0xFF2A2A2A)
+                                          : Colors.grey.shade100,
+                                ),
+                                style: TextStyle(
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                              SizedBox(height: 16.h),
+
+                              // Tipo de transacción
+                              DropdownButtonFormField<String>(
+                                value: tipoController.text,
+                                decoration: InputDecoration(
+                                  labelText: 'Tipo',
+                                  labelStyle: TextStyle(
+                                    color:
+                                        isDark
+                                            ? Colors.grey.shade400
+                                            : Colors.grey.shade700,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                  filled: true,
+                                  fillColor:
+                                      isDark
+                                          ? const Color(0xFF2A2A2A)
+                                          : Colors.grey.shade100,
+                                ),
+                                dropdownColor:
                                     isDark
                                         ? const Color(0xFF2A2A2A)
-                                        : Colors.grey.shade100,
-                                borderRadius: BorderRadius.circular(12.r),
-                              ),
-                              child: GridView.builder(
-                                padding: EdgeInsets.all(8.w),
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 5,
-                                      mainAxisSpacing: 8.h,
-                                      crossAxisSpacing: 8.w,
-                                    ),
-                                itemCount: _iconosDisponibles.length,
-                                itemBuilder: (context, index) {
-                                  final icon = _iconosDisponibles[index];
-                                  final isSelected = icon == iconoSeleccionado;
-
-                                  return GestureDetector(
-                                    onTap: () {
-                                      setStateDialog(() {
-                                        iconoSeleccionado = icon;
-                                      });
-                                    },
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color:
-                                            isSelected
-                                                ? const Color(
-                                                  0xFF667eea,
-                                                ).withOpacity(0.2)
-                                                : Colors.transparent,
-                                        border: Border.all(
-                                          color:
-                                              isSelected
-                                                  ? const Color(0xFF667eea)
-                                                  : Colors.transparent,
-                                          width: 2,
-                                        ),
-                                        borderRadius: BorderRadius.circular(
-                                          8.r,
-                                        ),
-                                      ),
-                                      child: Icon(
-                                        icon,
-                                        color:
-                                            isSelected
-                                                ? const Color(0xFF667eea)
-                                                : (isDark
-                                                    ? Colors.grey.shade400
-                                                    : Colors.grey.shade600),
-                                        size: 24.sp,
-                                      ),
-                                    ),
-                                  );
+                                        : Colors.white,
+                                style: TextStyle(
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                                items:
+                                    ['Gasto', 'Pago', 'Ingreso'].map((tipo) {
+                                      return DropdownMenuItem(
+                                        value: tipo,
+                                        child: Text(tipo),
+                                      );
+                                    }).toList(),
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    tipoController.text = value;
+                                  }
                                 },
                               ),
+                              SizedBox(height: 16.h),
+
+                              // Selector de icono con búsqueda
+                              _buildSelectorIconoConBusqueda(
+                                context,
+                                isDark,
+                                iconoSeleccionado,
+                                (icon) {
+                                  setStateDialog(() {
+                                    iconoSeleccionado = icon;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Footer con botones
+                      Container(
+                        padding: EdgeInsets.all(20.r),
+                        decoration: BoxDecoration(
+                          color:
+                              isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                          border: Border(
+                            top: BorderSide(
+                              color: Colors.grey.shade200,
+                              width: 1,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(dialogContext),
-                      child: Text(
-                        'Cancelar',
-                        style: GoogleFonts.poppins(
-                          color:
-                              isDark
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600,
                         ),
-                      ),
-                    ),
-                    ElevatedButton(
-                      onPressed: () async {
-                        final nombre = nombreController.text.trim();
-                        final tipo = tipoController.text;
-                        final iconString = _getIconStringFromData(
-                          iconoSeleccionado,
-                        );
-
-                        if (nombre.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('El nombre es requerido'),
-                              behavior: SnackBarBehavior.fixed,
-                            ),
-                          );
-                          return;
-                        }
-
-                        try {
-                          if (isEdit) {
-                            await _firestoreService.actualizarCategoria(
-                              categoriaId: categoria['id'],
-                              nombre: nombre,
-                              imagen: iconString,
-                              tipoTransaccion: tipo,
-                            );
-                          } else {
-                            await _firestoreService.crearCategoria(
-                              nombre: nombre,
-                              imagen: iconString,
-                              tipoTransaccion: tipo,
-                            );
-                          }
-
-                          if (context.mounted) {
-                            Navigator.pop(dialogContext);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  isEdit
-                                      ? 'Categoría actualizada'
-                                      : 'Categoría creada',
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.pop(dialogContext),
+                                style: OutlinedButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(vertical: 16.h),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                  side: BorderSide(color: Colors.grey.shade300),
                                 ),
-                                behavior: SnackBarBehavior.fixed,
-                                backgroundColor: Colors.green,
+                                child: Text(
+                                  'Cancelar',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15.sp,
+                                  ),
+                                ),
                               ),
-                            );
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Error: $e'),
-                                behavior: SnackBarBehavior.fixed,
-                                backgroundColor: Colors.red,
+                            ),
+                            SizedBox(width: 12.w),
+                            Expanded(
+                              flex: 2,
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  final nombre = nombreController.text.trim();
+                                  final tipo = tipoController.text;
+                                  final iconString = _getIconStringFromData(
+                                    iconoSeleccionado,
+                                  );
+
+                                  if (nombre.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('El nombre es requerido'),
+                                        behavior: SnackBarBehavior.fixed,
+                                      ),
+                                    );
+                                    return;
+                                  }
+
+                                  try {
+                                    if (isEdit) {
+                                      await _firestoreService
+                                          .actualizarCategoria(
+                                            categoriaId: categoria['id'],
+                                            nombre: nombre,
+                                            imagen: iconString,
+                                            tipoTransaccion: tipo,
+                                          );
+                                    } else {
+                                      await _firestoreService.crearCategoria(
+                                        nombre: nombre,
+                                        imagen: iconString,
+                                        tipoTransaccion: tipo,
+                                      );
+                                    }
+
+                                    if (context.mounted) {
+                                      Navigator.pop(dialogContext);
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            isEdit
+                                                ? 'Categoría actualizada'
+                                                : 'Categoría creada',
+                                          ),
+                                          behavior: SnackBarBehavior.fixed,
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Error: $e'),
+                                          behavior: SnackBarBehavior.fixed,
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF667eea),
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.symmetric(vertical: 16.h),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                  elevation: 2,
+                                ),
+                                child: Text(
+                                  isEdit ? 'Actualizar' : 'Crear',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15.sp,
+                                  ),
+                                ),
                               ),
-                            );
-                          }
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF667eea),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.r),
+                            ),
+                          ],
                         ),
                       ),
-                      child: Text(
-                        isEdit ? 'Actualizar' : 'Crear',
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
           ),
     );
@@ -1074,51 +781,107 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
     final themeManager = Provider.of<ThemeManager>(context, listen: false);
     final isDark = themeManager.isDarkMode;
 
-    final confirmar = await showDialog<bool>(
+    final confirmar = await showModalBottomSheet<bool>(
       context: context,
+      backgroundColor: Colors.transparent,
       builder:
-          (context) => AlertDialog(
-            backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20.r),
+          (context) => Container(
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
             ),
-            title: Text(
-              '¿Eliminar categoría?',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white : Colors.black87,
-              ),
-            ),
-            content: Text(
-              '¿Estás seguro de eliminar "${categoria['categoria']}"?',
-              style: GoogleFonts.poppins(
-                color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(
-                  'Cancelar',
+            padding: EdgeInsets.all(28.r),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(20.r),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.warning_rounded,
+                    color: Colors.red,
+                    size: 48.sp,
+                  ),
+                ),
+                SizedBox(height: 20.h),
+                Text(
+                  '¿Eliminar categoría?',
                   style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22.sp,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                Text(
+                  '¿Estás seguro de eliminar "${categoria['categoria']}"?',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14.sp,
                     color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 8.h),
+                Text(
+                  'Esta acción no se puede deshacer',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13.sp,
+                    color: Colors.red,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
+                SizedBox(height: 28.h),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 16.h),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        child: Text(
+                          'Cancelar',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15.sp,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 16.h),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: Text(
+                          'Eliminar',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15.sp,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                child: Text(
-                  'Eliminar',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
     );
 
@@ -1146,5 +909,211 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
         }
       }
     }
+  }
+
+  // Selector de icono con flutter_iconpicker (incluye búsqueda)
+  Widget _buildSelectorIconoConBusqueda(
+    BuildContext context,
+    bool isDark,
+    IconData? iconoSeleccionado,
+    Function(IconData) onIconSelected,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Icono',
+          style: GoogleFonts.poppins(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+          ),
+        ),
+        SizedBox(height: 8.h),
+
+        // Botón para abrir el selector con búsqueda
+        GestureDetector(
+          onTap: () async {
+            IconPickerIcon? icon = await showIconPicker(
+              context,
+              configuration: SinglePickerConfiguration(
+                iconPackModes: [IconPack.material],
+                iconSize: 44.0,
+                iconColor: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                mainAxisSpacing: 12.0,
+                crossAxisSpacing: 12.0,
+                backgroundColor:
+                    isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                selectedIconBackgroundColor:
+                    isDark
+                        ? const Color(0xFF667eea).withOpacity(0.3)
+                        : const Color(0xFF667eea).withOpacity(0.15),
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.75,
+                  maxWidth: 600,
+                ),
+                searchHintText: 'Buscar icono...',
+                noResultsText: 'No se encontraron resultados',
+                showTooltips: true,
+                title: Padding(
+                  padding: EdgeInsets.all(16.r),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Seleccionar icono',
+                        style: GoogleFonts.poppins(
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        'Busca por nombre en inglés: restaurant, car, home...',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12.sp,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                closeChild: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w),
+                  child: Text(
+                    'Cerrar',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ),
+                iconPickerShape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+              ),
+            );
+
+            if (icon != null) {
+              onIconSelected(icon.data);
+            }
+          },
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors:
+                    isDark
+                        ? [const Color(0xFF2A2A2A), const Color(0xFF252525)]
+                        : [Colors.grey.shade50, Colors.grey.shade100],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16.r),
+              border: Border.all(
+                color:
+                    isDark
+                        ? Colors.grey.shade800.withOpacity(0.5)
+                        : Colors.grey.shade300.withOpacity(0.5),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // Icono seleccionado
+                Container(
+                  width: 56.w,
+                  height: 56.h,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors:
+                          isDark
+                              ? [Colors.grey.shade800, Colors.grey.shade900]
+                              : [Colors.white, Colors.grey.shade50],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(
+                      color:
+                          isDark
+                              ? Colors.grey.shade700.withOpacity(0.5)
+                              : Colors.grey.shade300.withOpacity(0.8),
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(isDark ? 0.3 : 0.06),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    iconoSeleccionado ?? Icons.category,
+                    color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                    size: 30.sp,
+                  ),
+                ),
+                SizedBox(width: 16.w),
+                // Texto
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Seleccionar icono',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        'Toca para buscar',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12.sp,
+                          color:
+                              isDark
+                                  ? Colors.grey.shade500
+                                  : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Icono de búsqueda
+                Container(
+                  padding: EdgeInsets.all(8.r),
+                  decoration: BoxDecoration(
+                    color:
+                        isDark
+                            ? Colors.grey.shade800.withOpacity(0.5)
+                            : Colors.grey.shade200.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Icon(
+                    Icons.search_rounded,
+                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    size: 20.sp,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

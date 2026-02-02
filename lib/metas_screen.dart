@@ -66,8 +66,10 @@ class _MetasScreenState extends State<MetasScreen> {
   }
 
   Future<void> _crearMeta() async {
-    final resultado = await showDialog<Meta>(
+    final resultado = await showModalBottomSheet<Meta>(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) => _CrearMetaDialog(),
     );
 
@@ -147,8 +149,10 @@ class _MetasScreenState extends State<MetasScreen> {
   }
 
   Future<void> _editarMeta(int index) async {
-    final resultado = await showDialog<Meta>(
+    final resultado = await showModalBottomSheet<Meta>(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) => _CrearMetaDialog(meta: _metasNotifier.value[index]),
     );
 
@@ -213,29 +217,107 @@ class _MetasScreenState extends State<MetasScreen> {
   }
 
   Future<void> _eliminarMeta(int index) async {
-    final confirmar = await showDialog<bool>(
+    final confirmar = await showModalBottomSheet<bool>(
       context: context,
+      backgroundColor: Colors.transparent,
       builder:
-          (context) => AlertDialog(
-            title: Text(
-              '¿Eliminar meta y cuenta?',
-              style: GoogleFonts.lato(fontWeight: FontWeight.bold),
+          (context) => Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
             ),
-            content: Text(
-              'Se eliminará la meta "${_metasNotifier.value[index].nombre}" y su cuenta de ahorro asociada. Esta acción no se puede deshacer.',
-              style: GoogleFonts.openSans(),
+            padding: EdgeInsets.all(24.r),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Ícono de advertencia
+                Container(
+                  padding: EdgeInsets.all(16.r),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.warning_rounded,
+                    color: Colors.red,
+                    size: 48.sp,
+                  ),
+                ),
+                SizedBox(height: 20.h),
+                Text(
+                  '¿Eliminar meta?',
+                  style: GoogleFonts.lato(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22.sp,
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                Text(
+                  'Se eliminará "${_metasNotifier.value[index].nombre}" y su cuenta de ahorro asociada.',
+                  style: GoogleFonts.openSans(
+                    fontSize: 14.sp,
+                    color: Colors.grey.shade600,
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 8.h),
+                Text(
+                  'Esta acción no se puede deshacer',
+                  style: GoogleFonts.openSans(
+                    fontSize: 13.sp,
+                    color: Colors.red,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 28.h),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 16.h),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        child: Text(
+                          'Cancelar',
+                          style: GoogleFonts.lato(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15.sp,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 16.h),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: Text(
+                          'Eliminar',
+                          style: GoogleFonts.lato(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15.sp,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text('Cancelar'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                child: Text('Eliminar'),
-              ),
-            ],
           ),
     );
 
@@ -829,491 +911,494 @@ class _CrearMetaDialogState extends State<_CrearMetaDialog> {
       int.parse('FF$_colorSeleccionado', radix: 16),
     );
 
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.r)),
-      child: Container(
-        constraints: BoxConstraints(maxHeight: 700.h),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header con gradiente
-            Container(
-              padding: EdgeInsets.all(24.r),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    colorSeleccionado.withOpacity(0.8),
-                    colorSeleccionado,
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(12.r),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(16.r),
-                    ),
-                    child: Icon(
-                      _getIconoActual(),
-                      color: Colors.white,
-                      size: 32.sp,
-                    ),
-                  ),
-                  SizedBox(width: 16.w),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.meta == null ? 'Nueva Meta' : 'Editar Meta',
-                          style: GoogleFonts.lato(
-                            fontSize: 20.sp,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        Text(
-                          'Define tu objetivo de ahorro',
-                          style: GoogleFonts.openSans(
-                            fontSize: 12.sp,
-                            color: Colors.white.withOpacity(0.9),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.9,
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+      ),
+      child: Column(
+        children: [
+          // Header simple
+          Container(
+            padding: EdgeInsets.all(20.r),
+            decoration: BoxDecoration(
+              color: colorSeleccionado.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
             ),
-            // Contenido
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(24.r),
-                child: Form(
-                  key: _formKey,
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(14.r),
+                  decoration: BoxDecoration(
+                    color: colorSeleccionado,
+                    borderRadius: BorderRadius.circular(12.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: colorSeleccionado.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    _getIconoActual(),
+                    color: Colors.white,
+                    size: 28.sp,
+                  ),
+                ),
+                SizedBox(width: 16.w),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Nombre
                       Text(
-                        'Nombre de la meta',
+                        widget.meta == null ? 'Nueva Meta' : 'Editar Meta',
                         style: GoogleFonts.lato(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
+                          fontSize: 22.sp,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      SizedBox(height: 8.h),
-                      TextFormField(
-                        controller: _nombreController,
-                        decoration: InputDecoration(
-                          hintText: 'Ej: Casa nueva, Auto, Vacaciones',
-                          prefixIcon: Icon(
-                            Icons.label_outline,
-                            color: colorSeleccionado,
-                          ),
-                          filled: true,
-                          fillColor: colorSeleccionado.withOpacity(0.05),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: BorderSide(
-                              color: colorSeleccionado,
-                              width: 2,
-                            ),
-                          ),
-                        ),
-                        validator:
-                            (v) =>
-                                v?.isEmpty == true ? 'Campo requerido' : null,
-                      ),
-                      SizedBox(height: 16.h),
-
-                      // Descripción
+                      SizedBox(height: 2.h),
                       Text(
-                        'Descripción (opcional)',
-                        style: GoogleFonts.lato(
+                        'Define tu objetivo de ahorro',
+                        style: GoogleFonts.openSans(
                           fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
+                          color: Colors.grey.shade600,
                         ),
-                      ),
-                      SizedBox(height: 8.h),
-                      TextFormField(
-                        controller: _descripcionController,
-                        decoration: InputDecoration(
-                          hintText: 'Añade más detalles sobre tu meta',
-                          prefixIcon: Icon(
-                            Icons.description_outlined,
-                            color: colorSeleccionado,
-                          ),
-                          filled: true,
-                          fillColor: colorSeleccionado.withOpacity(0.05),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: BorderSide(
-                              color: colorSeleccionado,
-                              width: 2,
-                            ),
-                          ),
-                        ),
-                        maxLines: 2,
-                      ),
-                      SizedBox(height: 16.h),
-
-                      // Monto objetivo
-                      Text(
-                        'Monto objetivo',
-                        style: GoogleFonts.lato(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                      SizedBox(height: 8.h),
-                      TextFormField(
-                        controller: _montoController,
-                        decoration: InputDecoration(
-                          hintText: '0.00',
-                          prefixIcon: Container(
-                            padding: EdgeInsets.all(12.r),
-                            child: Text(
-                              '\$',
-                              style: GoogleFonts.lato(
-                                fontSize: 18.sp,
-                                fontWeight: FontWeight.bold,
-                                color: colorSeleccionado,
-                              ),
-                            ),
-                          ),
-                          filled: true,
-                          fillColor: colorSeleccionado.withOpacity(0.05),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: BorderSide(
-                              color: colorSeleccionado,
-                              width: 2,
-                            ),
-                          ),
-                        ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        inputFormatters: [
-                          MoneyInputFormatter(
-                            leadingSymbol: '',
-                            thousandSeparator: ThousandSeparator.Comma,
-                            mantissaLength: 2,
-                          ),
-                        ],
-                        style: GoogleFonts.lato(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        validator: (v) {
-                          if (v?.isEmpty == true) return 'Campo requerido';
-                          final cleanValue = v!.replaceAll(',', '');
-                          if (double.tryParse(cleanValue) == null)
-                            return 'Monto inválido';
-                          return null;
-                        },
-                      ),
-                      SizedBox(height: 16.h),
-
-                      // Fecha objetivo
-                      Text(
-                        'Fecha objetivo',
-                        style: GoogleFonts.lato(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                      SizedBox(height: 8.h),
-                      InkWell(
-                        onTap: () async {
-                          final fecha = await showDatePicker(
-                            context: context,
-                            initialDate: _fechaObjetivo,
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime.now().add(Duration(days: 3650)),
-                            builder: (context, child) {
-                              return Theme(
-                                data: Theme.of(context).copyWith(
-                                  colorScheme: ColorScheme.light(
-                                    primary: colorSeleccionado,
-                                  ),
-                                ),
-                                child: child!,
-                              );
-                            },
-                          );
-                          if (fecha != null) {
-                            setState(() => _fechaObjetivo = fecha);
-                          }
-                        },
-                        child: Container(
-                          padding: EdgeInsets.all(16.r),
-                          decoration: BoxDecoration(
-                            color: colorSeleccionado.withOpacity(0.05),
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.calendar_today,
-                                color: colorSeleccionado,
-                                size: 20.sp,
-                              ),
-                              SizedBox(width: 12.w),
-                              Text(
-                                DateFormat(
-                                  'dd \'de\' MMMM \'de\' yyyy',
-                                  'es',
-                                ).format(_fechaObjetivo),
-                                style: GoogleFonts.lato(
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              Spacer(),
-                              Icon(Icons.arrow_drop_down, color: Colors.grey),
-                            ],
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 20.h),
-
-                      // Selector de ícono
-                      Text(
-                        'Ícono',
-                        style: GoogleFonts.lato(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                      SizedBox(height: 12.h),
-                      Wrap(
-                        spacing: 12.w,
-                        runSpacing: 12.h,
-                        children:
-                            _iconos.map((icono) {
-                              final seleccionado =
-                                  _iconoSeleccionado == icono['name'];
-                              return GestureDetector(
-                                onTap:
-                                    () => setState(
-                                      () => _iconoSeleccionado = icono['name'],
-                                    ),
-                                child: Container(
-                                  width: 60.w,
-                                  height: 60.h,
-                                  decoration: BoxDecoration(
-                                    color:
-                                        seleccionado
-                                            ? colorSeleccionado.withOpacity(0.1)
-                                            : Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(12.r),
-                                    border: Border.all(
-                                      color:
-                                          seleccionado
-                                              ? colorSeleccionado
-                                              : Colors.transparent,
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        icono['icon'],
-                                        size: 28.sp,
-                                        color:
-                                            seleccionado
-                                                ? colorSeleccionado
-                                                : Colors.grey.shade600,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                      ),
-                      SizedBox(height: 20.h),
-
-                      // Selector de color
-                      Text(
-                        'Color',
-                        style: GoogleFonts.lato(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                      SizedBox(height: 12.h),
-                      Wrap(
-                        spacing: 12.w,
-                        runSpacing: 12.h,
-                        children:
-                            _colores.map((color) {
-                              final seleccionado =
-                                  _colorSeleccionado == color['color'];
-                              final colorInt = int.parse(
-                                'FF${color['color']}',
-                                radix: 16,
-                              );
-                              return GestureDetector(
-                                onTap:
-                                    () => setState(
-                                      () =>
-                                          _colorSeleccionado = color['color']!,
-                                    ),
-                                child: Container(
-                                  width: 50.w,
-                                  height: 50.h,
-                                  decoration: BoxDecoration(
-                                    color: Color(colorInt),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color:
-                                          seleccionado
-                                              ? Colors.black
-                                              : Colors.grey.shade300,
-                                      width: seleccionado ? 3 : 1,
-                                    ),
-                                    boxShadow:
-                                        seleccionado
-                                            ? [
-                                              BoxShadow(
-                                                color: Color(
-                                                  colorInt,
-                                                ).withOpacity(0.4),
-                                                blurRadius: 8,
-                                                offset: Offset(0, 2),
-                                              ),
-                                            ]
-                                            : null,
-                                  ),
-                                  child:
-                                      seleccionado
-                                          ? Icon(
-                                            Icons.check,
-                                            color: Colors.white,
-                                            size: 24.sp,
-                                          )
-                                          : null,
-                                ),
-                              );
-                            }).toList(),
                       ),
                     ],
                   ),
                 ),
-              ),
-            ),
-            // Footer con botones
-            Container(
-              padding: EdgeInsets.all(20.r),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.vertical(
-                  bottom: Radius.circular(24.r),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(Icons.close, size: 24.sp),
+                  color: Colors.grey.shade600,
                 ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 14.h),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.r),
-                        ),
-                      ),
-                      child: Text(
-                        'Cancelar',
-                        style: GoogleFonts.lato(
-                          fontSize: 15.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
-                        ),
+              ],
+            ),
+          ),
+          // Contenido
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(20.r),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Nombre
+                    Text(
+                      'Nombre de la meta',
+                      style: GoogleFonts.lato(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
                       ),
                     ),
-                  ),
-                  SizedBox(width: 12.w),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          final cleanMonto = _montoController.text.replaceAll(
-                            ',',
-                            '',
-                          );
-                          final meta = Meta(
-                            id:
-                                widget.meta?.id ??
-                                DateTime.now().millisecondsSinceEpoch
-                                    .toString(),
-                            nombre: _nombreController.text,
-                            descripcion: _descripcionController.text,
-                            montoObjetivo: double.parse(cleanMonto),
-                            montoActual: widget.meta?.montoActual ?? 0,
-                            fechaInicio:
-                                widget.meta?.fechaInicio ??
-                                DateTime.now().toIso8601String(),
-                            fechaObjetivo: _fechaObjetivo.toIso8601String(),
-                            icono: _iconoSeleccionado,
-                            color: _colorSeleccionado,
-                            completada: widget.meta?.completada ?? false,
-                            cuentaId: widget.meta?.cuentaId,
-                            cuentaNombre: widget.meta?.cuentaNombre,
-                            numeroCuenta: widget.meta?.numeroCuenta,
-                          );
-                          Navigator.pop(context, meta);
+                    SizedBox(height: 8.h),
+                    TextFormField(
+                      controller: _nombreController,
+                      decoration: InputDecoration(
+                        hintText: 'Ej: Casa nueva, Auto, Vacaciones',
+                        prefixIcon: Icon(
+                          Icons.label_outline,
+                          color: colorSeleccionado,
+                        ),
+                        filled: true,
+                        fillColor: colorSeleccionado.withOpacity(0.05),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: BorderSide(
+                            color: colorSeleccionado,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      validator:
+                          (v) => v?.isEmpty == true ? 'Campo requerido' : null,
+                    ),
+                    SizedBox(height: 16.h),
+
+                    // Descripción
+                    Text(
+                      'Descripción (opcional)',
+                      style: GoogleFonts.lato(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
+                    TextFormField(
+                      controller: _descripcionController,
+                      decoration: InputDecoration(
+                        hintText: 'Añade más detalles sobre tu meta',
+                        prefixIcon: Icon(
+                          Icons.description_outlined,
+                          color: colorSeleccionado,
+                        ),
+                        filled: true,
+                        fillColor: colorSeleccionado.withOpacity(0.05),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: BorderSide(
+                            color: colorSeleccionado,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      maxLines: 2,
+                    ),
+                    SizedBox(height: 16.h),
+
+                    // Monto objetivo
+                    Text(
+                      'Monto objetivo',
+                      style: GoogleFonts.lato(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
+                    TextFormField(
+                      controller: _montoController,
+                      decoration: InputDecoration(
+                        hintText: '0.00',
+                        prefixIcon: Container(
+                          padding: EdgeInsets.all(12.r),
+                          child: Text(
+                            '\$',
+                            style: GoogleFonts.lato(
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.bold,
+                              color: colorSeleccionado,
+                            ),
+                          ),
+                        ),
+                        filled: true,
+                        fillColor: colorSeleccionado.withOpacity(0.05),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: BorderSide(
+                            color: colorSeleccionado,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      inputFormatters: [
+                        MoneyInputFormatter(
+                          leadingSymbol: '',
+                          thousandSeparator: ThousandSeparator.Comma,
+                          mantissaLength: 2,
+                        ),
+                      ],
+                      style: GoogleFonts.lato(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      validator: (v) {
+                        if (v?.isEmpty == true) return 'Campo requerido';
+                        final cleanValue = v!.replaceAll(',', '');
+                        if (double.tryParse(cleanValue) == null)
+                          return 'Monto inválido';
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 16.h),
+
+                    // Fecha objetivo
+                    Text(
+                      'Fecha objetivo',
+                      style: GoogleFonts.lato(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
+                    InkWell(
+                      onTap: () async {
+                        final fecha = await showDatePicker(
+                          context: context,
+                          initialDate: _fechaObjetivo,
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(Duration(days: 3650)),
+                          builder: (context, child) {
+                            return Theme(
+                              data: Theme.of(context).copyWith(
+                                colorScheme: ColorScheme.light(
+                                  primary: colorSeleccionado,
+                                ),
+                              ),
+                              child: child!,
+                            );
+                          },
+                        );
+                        if (fecha != null) {
+                          setState(() => _fechaObjetivo = fecha);
                         }
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colorSeleccionado,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 14.h),
-                        shape: RoundedRectangleBorder(
+                      child: Container(
+                        padding: EdgeInsets.all(16.r),
+                        decoration: BoxDecoration(
+                          color: colorSeleccionado.withOpacity(0.05),
                           borderRadius: BorderRadius.circular(12.r),
                         ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        'Guardar Meta',
-                        style: GoogleFonts.lato(
-                          fontSize: 15.sp,
-                          fontWeight: FontWeight.bold,
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_today,
+                              color: colorSeleccionado,
+                              size: 20.sp,
+                            ),
+                            SizedBox(width: 12.w),
+                            Text(
+                              DateFormat(
+                                'dd \'de\' MMMM \'de\' yyyy',
+                                'es',
+                              ).format(_fechaObjetivo),
+                              style: GoogleFonts.lato(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Spacer(),
+                            Icon(Icons.arrow_drop_down, color: Colors.grey),
+                          ],
                         ),
                       ),
                     ),
-                  ),
-                ],
+                    SizedBox(height: 20.h),
+
+                    // Selector de ícono
+                    Text(
+                      'Ícono',
+                      style: GoogleFonts.lato(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+                    Wrap(
+                      spacing: 12.w,
+                      runSpacing: 12.h,
+                      children:
+                          _iconos.map((icono) {
+                            final seleccionado =
+                                _iconoSeleccionado == icono['name'];
+                            return GestureDetector(
+                              onTap:
+                                  () => setState(
+                                    () => _iconoSeleccionado = icono['name'],
+                                  ),
+                              child: Container(
+                                width: 60.w,
+                                height: 60.h,
+                                decoration: BoxDecoration(
+                                  color:
+                                      seleccionado
+                                          ? colorSeleccionado.withOpacity(0.1)
+                                          : Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(12.r),
+                                  border: Border.all(
+                                    color:
+                                        seleccionado
+                                            ? colorSeleccionado
+                                            : Colors.transparent,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      icono['icon'],
+                                      size: 28.sp,
+                                      color:
+                                          seleccionado
+                                              ? colorSeleccionado
+                                              : Colors.grey.shade600,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                    ),
+                    SizedBox(height: 20.h),
+
+                    // Selector de color
+                    Text(
+                      'Color',
+                      style: GoogleFonts.lato(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+                    Wrap(
+                      spacing: 12.w,
+                      runSpacing: 12.h,
+                      children:
+                          _colores.map((color) {
+                            final seleccionado =
+                                _colorSeleccionado == color['color'];
+                            final colorInt = int.parse(
+                              'FF${color['color']}',
+                              radix: 16,
+                            );
+                            return GestureDetector(
+                              onTap:
+                                  () => setState(
+                                    () => _colorSeleccionado = color['color']!,
+                                  ),
+                              child: Container(
+                                width: 50.w,
+                                height: 50.h,
+                                decoration: BoxDecoration(
+                                  color: Color(colorInt),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color:
+                                        seleccionado
+                                            ? Colors.black
+                                            : Colors.grey.shade300,
+                                    width: seleccionado ? 3 : 1,
+                                  ),
+                                  boxShadow:
+                                      seleccionado
+                                          ? [
+                                            BoxShadow(
+                                              color: Color(
+                                                colorInt,
+                                              ).withOpacity(0.4),
+                                              blurRadius: 8,
+                                              offset: Offset(0, 2),
+                                            ),
+                                          ]
+                                          : null,
+                                ),
+                                child:
+                                    seleccionado
+                                        ? Icon(
+                                          Icons.check,
+                                          color: Colors.white,
+                                          size: 24.sp,
+                                        )
+                                        : null,
+                              ),
+                            );
+                          }).toList(),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+
+          // Footer con botones
+          Container(
+            padding: EdgeInsets.all(20.r),
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              border: Border(
+                top: BorderSide(color: Colors.grey.shade200, width: 1),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 16.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      side: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    child: Text(
+                      'Cancelar',
+                      style: GoogleFonts.lato(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (_formKey.currentState!.validate()) {
+                        final cleanMonto = _montoController.text.replaceAll(
+                          ',',
+                          '',
+                        );
+                        final meta = Meta(
+                          id:
+                              widget.meta?.id ??
+                              DateTime.now().millisecondsSinceEpoch.toString(),
+                          nombre: _nombreController.text,
+                          descripcion: _descripcionController.text,
+                          montoObjetivo: double.parse(cleanMonto),
+                          montoActual: widget.meta?.montoActual ?? 0,
+                          fechaInicio:
+                              widget.meta?.fechaInicio ??
+                              DateTime.now().toIso8601String(),
+                          fechaObjetivo: _fechaObjetivo.toIso8601String(),
+                          icono: _iconoSeleccionado,
+                          color: _colorSeleccionado,
+                          completada: widget.meta?.completada ?? false,
+                          cuentaId: widget.meta?.cuentaId,
+                          cuentaNombre: widget.meta?.cuentaNombre,
+                          numeroCuenta: widget.meta?.numeroCuenta,
+                        );
+                        Navigator.pop(context, meta);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colorSeleccionado,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 16.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      elevation: 2,
+                    ),
+                    child: Text(
+                      'Guardar Meta',
+                      style: GoogleFonts.lato(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

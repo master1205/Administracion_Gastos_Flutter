@@ -422,175 +422,167 @@ class _CuentasScreenState extends State<CuentasScreen> {
 
     if (estaAsociada) {
       // Mostrar mensaje informativo
-      await showDialog(
+      await showModalBottomSheet(
         context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
         builder:
-            (context) => AlertDialog(
-              backgroundColor:
-                  themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24.r),
+            (context) => Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
               ),
-              contentPadding: EdgeInsets.zero,
-              content: Container(
-                width: 340.w,
-                padding: EdgeInsets.all(28.r),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 80.w,
-                      height: 80.h,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            const Color(0xFFf59e0b).withOpacity(0.2),
-                            const Color(0xFFd97706).withOpacity(0.3),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 20.w,
+                      vertical: 16.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFf59e0b).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(24.r),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: const Color(0xFFf59e0b),
+                          size: 24.sp,
                         ),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.warning_amber_rounded,
-                        size: 40.sp,
-                        color: const Color(0xFFf59e0b),
-                      ),
-                    ),
-                    SizedBox(height: 24.h),
-                    Text(
-                      'Cuenta asociada a meta',
-                      style: GoogleFonts.lato(
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.bold,
-                        color:
-                            themeManager.isDarkMode
-                                ? Colors.white
-                                : Colors.black87,
-                      ),
-                    ),
-                    SizedBox(height: 12.h),
-                    Text(
-                      'Esta cuenta está asociada a una meta de ahorro. Si deseas eliminarla, elimina la meta desde la pantalla de Metas y la cuenta se eliminará automáticamente.',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.openSans(
-                        fontSize: 14.sp,
-                        color: Colors.grey.shade600,
-                        height: 1.5,
-                      ),
-                    ),
-                    SizedBox(height: 24.h),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFf59e0b),
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 14.h),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Text(
-                          'Entendido',
-                          style: GoogleFonts.lato(
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: Text(
+                            'Cuenta asociada a meta',
+                            style: GoogleFonts.lato(
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  themeManager.isDarkMode
+                                      ? Colors.white
+                                      : Colors.black87,
+                            ),
                           ),
                         ),
-                      ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: Icon(
+                            Icons.close,
+                            color: Colors.grey.shade600,
+                            size: 20.sp,
+                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints(),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  // Content
+                  Padding(
+                    padding: EdgeInsets.all(28.r),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(20.r),
+                          decoration: BoxDecoration(
+                            color: const Color(
+                              0xFFf59e0b,
+                            ).withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.warning_amber_rounded,
+                            size: 48.sp,
+                            color: const Color(0xFFf59e0b),
+                          ),
+                        ),
+                        SizedBox(height: 24.h),
+                        Text(
+                          'Esta cuenta está asociada a una meta de ahorro. Si deseas eliminarla, elimina la meta desde la pantalla de Metas y la cuenta se eliminará automáticamente.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.openSans(
+                            fontSize: 14.sp,
+                            color: Colors.grey.shade600,
+                            height: 1.5,
+                          ),
+                        ),
+                        SizedBox(height: 24.h),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFf59e0b),
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(vertical: 14.h),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: Text(
+                              'Entendido',
+                              style: GoogleFonts.lato(
+                                fontSize: 15.sp,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
       );
       return;
     }
 
-    final confirmar = await showDialog<bool>(
+    final confirmar = await showModalBottomSheet<bool>(
       context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder:
-          (context) => AlertDialog(
-            backgroundColor:
-                themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24.r),
+          (context) => Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
             ),
-            contentPadding: EdgeInsets.zero,
-            content: Container(
-              width: 340.w,
-              padding: EdgeInsets.all(28.r),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 80.w,
-                    height: 80.h,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFFef4444).withOpacity(0.2),
-                          const Color(0xFFdc2626).withOpacity(0.3),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.delete_forever_rounded,
-                      size: 40.sp,
-                      color: const Color(0xFFef4444),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 20.w,
+                    vertical: 16.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(24.r),
                     ),
                   ),
-                  SizedBox(height: 24.h),
-                  Text(
-                    '¿Eliminar cuenta?',
-                    style: GoogleFonts.lato(
-                      fontSize: 22.sp,
-                      fontWeight: FontWeight.bold,
-                      color:
-                          themeManager.isDarkMode
-                              ? Colors.white
-                              : Colors.black87,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 12.h),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 16.w,
-                      vertical: 12.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFef4444).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12.r),
-                      border: Border.all(
-                        color: const Color(0xFFef4444).withOpacity(0.3),
-                        width: 1,
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.delete_forever_rounded,
+                        color: Colors.red,
+                        size: 24.sp,
                       ),
-                    ),
-                    child: Column(
-                      children: [
-                        Text(
-                          cuenta.nombre,
+                      SizedBox(width: 12.w),
+                      Expanded(
+                        child: Text(
+                          '¿Eliminar cuenta?',
                           style: GoogleFonts.lato(
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFFef4444),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        SizedBox(height: 4.h),
-                        Text(
-                          _currencyFormat.format(cuenta.saldo),
-                          style: GoogleFonts.lato(
-                            fontSize: 20.sp,
+                            fontSize: 18.sp,
                             fontWeight: FontWeight.bold,
                             color:
                                 themeManager.isDarkMode
@@ -598,78 +590,151 @@ class _CuentasScreenState extends State<CuentasScreen> {
                                     : Colors.black87,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 16.h),
-                  Text(
-                    'Esta acción es permanente y no se puede deshacer',
-                    style: GoogleFonts.openSans(
-                      fontSize: 13.sp,
-                      color: Colors.grey.shade600,
-                      height: 1.4,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 28.h),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          style: OutlinedButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: 14.h),
-                            side: BorderSide(
-                              color: Colors.grey.shade300,
-                              width: 1.5,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                          ),
-                          child: Text(
-                            'Cancelar',
-                            style: GoogleFonts.lato(
-                              fontSize: 15.sp,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade700,
-                            ),
-                          ),
-                        ),
                       ),
-                      SizedBox(width: 12.w),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFef4444),
-                            padding: EdgeInsets.symmetric(vertical: 14.h),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.delete_outline, size: 18.sp),
-                              SizedBox(width: 6.w),
-                              Text(
-                                'Eliminar',
-                                style: GoogleFonts.lato(
-                                  fontSize: 15.sp,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        icon: Icon(
+                          Icons.close,
+                          color: Colors.grey.shade600,
+                          size: 20.sp,
                         ),
+                        padding: EdgeInsets.zero,
+                        constraints: BoxConstraints(),
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+                // Content
+                Padding(
+                  padding: EdgeInsets.all(28.r),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(20.r),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.delete_forever_rounded,
+                          size: 48.sp,
+                          color: Colors.red,
+                        ),
+                      ),
+                      SizedBox(height: 24.h),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16.w,
+                          vertical: 12.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFef4444).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12.r),
+                          border: Border.all(
+                            color: const Color(
+                              0xFFef4444,
+                            ).withValues(alpha: 0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              cuenta.nombre,
+                              style: GoogleFonts.lato(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFFef4444),
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            SizedBox(height: 4.h),
+                            Text(
+                              _currencyFormat.format(cuenta.saldo),
+                              style: GoogleFonts.lato(
+                                fontSize: 20.sp,
+                                fontWeight: FontWeight.bold,
+                                color:
+                                    themeManager.isDarkMode
+                                        ? Colors.white
+                                        : Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 16.h),
+                      Text(
+                        'Esta acción es permanente y no se puede deshacer',
+                        style: GoogleFonts.openSans(
+                          fontSize: 13.sp,
+                          color: Colors.grey.shade600,
+                          height: 1.4,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 28.h),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              style: OutlinedButton.styleFrom(
+                                padding: EdgeInsets.symmetric(vertical: 14.h),
+                                side: BorderSide(
+                                  color: Colors.grey.shade300,
+                                  width: 1.5,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                              ),
+                              child: Text(
+                                'Cancelar',
+                                style: GoogleFonts.lato(
+                                  fontSize: 15.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 12.w),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFef4444),
+                                padding: EdgeInsets.symmetric(vertical: 14.h),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.delete_outline, size: 18.sp),
+                                  SizedBox(width: 6.w),
+                                  Text(
+                                    'Eliminar',
+                                    style: GoogleFonts.lato(
+                                      fontSize: 15.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
     );
@@ -719,289 +784,310 @@ class _CuentasScreenState extends State<CuentasScreen> {
     );
     final formKey = GlobalKey<FormState>();
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) {
         final themeManager = Provider.of<ThemeManager>(context, listen: false);
 
-        return AlertDialog(
-          backgroundColor:
-              themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24.r),
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
-          contentPadding: EdgeInsets.zero,
-          content: Container(
-            width: 360.w,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Header con gradiente
+                // Header
                 Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(24.r),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 20.w,
+                    vertical: 16.h,
+                  ),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(24.r),
-                      topRight: Radius.circular(24.r),
+                    color: const Color(0xFF667eea).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(24.r),
                     ),
                   ),
-                  child: Column(
+                  child: Row(
                     children: [
-                      Container(
-                        padding: EdgeInsets.all(12.r),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.25),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.edit_rounded,
-                          color: Colors.white,
-                          size: 32.sp,
+                      Icon(
+                        Icons.edit_rounded,
+                        color: const Color(0xFF667eea),
+                        size: 24.sp,
+                      ),
+                      SizedBox(width: 12.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Editar Saldo',
+                              style: GoogleFonts.lato(
+                                fontSize: 18.sp,
+                                fontWeight: FontWeight.bold,
+                                color:
+                                    themeManager.isDarkMode
+                                        ? Colors.white
+                                        : Colors.black87,
+                              ),
+                            ),
+                            Text(
+                              cuenta.nombre,
+                              style: GoogleFonts.openSans(
+                                fontSize: 12.sp,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      SizedBox(height: 16.h),
-                      Text(
-                        'Editar Saldo',
-                        style: GoogleFonts.lato(
-                          fontSize: 22.sp,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(
+                          Icons.close,
+                          color: Colors.grey.shade600,
+                          size: 20.sp,
                         ),
-                      ),
-                      SizedBox(height: 6.h),
-                      Text(
-                        cuenta.nombre,
-                        style: GoogleFonts.openSans(
-                          fontSize: 14.sp,
-                          color: Colors.white.withOpacity(0.9),
-                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: BoxConstraints(),
                       ),
                     ],
                   ),
                 ),
-                // Form content
-                Padding(
-                  padding: EdgeInsets.all(24.r),
-                  child: Form(
-                    key: formKey,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(16.r),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                const Color(0xFF667eea).withOpacity(0.1),
-                                const Color(0xFF764ba2).withOpacity(0.1),
+                // Content
+                SingleChildScrollView(
+                  child: Padding(
+                    padding: EdgeInsets.all(24.r),
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(16.r),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  const Color(0xFF667eea).withOpacity(0.1),
+                                  const Color(0xFF764ba2).withOpacity(0.1),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(12.r),
+                              border: Border.all(
+                                color: const Color(0xFF667eea).withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'Saldo Actual',
+                                  style: GoogleFonts.openSans(
+                                    fontSize: 12.sp,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                                SizedBox(height: 4.h),
+                                Text(
+                                  _currencyFormat.format(cuenta.saldo),
+                                  style: GoogleFonts.lato(
+                                    fontSize: 28.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        themeManager.isDarkMode
+                                            ? Colors.white
+                                            : Colors.black87,
+                                  ),
+                                ),
                               ],
                             ),
-                            borderRadius: BorderRadius.circular(12.r),
-                            border: Border.all(
-                              color: const Color(0xFF667eea).withOpacity(0.3),
-                              width: 1,
-                            ),
                           ),
-                          child: Column(
-                            children: [
-                              Text(
-                                'Saldo Actual',
-                                style: GoogleFonts.openSans(
-                                  fontSize: 12.sp,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                              SizedBox(height: 4.h),
-                              Text(
-                                _currencyFormat.format(cuenta.saldo),
-                                style: GoogleFonts.lato(
-                                  fontSize: 28.sp,
-                                  fontWeight: FontWeight.bold,
-                                  color:
-                                      themeManager.isDarkMode
-                                          ? Colors.white
-                                          : Colors.black87,
-                                ),
+                          SizedBox(height: 24.h),
+                          TextFormField(
+                            controller: saldoController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            inputFormatters: [
+                              MoneyInputFormatter(
+                                leadingSymbol: '',
+                                thousandSeparator: ThousandSeparator.Comma,
+                                mantissaLength: 2,
                               ),
                             ],
-                          ),
-                        ),
-                        SizedBox(height: 24.h),
-                        TextFormField(
-                          controller: saldoController,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          inputFormatters: [
-                            MoneyInputFormatter(
-                              leadingSymbol: '',
-                              thousandSeparator: ThousandSeparator.Comma,
-                              mantissaLength: 2,
-                            ),
-                          ],
-                          autofocus: true,
-                          style: GoogleFonts.lato(
-                            fontSize: 28.sp,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF667eea),
-                          ),
-                          textAlign: TextAlign.center,
-                          decoration: InputDecoration(
-                            labelText: 'Nuevo Saldo',
-                            labelStyle: GoogleFonts.openSans(
-                              fontSize: 14.sp,
-                              color: Colors.grey.shade600,
-                            ),
-                            prefixText: '\$ ',
-                            prefixStyle: GoogleFonts.lato(
+                            autofocus: true,
+                            style: GoogleFonts.lato(
                               fontSize: 28.sp,
                               fontWeight: FontWeight.bold,
                               color: const Color(0xFF667eea),
                             ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16.r),
-                              borderSide: BorderSide(
-                                color: Colors.grey.shade300,
-                                width: 2,
+                            textAlign: TextAlign.center,
+                            decoration: InputDecoration(
+                              labelText: 'Nuevo Saldo',
+                              labelStyle: GoogleFonts.openSans(
+                                fontSize: 14.sp,
+                                color: Colors.grey.shade600,
+                              ),
+                              prefixText: '\$ ',
+                              prefixStyle: GoogleFonts.lato(
+                                fontSize: 28.sp,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF667eea),
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16.r),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                  width: 2,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16.r),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                  width: 2,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16.r),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF667eea),
+                                  width: 2.5,
+                                ),
+                              ),
+                              filled: true,
+                              fillColor:
+                                  themeManager.isDarkMode
+                                      ? Colors.grey.shade700
+                                      : Colors.grey.shade50,
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: 20.h,
+                                horizontal: 16.w,
                               ),
                             ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16.r),
-                              borderSide: BorderSide(
-                                color: Colors.grey.shade300,
-                                width: 2,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16.r),
-                              borderSide: const BorderSide(
-                                color: Color(0xFF667eea),
-                                width: 2.5,
-                              ),
-                            ),
-                            filled: true,
-                            fillColor:
-                                themeManager.isDarkMode
-                                    ? Colors.grey.shade700
-                                    : Colors.grey.shade50,
-                            contentPadding: EdgeInsets.symmetric(
-                              vertical: 20.h,
-                              horizontal: 16.w,
-                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Ingresa un monto';
+                              }
+                              final cleanValue = value.trim().replaceAll(
+                                ',',
+                                '',
+                              );
+                              final double? monto = double.tryParse(cleanValue);
+                              if (monto == null) {
+                                return 'Monto inválido';
+                              }
+                              return null;
+                            },
                           ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Ingresa un monto';
-                            }
-                            final cleanValue = value.trim().replaceAll(',', '');
-                            final double? monto = double.tryParse(cleanValue);
-                            if (monto == null) {
-                              return 'Monto inválido';
-                            }
-                            return null;
-                          },
-                        ),
-                        SizedBox(height: 24.h),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () => Navigator.pop(context),
-                                style: OutlinedButton.styleFrom(
-                                  padding: EdgeInsets.symmetric(vertical: 16.h),
-                                  side: BorderSide(
-                                    color: Colors.grey.shade300,
-                                    width: 2,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12.r),
-                                  ),
-                                ),
-                                child: Text(
-                                  'Cancelar',
-                                  style: GoogleFonts.lato(
-                                    fontSize: 15.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.grey.shade700,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 12.w),
-                            Expanded(
-                              flex: 2,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFF667eea),
-                                      Color(0xFF764ba2),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(12.r),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(
-                                        0xFF667eea,
-                                      ).withOpacity(0.4),
-                                      blurRadius: 12.r,
-                                      offset: Offset(0, 6.h),
-                                    ),
-                                  ],
-                                ),
-                                child: ElevatedButton(
-                                  onPressed: () async {
-                                    if (formKey.currentState!.validate()) {
-                                      Navigator.pop(context);
-                                      final cleanValue = saldoController.text
-                                          .trim()
-                                          .replaceAll(',', '');
-                                      await _actualizarSaldo(
-                                        cuenta,
-                                        double.parse(cleanValue),
-                                      );
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.transparent,
-                                    shadowColor: Colors.transparent,
+                          SizedBox(height: 24.h),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  style: OutlinedButton.styleFrom(
                                     padding: EdgeInsets.symmetric(
                                       vertical: 16.h,
+                                    ),
+                                    side: BorderSide(
+                                      color: Colors.grey.shade300,
+                                      width: 2,
                                     ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12.r),
                                     ),
                                   ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.check_circle_outline,
-                                        size: 20.sp,
-                                      ),
-                                      SizedBox(width: 8.w),
-                                      Text(
-                                        'Actualizar',
-                                        style: GoogleFonts.lato(
-                                          fontSize: 15.sp,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ],
+                                  child: Text(
+                                    'Cancelar',
+                                    style: GoogleFonts.lato(
+                                      fontSize: 15.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey.shade700,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                              SizedBox(width: 12.w),
+                              Expanded(
+                                flex: 2,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFF667eea),
+                                        Color(0xFF764ba2),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(
+                                          0xFF667eea,
+                                        ).withOpacity(0.4),
+                                        blurRadius: 12.r,
+                                        offset: Offset(0, 6.h),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ElevatedButton(
+                                    onPressed: () async {
+                                      if (formKey.currentState!.validate()) {
+                                        Navigator.pop(context);
+                                        final cleanValue = saldoController.text
+                                            .trim()
+                                            .replaceAll(',', '');
+                                        await _actualizarSaldo(
+                                          cuenta,
+                                          double.parse(cleanValue),
+                                        );
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      shadowColor: Colors.transparent,
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 16.h,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                          12.r,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.check_circle_outline,
+                                          size: 20.sp,
+                                        ),
+                                        SizedBox(width: 8.w),
+                                        Text(
+                                          'Actualizar',
+                                          style: GoogleFonts.lato(
+                                            fontSize: 15.sp,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -1091,79 +1177,94 @@ class _CuentasScreenState extends State<CuentasScreen> {
     final tipos = ['efectivo', 'banco', 'tarjeta'];
     final iconos = {'efectivo': '💵', 'banco': '🏦', 'tarjeta': '💳'};
 
-    return showDialog(
+    return showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) {
         final themeManager = Provider.of<ThemeManager>(context, listen: false);
 
         return StatefulBuilder(
           builder:
-              (context, setDialogState) => AlertDialog(
-                backgroundColor:
-                    themeManager.isDarkMode
-                        ? Colors.grey.shade800
-                        : Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24.r),
+              (context, setDialogState) => Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
                 ),
-                contentPadding: EdgeInsets.zero,
-                content: Container(
-                  width: 380.w,
-                  constraints: BoxConstraints(maxHeight: 600.h),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(24.r),
+                    ),
+                  ),
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.9,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Header con gradiente
+                      // Header
                       Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.all(24.r),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 20.w,
+                          vertical: 16.h,
+                        ),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(24.r),
-                            topRight: Radius.circular(24.r),
+                          color: const Color(
+                            0xFF667eea,
+                          ).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(24.r),
                           ),
                         ),
-                        child: Column(
+                        child: Row(
                           children: [
-                            Container(
-                              padding: EdgeInsets.all(12.r),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.25),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.add_card_rounded,
-                                color: Colors.white,
-                                size: 32.sp,
+                            Icon(
+                              Icons.add_card_rounded,
+                              color: const Color(0xFF667eea),
+                              size: 24.sp,
+                            ),
+                            SizedBox(width: 12.w),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Nueva Cuenta',
+                                    style: GoogleFonts.lato(
+                                      fontSize: 18.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color:
+                                          themeManager.isDarkMode
+                                              ? Colors.white
+                                              : Colors.black87,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Completa la información',
+                                    style: GoogleFonts.openSans(
+                                      fontSize: 11.sp,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            SizedBox(height: 12.h),
-                            Text(
-                              'Nueva Cuenta',
-                              style: GoogleFonts.lato(
-                                fontSize: 24.sp,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                            IconButton(
+                              onPressed: () => Navigator.pop(context),
+                              icon: Icon(
+                                Icons.close,
+                                color: Colors.grey.shade600,
+                                size: 20.sp,
                               ),
-                            ),
-                            SizedBox(height: 4.h),
-                            Text(
-                              'Completa la información',
-                              style: GoogleFonts.openSans(
-                                fontSize: 13.sp,
-                                color: Colors.white.withOpacity(0.85),
-                              ),
+                              padding: EdgeInsets.zero,
+                              constraints: BoxConstraints(),
                             ),
                           ],
                         ),
                       ),
-                      // Form content con Flexible para permitir scroll
-                      Flexible(
+                      // Form content con Expanded y SingleChildScrollView
+                      Expanded(
                         child: SingleChildScrollView(
                           padding: EdgeInsets.all(24.r),
                           child: Column(
