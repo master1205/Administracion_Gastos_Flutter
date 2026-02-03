@@ -917,7 +917,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
           IconButton(
             icon: Icon(
               Icons.edit_calendar_rounded,
-              color: widget.color,
+              color: Colors.white,
               size: 20.sp,
             ),
             onPressed: () => _selectDate(context),
@@ -991,7 +991,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
             ),
             icon: Icon(
               Icons.keyboard_arrow_down_rounded,
-              color: widget.color,
+              color: Colors.white,
               size: 20.sp,
             ),
             isExpanded: true,
@@ -1117,7 +1117,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
             ),
             icon: Icon(
               Icons.keyboard_arrow_down_rounded,
-              color: widget.color,
+              color: Colors.white,
               size: 20.sp,
             ),
             isExpanded: true,
