@@ -48,9 +48,9 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
         actions: [
           // Filtros
           PopupMenuButton<String>(
-            icon: Icon(
-              Icons.filter_list_rounded,
-              color: isDark ? Colors.white : Colors.black87,
+            icon: Icon(Icons.filter_list_rounded, color: Colors.white),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16.r),
             ),
             onSelected: (value) {
               setState(() {
@@ -136,26 +136,42 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.category_outlined,
-              size: 80.sp,
-              color: isDark ? Colors.grey.shade700 : Colors.grey.shade400,
+            ScaleIn(
+              child: Container(
+                padding: EdgeInsets.all(32.r),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF06B6D4).withOpacity(0.15),
+                      const Color(0xFF8B5CF6).withOpacity(0.15),
+                    ],
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.widgets_rounded,
+                  size: 80.sp,
+                  color: const Color(0xFF06B6D4),
+                ),
+              ),
             ),
-            SizedBox(height: 16.h),
+            SizedBox(height: 24.h),
             Text(
-              'No hay categorías',
+              'Sin categorías',
               style: GoogleFonts.poppins(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                fontSize: 22.sp,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : Colors.black87,
               ),
             ),
             SizedBox(height: 8.h),
             Text(
-              'Agrega tu primera categoría',
+              'Crea tu primera categoría para\norganizar tus transacciones',
+              textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 14.sp,
                 color: isDark ? Colors.grey.shade600 : Colors.grey.shade500,
+                height: 1.5,
               ),
             ),
           ],
@@ -173,52 +189,129 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
     final iconData = _getIconFromString(iconCode);
 
     return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
+      margin: EdgeInsets.only(bottom: 14.h),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(
+          color: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: color.withOpacity(0.1),
+            blurRadius: 20.r,
+            offset: Offset(0, 8.h),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
+            blurRadius: 8.r,
+            offset: Offset(0, 2.h),
           ),
         ],
       ),
-      child: ListTile(
-        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-        leading: Container(
-          width: 48.w,
-          height: 48.h,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-          child: Icon(iconData, color: color, size: 24.sp),
-        ),
-        title: Text(
-          categoria['categoria'] ?? '',
-          style: GoogleFonts.poppins(
-            fontSize: 16.sp,
-            fontWeight: FontWeight.w600,
-            color: isDark ? Colors.white : Colors.black87,
-          ),
-        ),
-        subtitle: Text(
-          tipoTransaccion,
-          style: GoogleFonts.poppins(fontSize: 13.sp, color: color),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
+      child: Padding(
+        padding: EdgeInsets.all(18.r),
+        child: Row(
           children: [
-            IconButton(
-              icon: Icon(Icons.edit_rounded, color: Colors.blue.shade400),
-              onPressed:
-                  () => _mostrarDialogoCategoria(context, categoria: categoria),
+            // Icono con gradiente
+            Container(
+              width: 58.w,
+              height: 58.h,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [color.withOpacity(0.15), color.withOpacity(0.05)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16.r),
+                border: Border.all(color: color.withOpacity(0.2), width: 1.5),
+              ),
+              child: Icon(iconData, color: color, size: 28.sp),
             ),
-            IconButton(
-              icon: Icon(Icons.delete_rounded, color: Colors.red.shade400),
-              onPressed: () => _confirmarEliminar(categoria),
+            SizedBox(width: 16.w),
+            // Información
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    categoria['categoria'] ?? '',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : Colors.black87,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 10.w,
+                      vertical: 4.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                    child: Text(
+                      tipoTransaccion,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12.sp,
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Botones de acción
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap:
+                      () => _mostrarDialogoCategoria(
+                        context,
+                        categoria: categoria,
+                      ),
+                  child: Container(
+                    padding: EdgeInsets.all(10.r),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF06B6D4).withOpacity(0.15),
+                          const Color(0xFF3B82F6).withOpacity(0.15),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                    child: Icon(
+                      Icons.edit_rounded,
+                      color: const Color(0xFF06B6D4),
+                      size: 18.sp,
+                    ),
+                  ),
+                ),
+                SizedBox(width: 10.w),
+                GestureDetector(
+                  onTap: () => _confirmarEliminar(categoria),
+                  child: Container(
+                    padding: EdgeInsets.all(10.r),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                    child: Icon(
+                      Icons.delete_rounded,
+                      color: const Color(0xFFEF4444),
+                      size: 18.sp,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -229,12 +322,12 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
   Color _getColorForTipo(String tipo) {
     switch (tipo) {
       case 'Ingreso':
-        return const Color(0xFF4CAF50);
+        return const Color(0xFF10B981);
       case 'Pago':
-        return const Color(0xFFFF9800);
+        return const Color(0xFFF59E0B);
       case 'Gasto':
       default:
-        return const Color(0xFFF44336);
+        return const Color(0xFFEF4444);
     }
   }
 

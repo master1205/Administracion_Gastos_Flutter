@@ -32,16 +32,29 @@ class _CuentasScreenState extends State<CuentasScreen> {
 
     return Scaffold(
       backgroundColor:
-          themeManager.isDarkMode ? Colors.grey.shade900 : Colors.grey.shade50,
+          themeManager.isDarkMode
+              ? const Color(0xFF0F172A)
+              : const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Text(
           'Administrar Cuentas',
-          style: GoogleFonts.lato(fontWeight: FontWeight.bold, fontSize: 20.sp),
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.bold,
+            fontSize: 20.sp,
+          ),
         ),
-        backgroundColor: const Color(0xFF4facfe),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, size: 22.sp),
+          icon: Icon(Icons.arrow_back, size: 20.sp),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -76,10 +89,11 @@ class _CuentasScreenState extends State<CuentasScreen> {
           onPressed: () => _mostrarDialogoCrearCuenta(context),
           backgroundColor:
               themeManager.isDarkMode
-                  ? const Color(0xFF2D2D2D)
-                  : const Color(0xFF4facfe),
+                  ? const Color(0xFF6366F1)
+                  : const Color(0xFF6366F1),
           shape: const CircleBorder(),
-          child: Icon(Icons.add, color: Colors.white, size: 28.sp),
+          elevation: 6,
+          child: Icon(Icons.add_rounded, color: Colors.white, size: 28.sp),
         ),
       ),
     );
@@ -130,19 +144,24 @@ class _CuentasScreenState extends State<CuentasScreen> {
 
     return Container(
       margin: EdgeInsets.only(bottom: 8.h),
-      padding: EdgeInsets.all(24.r),
+      padding: EdgeInsets.all(28.r),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6), Color(0xFFEC4899)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20.r),
+        borderRadius: BorderRadius.circular(24.r),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF667eea).withOpacity(0.4),
-            blurRadius: 20.r,
-            offset: Offset(0, 8.h),
+            color: const Color(0xFF6366F1).withOpacity(0.3),
+            blurRadius: 24.r,
+            offset: Offset(0, 12.h),
+          ),
+          BoxShadow(
+            color: const Color(0xFF8B5CF6).withOpacity(0.2),
+            blurRadius: 16.r,
+            offset: Offset(0, 4.h),
           ),
         ],
       ),
@@ -190,21 +209,23 @@ class _CuentasScreenState extends State<CuentasScreen> {
           ),
           SizedBox(height: 20.h),
           Text(
-            'Saldo Total',
-            style: GoogleFonts.openSans(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: 14.sp,
+            'SALDO TOTAL',
+            style: GoogleFonts.inter(
+              color: Colors.white.withOpacity(0.85),
+              fontSize: 13.sp,
               fontWeight: FontWeight.w600,
+              letterSpacing: 1.5,
             ),
           ),
-          SizedBox(height: 8.h),
+          SizedBox(height: 10.h),
           Text(
             _currencyFormat.format(saldoTotal),
-            style: GoogleFonts.lato(
+            style: GoogleFonts.inter(
               color: Colors.white,
-              fontSize: 32.sp,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -1,
+              fontSize: 36.sp,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -1.5,
+              height: 1.1,
             ),
           ),
           SizedBox(height: 16.h),
@@ -236,25 +257,33 @@ class _CuentasScreenState extends State<CuentasScreen> {
 
   Widget _buildCuentaCard(Account cuenta, ThemeManager themeManager) {
     final saldoColor =
-        cuenta.saldo >= 0 ? const Color(0xFF10b981) : const Color(0xFFef4444);
+        cuenta.saldo >= 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444);
 
     return Container(
       margin: EdgeInsets.only(bottom: 16.h),
       decoration: BoxDecoration(
-        color: themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+        color: themeManager.isDarkMode ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(20.r),
         border: Border.all(
           color:
               themeManager.isDarkMode
-                  ? Colors.grey.shade700
-                  : Colors.grey.shade200,
-          width: 1,
+                  ? const Color(0xFF334155)
+                  : const Color(0xFFE2E8F0),
+          width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10.r,
+            color:
+                themeManager.isDarkMode
+                    ? Colors.black.withOpacity(0.3)
+                    : const Color(0xFF6366F1).withOpacity(0.08),
+            blurRadius: 16.r,
             offset: Offset(0, 4.h),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8.r,
+            offset: Offset(0, 2.h),
           ),
         ],
       ),
@@ -269,16 +298,22 @@ class _CuentasScreenState extends State<CuentasScreen> {
               children: [
                 // Imagen/Icono de la cuenta
                 Container(
-                  width: 64.w,
-                  height: 64.h,
+                  width: 68.w,
+                  height: 68.h,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        const Color(0xFF667eea).withOpacity(0.2),
-                        const Color(0xFF764ba2).withOpacity(0.2),
+                        const Color(0xFF6366F1).withOpacity(0.15),
+                        const Color(0xFF8B5CF6).withOpacity(0.15),
                       ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(16.r),
+                    borderRadius: BorderRadius.circular(18.r),
+                    border: Border.all(
+                      color: const Color(0xFF6366F1).withOpacity(0.1),
+                      width: 1,
+                    ),
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16.r),
@@ -305,13 +340,14 @@ class _CuentasScreenState extends State<CuentasScreen> {
                     children: [
                       Text(
                         cuenta.nombre,
-                        style: GoogleFonts.lato(
-                          fontSize: 17.sp,
-                          fontWeight: FontWeight.bold,
+                        style: GoogleFonts.inter(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w700,
                           color:
                               themeManager.isDarkMode
                                   ? Colors.white
-                                  : Colors.black87,
+                                  : const Color(0xFF1E293B),
+                          letterSpacing: -0.3,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -372,10 +408,11 @@ class _CuentasScreenState extends State<CuentasScreen> {
                   children: [
                     Text(
                       _currencyFormat.format(cuenta.saldo),
-                      style: GoogleFonts.lato(
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.bold,
+                      style: GoogleFonts.inter(
+                        fontSize: 19.sp,
+                        fontWeight: FontWeight.w800,
                         color: saldoColor,
+                        letterSpacing: -0.5,
                       ),
                     ),
                     SizedBox(height: 8.h),
@@ -386,32 +423,37 @@ class _CuentasScreenState extends State<CuentasScreen> {
                         GestureDetector(
                           onTap: () => _mostrarDialogoEditarSaldo(cuenta),
                           child: Container(
-                            padding: EdgeInsets.all(8.r),
+                            padding: EdgeInsets.all(9.r),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF667eea).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8.r),
+                              gradient: LinearGradient(
+                                colors: [
+                                  const Color(0xFF6366F1).withOpacity(0.12),
+                                  const Color(0xFF8B5CF6).withOpacity(0.12),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(10.r),
                             ),
                             child: Icon(
-                              Icons.edit_outlined,
-                              size: 16.sp,
-                              color: const Color(0xFF667eea),
+                              Icons.edit_rounded,
+                              size: 17.sp,
+                              color: const Color(0xFF6366F1),
                             ),
                           ),
                         ),
-                        SizedBox(width: 8.w),
+                        SizedBox(width: 10.w),
                         // Botón eliminar
                         GestureDetector(
                           onTap: () => _confirmarEliminarCuenta(cuenta),
                           child: Container(
-                            padding: EdgeInsets.all(8.r),
+                            padding: EdgeInsets.all(9.r),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFef4444).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8.r),
+                              color: const Color(0xFFEF4444).withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(10.r),
                             ),
                             child: Icon(
-                              Icons.delete_outline,
-                              size: 16.sp,
-                              color: const Color(0xFFef4444),
+                              Icons.delete_rounded,
+                              size: 17.sp,
+                              color: const Color(0xFFEF4444),
                             ),
                           ),
                         ),
