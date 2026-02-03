@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:notificaciones/api_service.dart';
+import 'package:notificaciones/componentes/heads_up_notification.dart';
 import 'package:notificaciones/data_provider.dart';
 import 'package:notificaciones/models/Account.dart';
 import 'package:notificaciones/models/Categoria.dart';
@@ -479,35 +480,6 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
     if (_validateForm()) {
       setState(() => isRegistering = true);
 
-      // Mostrar feedback inmediato
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              SizedBox(
-                width: 16.sp,
-                height: 16.sp,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation(Colors.white),
-                ),
-              ),
-              SizedBox(width: 10.w),
-              Text(
-                'Registrando transacción...',
-                style: TextStyle(fontSize: 14.sp),
-              ),
-            ],
-          ),
-          backgroundColor: Colors.blue.shade700,
-          behavior: SnackBarBehavior.fixed,
-          duration: const Duration(seconds: 10),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.r),
-          ),
-        ),
-      );
-
       try {
         final amount = double.parse(_amountController.text.replaceAll(',', ''));
         final description = _descriptionController.text;
@@ -543,33 +515,14 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
           cuentaDestino:
               widget.transactionType == 'Traspasos' ? selectedAccountTo : null,
         );
-        String mensaje = 'Transacción registrada exitosamente';
+        String mensaje =
+            widget.transaction != null
+                ? 'Transacción editada correctamente'
+                : 'Transacción registrada exitosamente';
 
         if (!mounted) return;
 
-        // Cerrar el snackbar de loading
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
-        // Mostrar mensaje de éxito rápido
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white, size: 20.sp),
-                SizedBox(width: 10.w),
-                Expanded(
-                  child: Text(mensaje, style: TextStyle(fontSize: 14.sp)),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.green.shade600,
-            behavior: SnackBarBehavior.fixed,
-            duration: const Duration(milliseconds: 1500),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.r),
-            ),
-          ),
-        );
+        showSuccessNotification(context, message: mensaje);
 
         _resetForm();
 
@@ -579,10 +532,11 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
       } catch (e) {
         if (!mounted) return;
 
-        // Cerrar el snackbar de loading
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
-        _showErrorSnackBar('Error al registrar la transacción: $e');
+        showErrorNotification(
+          context,
+          message: 'Error al registrar la transacción',
+          subtitle: e.toString(),
+        );
       } finally {
         if (mounted) setState(() => isRegistering = false);
       }
@@ -599,23 +553,8 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
       selectedAccountFrom = null;
       selectedAccountTo = null;
     });
-  }
-
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.error_outline, color: Colors.white, size: 18.sp),
-            SizedBox(width: 10.w),
-            Expanded(child: Text(message, style: TextStyle(fontSize: 13.sp))),
-          ],
-        ),
-        backgroundColor: Colors.red.shade400,
-        behavior: SnackBarBehavior.fixed,
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    // Actualizar el estado inicial para evitar que detecte cambios después de resetear
+    _saveInitialState();
   }
 
   Widget _buildHeader(ThemeManager themeManager) {
@@ -751,6 +690,17 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
     }
   }
 
+  Widget _buildSectionTitle(String title, ThemeManager themeManager) {
+    return Text(
+      title,
+      style: GoogleFonts.lato(
+        fontSize: 13.sp,
+        fontWeight: FontWeight.bold,
+        color: themeManager.isDarkMode ? Colors.white : const Color(0xFF2D3436),
+      ),
+    );
+  }
+
   Widget _buildAmountField(ThemeManager themeManager) {
     final currentAmount =
         _amountController.text.isNotEmpty
@@ -796,17 +746,28 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
           ],
         ),
         child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+          padding: EdgeInsets.only(
+            left: 8.w,
+            right: 16.w,
+            top: 8.h,
+            bottom: 8.h,
+          ),
           child: Row(
             children: [
               Container(
-                margin: EdgeInsets.only(right: 12.w),
-                padding: EdgeInsets.all(6.r),
+                padding: EdgeInsets.all(8.r),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [widget.color, widget.color.withOpacity(0.7)],
                   ),
                   borderRadius: BorderRadius.circular(10.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: widget.color.withOpacity(0.3),
+                      blurRadius: 4.r,
+                      offset: Offset(0, 2.h),
+                    ),
+                  ],
                 ),
                 child: Icon(
                   Icons.attach_money_rounded,
@@ -814,33 +775,20 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                   size: 20.sp,
                 ),
               ),
+              SizedBox(width: 12.w),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Monto',
-                      style: GoogleFonts.openSans(
-                        fontSize: 12.sp,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      displayText.isNotEmpty ? displayText : '\$0.00',
-                      style: GoogleFonts.lato(
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.bold,
-                        color:
-                            displayText.isNotEmpty
-                                ? (themeManager.isDarkMode
-                                    ? Colors.white
-                                    : const Color(0xFF2D3436))
-                                : Colors.grey.shade400,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  displayText.isNotEmpty ? displayText : '\$0.00',
+                  style: GoogleFonts.lato(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.bold,
+                    color:
+                        displayText.isNotEmpty
+                            ? (themeManager.isDarkMode
+                                ? Colors.white
+                                : const Color(0xFF2D3436))
+                            : Colors.grey.shade400,
+                  ),
                 ),
               ),
             ],
@@ -872,11 +820,6 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
               themeManager.isDarkMode ? Colors.white : const Color(0xFF2D3436),
         ),
         decoration: InputDecoration(
-          labelText: 'Descripción',
-          labelStyle: GoogleFonts.openSans(
-            fontSize: 12.sp,
-            color: Colors.grey.shade600,
-          ),
           hintText: 'Ej: Compra de supermercado',
           hintStyle: GoogleFonts.openSans(
             color: Colors.grey.shade400,
@@ -922,7 +865,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
 
   Widget _buildDateSelector(ThemeManager themeManager) {
     return Container(
-      padding: EdgeInsets.all(14.r),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
       decoration: BoxDecoration(
         color: themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
         borderRadius: BorderRadius.circular(12.r),
@@ -937,12 +880,19 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
       child: Row(
         children: [
           Container(
-            padding: EdgeInsets.all(10.r),
+            padding: EdgeInsets.all(6.r),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [widget.color, widget.color.withOpacity(0.7)],
               ),
               borderRadius: BorderRadius.circular(10.r),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.color.withOpacity(0.3),
+                  blurRadius: 4.r,
+                  offset: Offset(0, 2.h),
+                ),
+              ],
             ),
             child: Icon(
               Icons.calendar_today_rounded,
@@ -952,39 +902,27 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
           ),
           SizedBox(width: 12.w),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Fecha',
-                  style: GoogleFonts.openSans(
-                    fontSize: 11.sp,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  DateFormat('EEEE, d MMMM yyyy', 'es_ES').format(selectedDate),
-                  style: GoogleFonts.lato(
-                    fontSize: 13.sp,
-                    fontWeight: FontWeight.w600,
-                    color:
-                        themeManager.isDarkMode
-                            ? Colors.white
-                            : const Color(0xFF2D3436),
-                  ),
-                ),
-              ],
+            child: Text(
+              DateFormat('EEEE, d MMMM yyyy', 'es_ES').format(selectedDate),
+              style: GoogleFonts.lato(
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w600,
+                color:
+                    themeManager.isDarkMode
+                        ? Colors.white
+                        : const Color(0xFF2D3436),
+              ),
             ),
           ),
           IconButton(
             icon: Icon(
               Icons.edit_calendar_rounded,
-              color: Colors.white,
+              color: widget.color,
               size: 20.sp,
             ),
             onPressed: () => _selectDate(context),
-            padding: EdgeInsets.all(8.r),
+            padding: EdgeInsets.zero,
+            constraints: BoxConstraints(),
           ),
         ],
       ),
@@ -1466,6 +1404,8 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                     ),
                                     SizedBox(height: 16.h),
                                   ],
+                                  _buildSectionTitle('Monto', themeManager),
+                                  SizedBox(height: 8.h),
                                   _buildAmountField(themeManager),
                                   if (amountError != null) ...[
                                     SizedBox(height: 6.h),
@@ -1496,6 +1436,11 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                     ),
                                   ],
                                   SizedBox(height: 12.h),
+                                  _buildSectionTitle(
+                                    'Descripción',
+                                    themeManager,
+                                  ),
+                                  SizedBox(height: 8.h),
                                   _buildDescriptionField(themeManager),
                                   if (descriptionError != null) ...[
                                     SizedBox(height: 6.h),
@@ -1526,6 +1471,8 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                     ),
                                   ],
                                   SizedBox(height: 12.h),
+                                  _buildSectionTitle('Fecha', themeManager),
+                                  SizedBox(height: 8.h),
                                   _buildDateSelector(themeManager),
                                   SizedBox(height: 16.h),
 

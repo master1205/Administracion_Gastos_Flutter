@@ -3,13 +3,15 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'componentes/heads_up_notification.dart';
 import 'models/Account.dart';
 import 'data_provider.dart';
 import 'theme_provider.dart';
 import 'api_service.dart';
 import 'services/firestore_service.dart';
-import 'widgets/select_amount.dart';
-import 'widgets/discard_changes_dialog.dart';
+import 'widgets/animations.dart';
+import 'crear_cuenta_screen.dart';
+import 'widgets/shimmer_loading.dart';
 
 class CuentasScreen extends StatefulWidget {
   const CuentasScreen({Key? key}) : super(key: key);
@@ -45,14 +47,7 @@ class _CuentasScreenState extends State<CuentasScreen> {
       ),
       body:
           isLoading
-              ? Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 3.w,
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFF4facfe),
-                  ),
-                ),
-              )
+              ? ShimmerList(shimmerItem: CuentaCardShimmer(), itemCount: 3)
               : cuentas.isEmpty
               ? _buildEmptyState()
               : ListView(
@@ -63,54 +58,66 @@ class _CuentasScreenState extends State<CuentasScreen> {
                   bottom: 16.r + MediaQuery.of(context).padding.bottom + 80.h,
                 ),
                 children: [
-                  _buildResumenTotal(cuentas, themeManager),
+                  FadeIn(
+                    duration: Duration(milliseconds: 300),
+                    child: _buildResumenTotal(cuentas, themeManager),
+                  ),
                   SizedBox(height: 20.h),
-                  ...cuentas.map(
-                    (cuenta) => _buildCuentaCard(cuenta, themeManager),
+                  ...cuentas.asMap().entries.map(
+                    (entry) => FadeIn(
+                      duration: Duration(milliseconds: 350 + (entry.key * 50)),
+                      child: _buildCuentaCard(entry.value, themeManager),
+                    ),
                   ),
                 ],
               ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _mostrarDialogoCrearCuenta(context),
-        backgroundColor:
-            themeManager.isDarkMode
-                ? const Color(0xFF2D2D2D)
-                : const Color(0xFF4facfe),
-        shape: const CircleBorder(),
-        child: Icon(Icons.add, color: Colors.white, size: 28.sp),
+      floatingActionButton: AnimateFABDelayed(
+        fab: FloatingActionButton(
+          onPressed: () => _mostrarDialogoCrearCuenta(context),
+          backgroundColor:
+              themeManager.isDarkMode
+                  ? const Color(0xFF2D2D2D)
+                  : const Color(0xFF4facfe),
+          shape: const CircleBorder(),
+          child: Icon(Icons.add, color: Colors.white, size: 28.sp),
+        ),
       ),
     );
   }
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.account_balance_wallet_outlined,
-            size: 100.sp,
-            color: Colors.grey.shade400,
-          ),
-          SizedBox(height: 20.h),
-          Text(
-            'No hay cuentas registradas',
-            style: GoogleFonts.lato(
-              fontSize: 18.sp,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey.shade600,
+      child: SlideFadeTransition(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ScaleIn(
+              child: Icon(
+                Icons.account_balance_wallet_outlined,
+                size: 100.sp,
+                color: Colors.grey.shade400,
+              ),
             ),
-          ),
-          SizedBox(height: 8.h),
-          Text(
-            'Contacta al administrador para agregar cuentas',
-            style: GoogleFonts.openSans(
-              fontSize: 14.sp,
-              color: Colors.grey.shade500,
+            SizedBox(height: 20.h),
+            Text(
+              'No hay cuentas registradas',
+              style: GoogleFonts.lato(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade600,
+              ),
             ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+            SizedBox(height: 8.h),
+            Text(
+              'Contacta al administrador para agregar cuentas',
+              style: GoogleFonts.openSans(
+                fontSize: 14.sp,
+                color: Colors.grey.shade500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -420,9 +427,130 @@ class _CuentasScreenState extends State<CuentasScreen> {
     );
   }
 
-  Future<void> _confirmarEliminarCuenta(Account cuenta) async {
+  Future<void> _mostrarDialogoCuentaAsociadaAMeta() async {
     final themeManager = Provider.of<ThemeManager>(context, listen: false);
 
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder:
+          (context) => Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 20.w,
+                    vertical: 16.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFf59e0b).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(24.r),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: const Color(0xFFf59e0b),
+                        size: 24.sp,
+                      ),
+                      SizedBox(width: 12.w),
+                      Expanded(
+                        child: Text(
+                          'Cuenta asociada a meta',
+                          style: GoogleFonts.lato(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.bold,
+                            color:
+                                themeManager.isDarkMode
+                                    ? Colors.white
+                                    : Colors.black87,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(
+                          Icons.close,
+                          color: Colors.grey.shade600,
+                          size: 20.sp,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
+                // Content
+                Padding(
+                  padding: EdgeInsets.all(28.r),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(20.r),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFf59e0b).withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.warning_amber_rounded,
+                          size: 48.sp,
+                          color: const Color(0xFFf59e0b),
+                        ),
+                      ),
+                      SizedBox(height: 24.h),
+                      Text(
+                        'Esta cuenta está asociada a una meta de ahorro. Puedes editarla o eliminarla desde la pantalla de Metas.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.openSans(
+                          fontSize: 14.sp,
+                          color: Colors.grey.shade600,
+                          height: 1.5,
+                        ),
+                      ),
+                      SizedBox(height: 24.h),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFf59e0b),
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(vertical: 14.h),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            'Entendido',
+                            style: GoogleFonts.lato(
+                              fontSize: 15.sp,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+    );
+  }
+
+  Future<void> _confirmarEliminarCuenta(Account cuenta) async {
     // Verificar si la cuenta está asociada a una meta
     final firestoreService = FirestoreService();
     final estaAsociada = await firestoreService.cuentaEstaAsociadaAMeta(
@@ -430,129 +558,11 @@ class _CuentasScreenState extends State<CuentasScreen> {
     );
 
     if (estaAsociada) {
-      // Mostrar mensaje informativo
-      await showModalBottomSheet(
-        context: context,
-        backgroundColor: Colors.transparent,
-        isScrollControlled: true,
-        builder:
-            (context) => Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Header
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 20.w,
-                      vertical: 16.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFf59e0b).withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(24.r),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.warning_amber_rounded,
-                          color: const Color(0xFFf59e0b),
-                          size: 24.sp,
-                        ),
-                        SizedBox(width: 12.w),
-                        Expanded(
-                          child: Text(
-                            'Cuenta asociada a meta',
-                            style: GoogleFonts.lato(
-                              fontSize: 18.sp,
-                              fontWeight: FontWeight.bold,
-                              color:
-                                  themeManager.isDarkMode
-                                      ? Colors.white
-                                      : Colors.black87,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: Icon(
-                            Icons.close,
-                            color: Colors.grey.shade600,
-                            size: 20.sp,
-                          ),
-                          padding: EdgeInsets.zero,
-                          constraints: BoxConstraints(),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Content
-                  Padding(
-                    padding: EdgeInsets.all(28.r),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(20.r),
-                          decoration: BoxDecoration(
-                            color: const Color(
-                              0xFFf59e0b,
-                            ).withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.warning_amber_rounded,
-                            size: 48.sp,
-                            color: const Color(0xFFf59e0b),
-                          ),
-                        ),
-                        SizedBox(height: 24.h),
-                        Text(
-                          'Esta cuenta está asociada a una meta de ahorro. Si deseas eliminarla, elimina la meta desde la pantalla de Metas y la cuenta se eliminará automáticamente.',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.openSans(
-                            fontSize: 14.sp,
-                            color: Colors.grey.shade600,
-                            height: 1.5,
-                          ),
-                        ),
-                        SizedBox(height: 24.h),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFf59e0b),
-                              foregroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(vertical: 14.h),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12.r),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: Text(
-                              'Entendido',
-                              style: GoogleFonts.lato(
-                                fontSize: 15.sp,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-      );
+      await _mostrarDialogoCuentaAsociadaAMeta();
       return;
     }
+
+    final themeManager = Provider.of<ThemeManager>(context, listen: false);
 
     final confirmar = await showModalBottomSheet<bool>(
       context: context,
@@ -757,28 +767,17 @@ class _CuentasScreenState extends State<CuentasScreen> {
         // Firebase notifica automáticamente vía Stream, no necesitamos recargar manualmente
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.check_circle, color: Colors.white, size: 20.sp),
-                  SizedBox(width: 10.w),
-                  Text('Cuenta eliminada exitosamente'),
-                ],
-              ),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.fixed,
-            ),
+          showSuccessNotification(
+            context,
+            message: 'Cuenta eliminada exitosamente',
           );
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al eliminar: $e'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.fixed,
-            ),
+          showErrorNotification(
+            context,
+            message: 'Error al eliminar',
+            subtitle: e.toString(),
           );
         }
       } finally {
@@ -787,1140 +786,32 @@ class _CuentasScreenState extends State<CuentasScreen> {
     }
   }
 
-  void _mostrarDialogoEditarSaldo(Account cuenta) {
-    final TextEditingController saldoController = TextEditingController(
-      text: cuenta.saldo.toStringAsFixed(2),
+  Future<void> _mostrarDialogoEditarSaldo(Account cuenta) async {
+    // Verificar si la cuenta está asociada a una meta
+    final firestoreService = FirestoreService();
+    final estaAsociada = await firestoreService.cuentaEstaAsociadaAMeta(
+      cuenta.id,
     );
-    final formKey = GlobalKey<FormState>();
 
-    // Variables para detectar cambios
-    final String initialSaldo = cuenta.saldo.toStringAsFixed(2);
-
-    // Función para verificar si hay cambios
-    bool hasChanges() {
-      return saldoController.text.replaceAll(',', '') != initialSaldo;
+    if (estaAsociada) {
+      await _mostrarDialogoCuentaAsociadaAMeta();
+      return;
     }
 
-    // Función para manejar el cierre del diálogo
-    Future<bool> onWillPop() async {
-      if (hasChanges()) {
-        final result = await DiscardChangesDialog.show(context);
-        return result;
-      }
-      return true;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        final themeManager = Provider.of<ThemeManager>(context, listen: false);
-
-        return StatefulBuilder(
-          builder:
-              (context, setDialogState) => PopScope(
-                canPop: false,
-                onPopInvoked: (didPop) async {
-                  if (didPop) return;
-                  final shouldPop = await onWillPop();
-                  if (shouldPop && context.mounted) {
-                    Navigator.of(context).pop();
-                  }
-                },
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    bottom:
-                        MediaQuery.of(context).viewInsets.bottom > 0
-                            ? MediaQuery.of(context).viewInsets.bottom
-                            : MediaQuery.of(context).viewPadding.bottom,
-                  ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(24.r),
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Header
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 20.w,
-                            vertical: 16.h,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(
-                              0xFF667eea,
-                            ).withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(24.r),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.edit_rounded,
-                                color: const Color(0xFF667eea),
-                                size: 24.sp,
-                              ),
-                              SizedBox(width: 12.w),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Editar Saldo',
-                                      style: GoogleFonts.lato(
-                                        fontSize: 18.sp,
-                                        fontWeight: FontWeight.bold,
-                                        color:
-                                            themeManager.isDarkMode
-                                                ? Colors.white
-                                                : Colors.black87,
-                                      ),
-                                    ),
-                                    Text(
-                                      cuenta.nombre,
-                                      style: GoogleFonts.openSans(
-                                        fontSize: 12.sp,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: () async {
-                                  final shouldClose = await onWillPop();
-                                  if (shouldClose && context.mounted) {
-                                    Navigator.pop(context);
-                                  }
-                                },
-                                icon: Icon(
-                                  Icons.close,
-                                  color: Colors.grey.shade600,
-                                  size: 20.sp,
-                                ),
-                                padding: EdgeInsets.zero,
-                                constraints: BoxConstraints(),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Content
-                        SingleChildScrollView(
-                          child: Padding(
-                            padding: EdgeInsets.all(24.r),
-                            child: Form(
-                              key: formKey,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    padding: EdgeInsets.all(16.r),
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          const Color(
-                                            0xFF667eea,
-                                          ).withOpacity(0.1),
-                                          const Color(
-                                            0xFF764ba2,
-                                          ).withOpacity(0.1),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(12.r),
-                                      border: Border.all(
-                                        color: const Color(
-                                          0xFF667eea,
-                                        ).withOpacity(0.3),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Column(
-                                      children: [
-                                        Text(
-                                          'Saldo Actual',
-                                          style: GoogleFonts.openSans(
-                                            fontSize: 12.sp,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        ),
-                                        SizedBox(height: 4.h),
-                                        Text(
-                                          _currencyFormat.format(cuenta.saldo),
-                                          style: GoogleFonts.lato(
-                                            fontSize: 28.sp,
-                                            fontWeight: FontWeight.bold,
-                                            color:
-                                                themeManager.isDarkMode
-                                                    ? Colors.white
-                                                    : Colors.black87,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  SizedBox(height: 24.h),
-                                  Text(
-                                    'Nuevo Saldo',
-                                    style: GoogleFonts.openSans(
-                                      fontSize: 14.sp,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                  SizedBox(height: 12.h),
-                                  GestureDetector(
-                                    onTap: () async {
-                                      final currentAmount =
-                                          saldoController.text.isNotEmpty
-                                              ? double.tryParse(
-                                                    saldoController.text
-                                                        .replaceAll(',', ''),
-                                                  ) ??
-                                                  0.0
-                                              : cuenta.saldo;
-
-                                      final result =
-                                          await showSelectAmountBottomSheet(
-                                            context,
-                                            title: 'Ingresa el nuevo saldo',
-                                            initialAmount: currentAmount,
-                                            allowZero: true,
-                                            currencySymbol: '\$',
-                                          );
-
-                                      if (result != null) {
-                                        setDialogState(() {
-                                          saldoController.text = result
-                                              .toStringAsFixed(2);
-                                        });
-                                      }
-                                    },
-                                    child: Container(
-                                      padding: EdgeInsets.all(20.r),
-                                      decoration: BoxDecoration(
-                                        color: const Color(
-                                          0xFF667eea,
-                                        ).withOpacity(0.05),
-                                        borderRadius: BorderRadius.circular(
-                                          16.r,
-                                        ),
-                                        border: Border.all(
-                                          color: const Color(
-                                            0xFF667eea,
-                                          ).withOpacity(0.3),
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            '\$ ',
-                                            style: GoogleFonts.lato(
-                                              fontSize: 28.sp,
-                                              fontWeight: FontWeight.bold,
-                                              color: const Color(0xFF667eea),
-                                            ),
-                                          ),
-                                          Text(
-                                            saldoController.text.isNotEmpty
-                                                ? NumberFormat.currency(
-                                                  locale: 'es_MX',
-                                                  symbol: '',
-                                                  decimalDigits: 2,
-                                                ).format(
-                                                  double.tryParse(
-                                                        saldoController.text
-                                                            .replaceAll(
-                                                              ',',
-                                                              '',
-                                                            ),
-                                                      ) ??
-                                                      0.0,
-                                                )
-                                                : '0.00',
-                                            style: GoogleFonts.lato(
-                                              fontSize: 28.sp,
-                                              fontWeight: FontWeight.bold,
-                                              color:
-                                                  saldoController
-                                                          .text
-                                                          .isNotEmpty
-                                                      ? const Color(0xFF667eea)
-                                                      : Colors.grey.shade400,
-                                            ),
-                                          ),
-                                          SizedBox(width: 12.w),
-                                          Icon(
-                                            Icons.edit_rounded,
-                                            color: const Color(0xFF667eea),
-                                            size: 24.sp,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(height: 24.h),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: OutlinedButton(
-                                          onPressed:
-                                              () => Navigator.pop(context),
-                                          style: OutlinedButton.styleFrom(
-                                            padding: EdgeInsets.symmetric(
-                                              vertical: 16.h,
-                                            ),
-                                            side: BorderSide(
-                                              color: Colors.grey.shade300,
-                                              width: 2,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12.r),
-                                            ),
-                                          ),
-                                          child: Text(
-                                            'Cancelar',
-                                            style: GoogleFonts.lato(
-                                              fontSize: 15.sp,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.grey.shade700,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      SizedBox(width: 12.w),
-                                      Expanded(
-                                        flex: 2,
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            gradient: const LinearGradient(
-                                              colors: [
-                                                Color(0xFF667eea),
-                                                Color(0xFF764ba2),
-                                              ],
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              12.r,
-                                            ),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: const Color(
-                                                  0xFF667eea,
-                                                ).withOpacity(0.4),
-                                                blurRadius: 12.r,
-                                                offset: Offset(0, 6.h),
-                                              ),
-                                            ],
-                                          ),
-                                          child: ElevatedButton(
-                                            onPressed: () async {
-                                              if (formKey.currentState!
-                                                  .validate()) {
-                                                Navigator.pop(context);
-                                                final cleanValue =
-                                                    saldoController.text
-                                                        .trim()
-                                                        .replaceAll(',', '');
-                                                await _actualizarSaldo(
-                                                  cuenta,
-                                                  double.parse(cleanValue),
-                                                );
-                                              }
-                                            },
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor:
-                                                  Colors.transparent,
-                                              shadowColor: Colors.transparent,
-                                              padding: EdgeInsets.symmetric(
-                                                vertical: 16.h,
-                                              ),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(12.r),
-                                              ),
-                                            ),
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  Icons.check_circle_outline,
-                                                  size: 20.sp,
-                                                ),
-                                                SizedBox(width: 8.w),
-                                                Text(
-                                                  'Actualizar',
-                                                  style: GoogleFonts.lato(
-                                                    fontSize: 15.sp,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-        );
-      },
+    // Si no está asociada, permitir editar
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CrearCuentaScreen(cuenta: cuenta),
+      ),
     );
-  }
-
-  Future<void> _actualizarSaldo(Account cuenta, double nuevoSaldo) async {
-    setState(() => isLoading = true);
-    try {
-      final apiService = ApiService();
-      await apiService.updateAccountBalance(
-        cuentaId: cuenta.id,
-        nuevoSaldo: nuevoSaldo,
-      );
-
-      // Firebase notifica automáticamente vía Stream, no necesitamos recargar manualmente
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(
-                  Icons.check_circle_outline,
-                  color: Colors.white,
-                  size: 20.sp,
-                ),
-                SizedBox(width: 10.w),
-                Expanded(
-                  child: Text(
-                    'Saldo actualizado exitosamente',
-                    style: GoogleFonts.openSans(fontSize: 13.sp),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.green.shade600,
-            behavior: SnackBarBehavior.fixed,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.r),
-            ),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.error_outline, color: Colors.white, size: 20.sp),
-                SizedBox(width: 10.w),
-                Expanded(
-                  child: Text(
-                    'Error al actualizar: $e',
-                    style: GoogleFonts.openSans(fontSize: 13.sp),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.red.shade600,
-            behavior: SnackBarBehavior.fixed,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.r),
-            ),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => isLoading = false);
-    }
   }
 
   // Diálogo para crear una nueva cuenta
   Future<void> _mostrarDialogoCrearCuenta(BuildContext context) async {
-    final nombreController = TextEditingController();
-    final saldoController = TextEditingController(text: '0');
-    final beneficiarioController = TextEditingController();
-    String tipoSeleccionado = 'efectivo';
-
-    // Variables para detectar cambios
-    final String initialNombre = '';
-    final String initialSaldo = '0';
-    final String initialBeneficiario = '';
-    final String initialTipo = 'efectivo';
-
-    // Función para verificar si hay cambios
-    bool hasChanges() {
-      return nombreController.text.trim() != initialNombre ||
-          saldoController.text.replaceAll(',', '') != initialSaldo ||
-          beneficiarioController.text.trim() != initialBeneficiario ||
-          tipoSeleccionado != initialTipo;
-    }
-
-    // Función para manejar el cierre del diálogo
-    Future<bool> onWillPop() async {
-      if (hasChanges()) {
-        final result = await DiscardChangesDialog.show(context);
-        return result;
-      }
-      return true;
-    }
-
-    final tipos = ['efectivo', 'banco', 'tarjeta'];
-    final iconos = {'efectivo': '💵', 'banco': '🏦', 'tarjeta': '💳'};
-
-    return showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        final themeManager = Provider.of<ThemeManager>(context, listen: false);
-
-        return StatefulBuilder(
-          builder:
-              (context, setDialogState) => PopScope(
-                canPop: false,
-                onPopInvoked: (didPop) async {
-                  if (didPop) return;
-                  final shouldPop = await onWillPop();
-                  if (shouldPop && context.mounted) {
-                    Navigator.of(context).pop();
-                  }
-                },
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    bottom:
-                        MediaQuery.of(context).viewInsets.bottom > 0
-                            ? MediaQuery.of(context).viewInsets.bottom
-                            : MediaQuery.of(context).viewPadding.bottom,
-                  ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(24.r),
-                      ),
-                    ),
-                    constraints: BoxConstraints(
-                      maxHeight: MediaQuery.of(context).size.height * 0.9,
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Header
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 20.w,
-                            vertical: 16.h,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(
-                              0xFF667eea,
-                            ).withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(24.r),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.add_card_rounded,
-                                color: const Color(0xFF667eea),
-                                size: 24.sp,
-                              ),
-                              SizedBox(width: 12.w),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Nueva Cuenta',
-                                      style: GoogleFonts.lato(
-                                        fontSize: 18.sp,
-                                        fontWeight: FontWeight.bold,
-                                        color:
-                                            themeManager.isDarkMode
-                                                ? Colors.white
-                                                : Colors.black87,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Completa la información',
-                                      style: GoogleFonts.openSans(
-                                        fontSize: 11.sp,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: () async {
-                                  final shouldClose = await onWillPop();
-                                  if (shouldClose && context.mounted) {
-                                    Navigator.pop(context);
-                                  }
-                                },
-                                icon: Icon(
-                                  Icons.close,
-                                  color: Colors.grey.shade600,
-                                  size: 20.sp,
-                                ),
-                                padding: EdgeInsets.zero,
-                                constraints: BoxConstraints(),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Form content con Expanded y SingleChildScrollView
-                        Expanded(
-                          child: SingleChildScrollView(
-                            padding: EdgeInsets.all(24.r),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Nombre de la cuenta
-                                Text(
-                                  'Nombre de la cuenta',
-                                  style: GoogleFonts.lato(
-                                    fontSize: 13.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.grey.shade700,
-                                  ),
-                                ),
-                                SizedBox(height: 8.h),
-                                TextField(
-                                  controller: nombreController,
-                                  style: GoogleFonts.openSans(
-                                    fontSize: 15.sp,
-                                    color:
-                                        themeManager.isDarkMode
-                                            ? Colors.white
-                                            : Colors.black87,
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: 'Ej: Efectivo, Banco BBVA',
-                                    hintStyle: GoogleFonts.openSans(
-                                      fontSize: 14.sp,
-                                      color: Colors.grey.shade400,
-                                    ),
-                                    prefixIcon: Icon(
-                                      Icons.account_balance_wallet_outlined,
-                                      size: 20.sp,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12.r),
-                                      borderSide: BorderSide(
-                                        color: Colors.grey.shade300,
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12.r),
-                                      borderSide: BorderSide(
-                                        color: Colors.grey.shade300,
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12.r),
-                                      borderSide: const BorderSide(
-                                        color: Color(0xFF667eea),
-                                        width: 2,
-                                      ),
-                                    ),
-                                    filled: true,
-                                    fillColor:
-                                        themeManager.isDarkMode
-                                            ? Colors.grey.shade700
-                                            : Colors.grey.shade50,
-                                  ),
-                                  textCapitalization: TextCapitalization.words,
-                                ),
-                                SizedBox(height: 20.h),
-
-                                // Tipo de cuenta con cards
-                                Text(
-                                  'Tipo de cuenta',
-                                  style: GoogleFonts.lato(
-                                    fontSize: 13.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.grey.shade700,
-                                  ),
-                                ),
-                                SizedBox(height: 12.h),
-                                Row(
-                                  children:
-                                      tipos.map((tipo) {
-                                        final isSelected =
-                                            tipoSeleccionado == tipo;
-                                        return Expanded(
-                                          child: GestureDetector(
-                                            onTap:
-                                                () => setDialogState(
-                                                  () => tipoSeleccionado = tipo,
-                                                ),
-                                            child: Container(
-                                              margin: EdgeInsets.symmetric(
-                                                horizontal: 4.w,
-                                              ),
-                                              padding: EdgeInsets.symmetric(
-                                                vertical: 14.h,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                gradient:
-                                                    isSelected
-                                                        ? const LinearGradient(
-                                                          colors: [
-                                                            Color(0xFF667eea),
-                                                            Color(0xFF764ba2),
-                                                          ],
-                                                        )
-                                                        : null,
-                                                color:
-                                                    isSelected
-                                                        ? null
-                                                        : Colors.grey.shade100,
-                                                borderRadius:
-                                                    BorderRadius.circular(12.r),
-                                                border: Border.all(
-                                                  color:
-                                                      isSelected
-                                                          ? Colors.transparent
-                                                          : Colors
-                                                              .grey
-                                                              .shade300,
-                                                  width: 1.5,
-                                                ),
-                                              ),
-                                              child: Column(
-                                                children: [
-                                                  Text(
-                                                    iconos[tipo]!,
-                                                    style: TextStyle(
-                                                      fontSize: 26.sp,
-                                                    ),
-                                                  ),
-                                                  SizedBox(height: 6.h),
-                                                  Text(
-                                                    tipo.toUpperCase(),
-                                                    style: GoogleFonts.lato(
-                                                      fontSize: 11.sp,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color:
-                                                          isSelected
-                                                              ? Colors.white
-                                                              : Colors
-                                                                  .grey
-                                                                  .shade700,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      }).toList(),
-                                ),
-                                SizedBox(height: 20.h),
-
-                                // Beneficiario
-                                Text(
-                                  'Beneficiario (opcional)',
-                                  style: GoogleFonts.lato(
-                                    fontSize: 13.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.grey.shade700,
-                                  ),
-                                ),
-                                SizedBox(height: 8.h),
-                                TextField(
-                                  controller: beneficiarioController,
-                                  style: GoogleFonts.openSans(
-                                    fontSize: 15.sp,
-                                    color:
-                                        themeManager.isDarkMode
-                                            ? Colors.white
-                                            : Colors.black87,
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: 'Ej: Juan Pérez',
-                                    hintStyle: GoogleFonts.openSans(
-                                      fontSize: 14.sp,
-                                      color: Colors.grey.shade400,
-                                    ),
-                                    prefixIcon: Icon(
-                                      Icons.person_outline,
-                                      size: 20.sp,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12.r),
-                                      borderSide: BorderSide(
-                                        color: Colors.grey.shade300,
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12.r),
-                                      borderSide: BorderSide(
-                                        color: Colors.grey.shade300,
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12.r),
-                                      borderSide: const BorderSide(
-                                        color: Color(0xFF667eea),
-                                        width: 2,
-                                      ),
-                                    ),
-                                    filled: true,
-                                    fillColor:
-                                        themeManager.isDarkMode
-                                            ? Colors.grey.shade700
-                                            : Colors.grey.shade50,
-                                  ),
-                                  textCapitalization: TextCapitalization.words,
-                                ),
-                                SizedBox(height: 20.h),
-
-                                // Saldo inicial
-                                Text(
-                                  'Saldo inicial',
-                                  style: GoogleFonts.lato(
-                                    fontSize: 13.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.grey.shade700,
-                                  ),
-                                ),
-                                SizedBox(height: 8.h),
-                                GestureDetector(
-                                  onTap: () async {
-                                    final currentAmount =
-                                        saldoController.text.isNotEmpty
-                                            ? double.tryParse(
-                                                  saldoController.text
-                                                      .replaceAll(',', ''),
-                                                ) ??
-                                                0.0
-                                            : 0.0;
-
-                                    final result =
-                                        await showSelectAmountBottomSheet(
-                                          context,
-                                          title: 'Ingresa el saldo inicial',
-                                          initialAmount: currentAmount,
-                                          allowZero: true,
-                                          currencySymbol: '\$',
-                                        );
-
-                                    if (result != null) {
-                                      setDialogState(() {
-                                        saldoController.text = result
-                                            .toStringAsFixed(2);
-                                      });
-                                    }
-                                  },
-                                  child: Container(
-                                    padding: EdgeInsets.all(16.r),
-                                    decoration: BoxDecoration(
-                                      color: const Color(
-                                        0xFF667eea,
-                                      ).withOpacity(0.05),
-                                      borderRadius: BorderRadius.circular(12.r),
-                                      border: Border.all(
-                                        color: const Color(
-                                          0xFF667eea,
-                                        ).withOpacity(0.3),
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Text(
-                                          '\$ ',
-                                          style: GoogleFonts.lato(
-                                            fontSize: 20.sp,
-                                            fontWeight: FontWeight.bold,
-                                            color: const Color(0xFF667eea),
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: Text(
-                                            saldoController.text.isNotEmpty
-                                                ? NumberFormat.currency(
-                                                  locale: 'es_MX',
-                                                  symbol: '',
-                                                  decimalDigits: 2,
-                                                ).format(
-                                                  double.tryParse(
-                                                        saldoController.text
-                                                            .replaceAll(
-                                                              ',',
-                                                              '',
-                                                            ),
-                                                      ) ??
-                                                      0.0,
-                                                )
-                                                : '0.00',
-                                            style: GoogleFonts.lato(
-                                              fontSize: 20.sp,
-                                              fontWeight: FontWeight.bold,
-                                              color:
-                                                  saldoController
-                                                          .text
-                                                          .isNotEmpty
-                                                      ? const Color(0xFF667eea)
-                                                      : Colors.grey.shade400,
-                                            ),
-                                          ),
-                                        ),
-                                        Icon(
-                                          Icons.edit_rounded,
-                                          color: const Color(0xFF667eea),
-                                          size: 20.sp,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(height: 20.h),
-
-                                // Botones de acción
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: OutlinedButton(
-                                        onPressed: () => Navigator.pop(context),
-                                        style: OutlinedButton.styleFrom(
-                                          padding: EdgeInsets.symmetric(
-                                            vertical: 14.h,
-                                          ),
-                                          side: BorderSide(
-                                            color: Colors.grey.shade300,
-                                            width: 1.5,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              12.r,
-                                            ),
-                                          ),
-                                        ),
-                                        child: Text(
-                                          'Cancelar',
-                                          style: GoogleFonts.lato(
-                                            fontSize: 15.sp,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.grey.shade700,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(width: 12.w),
-                                    Expanded(
-                                      flex: 2,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          gradient: const LinearGradient(
-                                            colors: [
-                                              Color(0xFF667eea),
-                                              Color(0xFF764ba2),
-                                            ],
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            12.r,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color(
-                                                0xFF667eea,
-                                              ).withOpacity(0.4),
-                                              blurRadius: 12.r,
-                                              offset: Offset(0, 6.h),
-                                            ),
-                                          ],
-                                        ),
-                                        child: ElevatedButton(
-                                          onPressed: () async {
-                                            if (nombreController.text
-                                                .trim()
-                                                .isEmpty) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    'Ingresa un nombre para la cuenta',
-                                                  ),
-                                                  behavior:
-                                                      SnackBarBehavior.fixed,
-                                                ),
-                                              );
-                                              return;
-                                            }
-
-                                            // Guardar el context del Scaffold antes de cerrar el diálogo
-                                            final scaffoldContext =
-                                                this.context;
-
-                                            Navigator.pop(context);
-
-                                            // Mostrar loading
-                                            showDialog(
-                                              context: scaffoldContext,
-                                              barrierDismissible: false,
-                                              builder:
-                                                  (loadingContext) => Center(
-                                                    child:
-                                                        CircularProgressIndicator(),
-                                                  ),
-                                            );
-
-                                            try {
-                                              final apiService = ApiService();
-                                              final cleanValue = saldoController
-                                                  .text
-                                                  .replaceAll(',', '');
-                                              final saldo =
-                                                  double.tryParse(cleanValue) ??
-                                                  0.0;
-
-                                              // Generar número de tarjeta aleatorio (últimos 4 dígitos)
-                                              final random =
-                                                  DateTime.now()
-                                                      .millisecondsSinceEpoch %
-                                                  10000;
-                                              final numeroTarjeta =
-                                                  '****${random.toString().padLeft(4, '0')}';
-
-                                              await apiService.crearCuenta(
-                                                nombre:
-                                                    nombreController.text
-                                                        .trim(),
-                                                tipo: tipoSeleccionado,
-                                                saldoInicial: saldo,
-                                                imagen:
-                                                    iconos[tipoSeleccionado]!,
-                                                beneficiario:
-                                                    beneficiarioController.text
-                                                        .trim(),
-                                                numeroTarjeta: numeroTarjeta,
-                                              );
-
-                                              // Firebase notifica automáticamente vía Stream, no necesitamos recargar manualmente
-
-                                              if (mounted) {
-                                                Navigator.of(
-                                                  scaffoldContext,
-                                                ).pop(); // Cerrar loading
-                                                ScaffoldMessenger.of(
-                                                  scaffoldContext,
-                                                ).showSnackBar(
-                                                  SnackBar(
-                                                    content: Row(
-                                                      children: [
-                                                        Icon(
-                                                          Icons.check_circle,
-                                                          color: Colors.white,
-                                                        ),
-                                                        SizedBox(width: 10.w),
-                                                        Text(
-                                                          'Cuenta creada exitosamente',
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    backgroundColor:
-                                                        Colors.green,
-                                                    behavior:
-                                                        SnackBarBehavior.fixed,
-                                                  ),
-                                                );
-                                              }
-                                            } catch (e) {
-                                              if (mounted) {
-                                                Navigator.of(
-                                                  scaffoldContext,
-                                                ).pop(); // Cerrar loading
-                                                ScaffoldMessenger.of(
-                                                  scaffoldContext,
-                                                ).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text('Error: $e'),
-                                                    backgroundColor: Colors.red,
-                                                    behavior:
-                                                        SnackBarBehavior.fixed,
-                                                  ),
-                                                );
-                                              }
-                                            }
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.transparent,
-                                            shadowColor: Colors.transparent,
-                                            padding: EdgeInsets.symmetric(
-                                              vertical: 14.h,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12.r),
-                                            ),
-                                          ),
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                Icons.add_circle_outline,
-                                                size: 20.sp,
-                                              ),
-                                              SizedBox(width: 8.w),
-                                              Text(
-                                                'Crear Cuenta',
-                                                style: GoogleFonts.lato(
-                                                  fontSize: 15.sp,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-        );
-      },
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => CrearCuentaScreen()),
     );
   }
 }

@@ -20,6 +20,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import 'dart:async';
 import 'services/firestore_service.dart';
+import 'widgets/animations.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -748,7 +749,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           Navigator.pop(context);
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const CategoriasScreen()),
+            MaterialPageRoute(
+              builder:
+                  (context) =>
+                      const CategoriasScreen(headerColor: Color(0xFF667eea)),
+            ),
           );
         },
       ),
@@ -775,7 +780,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           Navigator.pop(context);
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const MetasScreen()),
+            MaterialPageRoute(
+              builder:
+                  (context) =>
+                      const MetasScreen(headerColor: Color(0xFF4CAF50)),
+            ),
           );
         },
       ),
@@ -920,107 +929,111 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 itemCount: menuItems.length,
                 itemBuilder: (context, index) {
                   final item = menuItems[index];
-                  return Container(
-                    margin: EdgeInsets.only(bottom: 10.h),
-                    decoration: BoxDecoration(
-                      color:
-                          themeManager.isDarkMode
-                              ? Colors.grey.shade800.withOpacity(0.5)
-                              : Colors.white,
-                      borderRadius: BorderRadius.circular(14.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color:
-                              themeManager.isDarkMode
-                                  ? Colors.black.withOpacity(0.2)
-                                  : Colors.grey.withOpacity(0.1),
-                          blurRadius: 8.r,
-                          offset: Offset(0, 3.h),
-                        ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: item.onTap,
+                  return FadeIn(
+                    duration: Duration(milliseconds: 300 + (index * 50)),
+                    child: Container(
+                      margin: EdgeInsets.only(bottom: 10.h),
+                      decoration: BoxDecoration(
+                        color:
+                            themeManager.isDarkMode
+                                ? Colors.grey.shade800.withOpacity(0.5)
+                                : Colors.white,
                         borderRadius: BorderRadius.circular(14.r),
-                        child: Padding(
-                          padding: EdgeInsets.all(14.r),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.all(10.r),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      item.color,
-                                      item.color.withOpacity(0.7),
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                themeManager.isDarkMode
+                                    ? Colors.black.withOpacity(0.2)
+                                    : Colors.grey.withOpacity(0.1),
+                            blurRadius: 8.r,
+                            offset: Offset(0, 3.h),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: item.onTap,
+                          borderRadius: BorderRadius.circular(14.r),
+                          child: Padding(
+                            padding: EdgeInsets.all(14.r),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(10.r),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        item.color,
+                                        item.color.withOpacity(0.7),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(10.r),
+                                  ),
+                                  child: Icon(
+                                    item.icon,
+                                    color: Colors.white,
+                                    size: 20.sp,
+                                  ),
+                                ),
+                                SizedBox(width: 14.w),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.title,
+                                        style: TextStyle(
+                                          fontSize: 14.sp,
+                                          fontWeight: FontWeight.bold,
+                                          color:
+                                              themeManager.isDarkMode
+                                                  ? Colors.white
+                                                  : const Color(0xFF2D3436),
+                                        ),
+                                      ),
+                                      SizedBox(height: 2.h),
+                                      Text(
+                                        item.subtitle,
+                                        style: TextStyle(
+                                          fontSize: 11.sp,
+                                          color:
+                                              themeManager.isDarkMode
+                                                  ? Colors.grey.shade400
+                                                  : Colors.grey.shade600,
+                                        ),
+                                      ),
                                     ],
                                   ),
-                                  borderRadius: BorderRadius.circular(10.r),
                                 ),
-                                child: Icon(
-                                  item.icon,
-                                  color: Colors.white,
-                                  size: 20.sp,
-                                ),
-                              ),
-                              SizedBox(width: 14.w),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item.title,
+                                if (item.badge != null)
+                                  Container(
+                                    padding: EdgeInsets.all(6.r),
+                                    decoration: BoxDecoration(
+                                      color: item.color,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Text(
+                                      item.badge!,
                                       style: TextStyle(
-                                        fontSize: 14.sp,
+                                        color: Colors.white,
+                                        fontSize: 10.sp,
                                         fontWeight: FontWeight.bold,
-                                        color:
-                                            themeManager.isDarkMode
-                                                ? Colors.white
-                                                : const Color(0xFF2D3436),
                                       ),
                                     ),
-                                    SizedBox(height: 2.h),
-                                    Text(
-                                      item.subtitle,
-                                      style: TextStyle(
-                                        fontSize: 11.sp,
-                                        color:
-                                            themeManager.isDarkMode
-                                                ? Colors.grey.shade400
-                                                : Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (item.badge != null)
-                                Container(
-                                  padding: EdgeInsets.all(6.r),
-                                  decoration: BoxDecoration(
-                                    color: item.color,
-                                    shape: BoxShape.circle,
+                                  )
+                                else
+                                  Icon(
+                                    Icons.chevron_right_rounded,
+                                    color:
+                                        themeManager.isDarkMode
+                                            ? Colors.grey.shade600
+                                            : Colors.grey.shade400,
+                                    size: 18.sp,
                                   ),
-                                  child: Text(
-                                    item.badge!,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10.sp,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                )
-                              else
-                                Icon(
-                                  Icons.chevron_right_rounded,
-                                  color:
-                                      themeManager.isDarkMode
-                                          ? Colors.grey.shade600
-                                          : Colors.grey.shade400,
-                                  size: 18.sp,
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),

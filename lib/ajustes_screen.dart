@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'componentes/heads_up_notification.dart';
 import 'theme_provider.dart';
 import 'services/biometric_service.dart';
 
@@ -566,12 +567,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
   }
 
   void _configurarPIN() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Función en desarrollo'),
-        backgroundColor: Colors.orange,
-      ),
-    );
+    showErrorNotification(context, message: 'Función en desarrollo');
   }
 
   Future<void> _toggleBiometric(bool value) async {
@@ -587,22 +583,16 @@ class _AjustesScreenState extends State<AjustesScreen> {
         setState(() => biometricEnabled = true);
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Autenticación biométrica activada'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
-            ),
+          showSuccessNotification(
+            context,
+            message: 'Autenticación biométrica activada',
           );
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('No se pudo verificar tu identidad'),
-              backgroundColor: Colors.red,
-              duration: Duration(seconds: 2),
-            ),
+          showErrorNotification(
+            context,
+            message: 'No se pudo verificar tu identidad',
           );
         }
       }
@@ -612,12 +602,9 @@ class _AjustesScreenState extends State<AjustesScreen> {
       setState(() => biometricEnabled = false);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Autenticación biométrica desactivada'),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 2),
-          ),
+        showSuccessNotification(
+          context,
+          message: 'Autenticación biométrica desactivada',
         );
       }
     }
@@ -655,8 +642,9 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 ),
                 onTap: () {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Exportando a Excel...')),
+                  showSuccessNotification(
+                    context,
+                    message: 'Exportando a Excel...',
                   );
                 },
               ),
@@ -671,8 +659,9 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 ),
                 onTap: () {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Exportando a CSV...')),
+                  showSuccessNotification(
+                    context,
+                    message: 'Exportando a CSV...',
                   );
                 },
               ),
@@ -687,8 +676,9 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 ),
                 onTap: () {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Exportando a PDF...')),
+                  showSuccessNotification(
+                    context,
+                    message: 'Exportando a PDF...',
                   );
                 },
               ),
@@ -741,12 +731,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
     );
 
     if (confirmar == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Caché limpiado correctamente'),
-          backgroundColor: Colors.green.shade600,
-        ),
-      );
+      showSuccessNotification(context, message: 'Caché limpiado correctamente');
     }
   }
 
@@ -827,12 +812,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
   }
 
   void _calificarApp() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Redirigiendo a la tienda...'),
-        backgroundColor: Colors.blue.shade600,
-      ),
-    );
+    showSuccessNotification(context, message: 'Redirigiendo a la tienda...');
   }
 
   void _cerrarSesion() async {
@@ -877,12 +857,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
     );
 
     if (confirmar == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Sesión cerrada'),
-          backgroundColor: Colors.orange.shade600,
-        ),
-      );
+      showSuccessNotification(context, message: 'Sesión cerrada');
     }
   }
 }

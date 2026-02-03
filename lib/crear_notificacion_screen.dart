@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'componentes/heads_up_notification.dart';
 import 'models/NotificacionPersonalizada.dart';
 import 'theme_provider.dart';
 
@@ -124,12 +125,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
 
       Navigator.pop(context, notificacion);
     } else if (_selectedDays.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Selecciona al menos un día'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      showErrorNotification(context, message: 'Selecciona al menos un día');
     }
   }
 

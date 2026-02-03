@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'componentes/heads_up_notification.dart';
 import 'models/NotificacionPersonalizada.dart';
 import 'theme_provider.dart';
 import 'crear_notificacion_screen.dart';
@@ -141,23 +142,17 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Notificación programada correctamente'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.fixed,
-          ),
+        showSuccessNotification(
+          context,
+          message: 'Notificación programada correctamente',
         );
       }
     } catch (e) {
       print('Error al programar notificación: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al programar notificación'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.fixed,
-          ),
+        showErrorNotification(
+          context,
+          message: 'Error al programar notificación',
         );
       }
     }
@@ -206,13 +201,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
       await _guardarNotificaciones();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Notificación eliminada'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.fixed,
-          ),
-        );
+        showSuccessNotification(context, message: 'Notificación eliminada');
       }
     }
   }
@@ -584,12 +573,9 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                           payload: 'test_${notif.id}',
                         );
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Notificación enviada'),
-                              duration: Duration(seconds: 1),
-                              behavior: SnackBarBehavior.fixed,
-                            ),
+                          showSuccessNotification(
+                            context,
+                            message: 'Notificación enviada',
                           );
                         }
                       },

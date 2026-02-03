@@ -7,6 +7,7 @@ import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'componentes/heads_up_notification.dart';
 import 'utils/animation_utils.dart';
 import 'componentes/empty_states.dart';
 
@@ -116,26 +117,7 @@ class ReportesScreenState extends State<ReportesScreen>
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(
-                  Icons.error,
-                  color: Colors.white,
-                  size: 18.sp,
-                ), // ✅ REDUCIDO de 20
-                SizedBox(width: 10.w), // ✅ REDUCIDO de 12
-                const Expanded(child: Text('Error al abrir el reporte')),
-              ],
-            ),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.fixed,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
-            ),
-          ),
-        );
+        showErrorNotification(context, message: 'Error al abrir el reporte');
       }
     }
   }

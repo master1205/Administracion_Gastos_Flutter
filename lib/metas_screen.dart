@@ -12,9 +12,15 @@ import 'theme_provider.dart';
 import 'services/firestore_service.dart';
 import 'widgets/select_amount.dart';
 import 'widgets/discard_changes_dialog.dart';
+import 'widgets/animations.dart';
+import 'crear_meta_screen.dart';
+import 'widgets/shimmer_loading.dart';
+import 'componentes/heads_up_notification.dart';
 
 class MetasScreen extends StatefulWidget {
-  const MetasScreen({Key? key}) : super(key: key);
+  final Color? headerColor;
+
+  const MetasScreen({Key? key, this.headerColor}) : super(key: key);
 
   @override
   State<MetasScreen> createState() => _MetasScreenState();
@@ -66,11 +72,9 @@ class _MetasScreenState extends State<MetasScreen> {
   }
 
   Future<void> _crearMeta() async {
-    final resultado = await showModalBottomSheet<Meta>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _CrearMetaDialog(),
+    final resultado = await Navigator.push<Meta>(
+      context,
+      MaterialPageRoute(builder: (context) => CrearMetaScreen()),
     );
 
     if (resultado != null) {
@@ -125,23 +129,19 @@ class _MetasScreenState extends State<MetasScreen> {
 
         if (mounted) {
           Navigator.pop(context); // Cerrar loading
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Meta y cuenta creadas exitosamente'),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.fixed,
-            ),
+          showSuccessNotification(
+            context,
+            message: 'Meta creada exitosamente',
+            subtitle: '1 meta',
           );
         }
       } on ApiException catch (e) {
         if (mounted) {
           Navigator.pop(context); // Cerrar loading
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: ${e.message}'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.fixed,
-            ),
+          showErrorNotification(
+            context,
+            message: 'Error al crear meta',
+            subtitle: e.message,
           );
         }
       }
@@ -149,11 +149,12 @@ class _MetasScreenState extends State<MetasScreen> {
   }
 
   Future<void> _editarMeta(int index) async {
-    final resultado = await showModalBottomSheet<Meta>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _CrearMetaDialog(meta: _metasNotifier.value[index]),
+    final resultado = await Navigator.push<Meta>(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => CrearMetaScreen(meta: _metasNotifier.value[index]),
+      ),
     );
 
     if (resultado != null) {
@@ -193,23 +194,19 @@ class _MetasScreenState extends State<MetasScreen> {
 
         if (mounted) {
           Navigator.pop(context); // Cerrar loading
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Meta actualizada'),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.fixed,
-            ),
+          showSuccessNotification(
+            context,
+            message: 'Meta actualizada',
+            subtitle: '1 meta',
           );
         }
       } on ApiException catch (e) {
         if (mounted) {
           Navigator.pop(context); // Cerrar loading
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: ${e.message}'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.fixed,
-            ),
+          showErrorNotification(
+            context,
+            message: 'Error al actualizar meta',
+            subtitle: e.message,
           );
         }
       }
@@ -359,12 +356,10 @@ class _MetasScreenState extends State<MetasScreen> {
         if (mounted) Navigator.pop(context);
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Meta y cuenta eliminadas correctamente'),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.fixed,
-            ),
+          showSuccessNotification(
+            context,
+            message: 'Meta eliminada',
+            subtitle: '1 meta',
           );
         }
       } on ApiException catch (e) {
@@ -372,12 +367,10 @@ class _MetasScreenState extends State<MetasScreen> {
         if (mounted) Navigator.pop(context);
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: ${e.message}'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.fixed,
-            ),
+          showErrorNotification(
+            context,
+            message: 'Error al eliminar meta',
+            subtitle: e.message,
           );
         }
       }
@@ -398,8 +391,7 @@ class _MetasScreenState extends State<MetasScreen> {
           'Metas de Ahorro',
           style: GoogleFonts.lato(fontWeight: FontWeight.bold, fontSize: 20.sp),
         ),
-        backgroundColor:
-            themeManager.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        backgroundColor: widget.headerColor ?? const Color(0xFF4CAF50),
         elevation: 0,
       ),
       body: Stack(
@@ -408,10 +400,9 @@ class _MetasScreenState extends State<MetasScreen> {
             valueListenable: _isLoadingNotifier,
             builder: (context, isLoading, child) {
               if (isLoading) {
-                return Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation(Color(0xFF667eea)),
-                  ),
+                return ShimmerList(
+                  shimmerItem: MetaCardShimmer(),
+                  itemCount: 3,
                 );
               }
 
@@ -431,9 +422,16 @@ class _MetasScreenState extends State<MetasScreen> {
                           16.r + MediaQuery.of(context).padding.bottom + 80.h,
                     ),
                     itemCount: metas.length,
-                    itemBuilder:
-                        (context, index) =>
-                            _buildMetaCard(metas[index], index, themeManager),
+                    itemBuilder: (context, index) {
+                      return FadeIn(
+                        duration: Duration(milliseconds: 300 + (index * 50)),
+                        child: _buildMetaCard(
+                          metas[index],
+                          index,
+                          themeManager,
+                        ),
+                      );
+                    },
                   );
                 },
               );
@@ -476,82 +474,88 @@ class _MetasScreenState extends State<MetasScreen> {
             ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _crearMeta,
-        backgroundColor:
-            themeManager.isDarkMode
-                ? const Color(0xFF2D2D2D)
-                : const Color(0xFF667eea),
-        shape: const CircleBorder(),
-        elevation: 4,
-        child: Icon(Icons.add, color: Colors.white, size: 28.sp),
+      floatingActionButton: AnimateFABDelayed(
+        fab: FloatingActionButton(
+          onPressed: _crearMeta,
+          backgroundColor:
+              themeManager.isDarkMode
+                  ? const Color(0xFF2D2D2D)
+                  : const Color(0xFF667eea),
+          shape: const CircleBorder(),
+          elevation: 4,
+          child: Icon(Icons.add, color: Colors.white, size: 28.sp),
+        ),
       ),
     );
   }
 
   Widget _buildEmptyState(ThemeManager themeManager) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: EdgeInsets.all(40.r),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Color(0xFF667eea).withOpacity(0.1),
-                  Color(0xFF764ba2).withOpacity(0.1),
-                ],
-              ),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.savings_outlined,
-              size: 80.sp,
-              color: Color(0xFF667eea),
-            ),
-          ),
-          SizedBox(height: 24.h),
-          Text(
-            'Sin metas por ahora',
-            style: GoogleFonts.lato(
-              fontSize: 22.sp,
-              fontWeight: FontWeight.bold,
-              color: themeManager.isDarkMode ? Colors.white : Colors.black87,
-            ),
-          ),
-          SizedBox(height: 8.h),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 40.w),
-            child: Text(
-              '¡Crea tu primera meta de ahorro y empieza a cumplir tus sueños!',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.openSans(
-                fontSize: 14.sp,
-                color: Colors.grey,
-                height: 1.5,
+      child: SlideFadeTransition(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ScaleIn(
+              child: Container(
+                padding: EdgeInsets.all(40.r),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFF667eea).withOpacity(0.1),
+                      Color(0xFF764ba2).withOpacity(0.1),
+                    ],
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.savings_outlined,
+                  size: 80.sp,
+                  color: Color(0xFF667eea),
+                ),
               ),
             ),
-          ),
-          SizedBox(height: 32.h),
-          ElevatedButton.icon(
-            onPressed: _crearMeta,
-            icon: Icon(Icons.add_circle_outline),
-            label: Text(
-              'Crear Primera Meta',
-              style: GoogleFonts.lato(fontWeight: FontWeight.w600),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF667eea),
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r),
+            SizedBox(height: 24.h),
+            Text(
+              'Sin metas por ahora',
+              style: GoogleFonts.lato(
+                fontSize: 22.sp,
+                fontWeight: FontWeight.bold,
+                color: themeManager.isDarkMode ? Colors.white : Colors.black87,
               ),
-              elevation: 3,
             ),
-          ),
-        ],
+            SizedBox(height: 8.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 40.w),
+              child: Text(
+                '¡Crea tu primera meta de ahorro y empieza a cumplir tus sueños!',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.openSans(
+                  fontSize: 14.sp,
+                  color: Colors.grey,
+                  height: 1.5,
+                ),
+              ),
+            ),
+            SizedBox(height: 32.h),
+            ElevatedButton.icon(
+              onPressed: _crearMeta,
+              icon: Icon(Icons.add_circle_outline),
+              label: Text(
+                'Crear Primera Meta',
+                style: GoogleFonts.lato(fontWeight: FontWeight.w600),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF667eea),
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                elevation: 3,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -844,9 +848,7 @@ class _MetasScreenState extends State<MetasScreen> {
 
 // Dialog para crear/editar meta
 class _CrearMetaDialog extends StatefulWidget {
-  final Meta? meta;
-
-  const _CrearMetaDialog({this.meta});
+  const _CrearMetaDialog();
 
   @override
   State<_CrearMetaDialog> createState() => _CrearMetaDialogState();
@@ -891,21 +893,9 @@ class _CrearMetaDialogState extends State<_CrearMetaDialog> {
   @override
   void initState() {
     super.initState();
-    _nombreController = TextEditingController(text: widget.meta?.nombre ?? '');
-    _descripcionController = TextEditingController(
-      text: widget.meta?.descripcion ?? '',
-    );
-    _montoController = TextEditingController(
-      text: widget.meta?.montoObjetivo.toString() ?? '',
-    );
-
-    if (widget.meta != null) {
-      _iconoSeleccionado = widget.meta!.icono;
-      _colorSeleccionado = widget.meta!.color;
-      try {
-        _fechaObjetivo = DateTime.parse(widget.meta!.fechaObjetivo);
-      } catch (e) {}
-    }
+    _nombreController = TextEditingController(text: '');
+    _descripcionController = TextEditingController(text: '');
+    _montoController = TextEditingController(text: '');
 
     // Guardar estado inicial
     _saveInitialState();
@@ -1011,7 +1001,7 @@ class _CrearMetaDialogState extends State<_CrearMetaDialog> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            widget.meta == null ? 'Nueva Meta' : 'Editar Meta',
+                            'Nueva Meta',
                             style: GoogleFonts.lato(
                               fontSize: 22.sp,
                               fontWeight: FontWeight.bold,
@@ -1466,23 +1456,20 @@ class _CrearMetaDialogState extends State<_CrearMetaDialog> {
                             );
                             final meta = Meta(
                               id:
-                                  widget.meta?.id ??
                                   DateTime.now().millisecondsSinceEpoch
                                       .toString(),
                               nombre: _nombreController.text,
                               descripcion: _descripcionController.text,
                               montoObjetivo: double.parse(cleanMonto),
-                              montoActual: widget.meta?.montoActual ?? 0,
-                              fechaInicio:
-                                  widget.meta?.fechaInicio ??
-                                  DateTime.now().toIso8601String(),
+                              montoActual: 0,
+                              fechaInicio: DateTime.now().toIso8601String(),
                               fechaObjetivo: _fechaObjetivo.toIso8601String(),
                               icono: _iconoSeleccionado,
                               color: _colorSeleccionado,
-                              completada: widget.meta?.completada ?? false,
-                              cuentaId: widget.meta?.cuentaId,
-                              cuentaNombre: widget.meta?.cuentaNombre,
-                              numeroCuenta: widget.meta?.numeroCuenta,
+                              completada: false,
+                              cuentaId: null,
+                              cuentaNombre: null,
+                              numeroCuenta: null,
                             );
                             Navigator.pop(context, meta);
                           }

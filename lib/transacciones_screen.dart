@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:notificaciones/api_service.dart';
+import 'package:notificaciones/componentes/heads_up_notification.dart';
 import 'package:notificaciones/dynamic_form_screen.dart';
 import 'package:notificaciones/models/Transaccion.dart';
 import 'package:notificaciones/services/firestore_service.dart';
@@ -462,45 +463,18 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
     try {
       await _apiService.eliminarFilaPorIdTransaccion(id);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(
-                  Icons.check_circle,
-                  color: Colors.white,
-                  size: 18.sp,
-                ), // ✅ REDUCIDO de 20
-                SizedBox(width: 10.w),
-                Text('Transacción eliminada exitosamente'),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.fixed,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12.r),
-            ), // ✅ REDUCIDO de 16
-          ),
+        showSuccessNotification(
+          context,
+          message: 'Transacción eliminada exitosamente',
         );
       }
       // ✅ Stream de Firebase actualiza automáticamente la UI
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.error, color: Colors.white, size: 18.sp),
-                SizedBox(width: 10.w),
-                Expanded(child: Text('Error: $e')),
-              ],
-            ),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.fixed,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-          ),
+        showErrorNotification(
+          context,
+          message: 'Error al eliminar',
+          subtitle: e.toString(),
         );
       }
     }
@@ -753,13 +727,9 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
   Widget _buildEmptyState() {
     return EmptyTransactionsState(
       onAddTransaction: () {
-        // Navegar al formulario de nueva transacción
-        // Nota: Implementar navegación correcta según tu app
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Navegar a agregar transacción'),
-            behavior: SnackBarBehavior.fixed,
-          ),
+        showSuccessNotification(
+          context,
+          message: 'Navegar a agregar transacción',
         );
       },
     );
