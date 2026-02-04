@@ -348,32 +348,14 @@ class _LoadingScreenState extends State<LoadingScreen>
   // UI Builders
   Widget _buildBackground(bool isDarkMode) {
     if (isDarkMode) {
-      return Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.grey.shade900, Colors.black],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-      );
+      return Container(color: Colors.grey.shade900);
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFFF5F7FA),
-            const Color(0xFF667eea).withOpacity(0.1),
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
-    );
+    return Container(color: const Color(0xFFF5F7FA));
   }
 
   Widget _buildLoadingContent(ThemeManager themeManager) {
+    final theme = Theme.of(context);
     return FadeTransition(
       opacity: _fadeAnimation,
       child: SlideTransition(
@@ -385,75 +367,60 @@ class _LoadingScreenState extends State<LoadingScreen>
             ScaleTransition(
               scale: _scaleAnimation,
               child: Container(
-                padding: EdgeInsets.all(20.r), // ✅ REDUCIDO de 24
+                padding: EdgeInsets.all(20.r),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                  color: theme.colorScheme.primary.withOpacity(0.12),
+                  border: Border.all(
+                    color: theme.colorScheme.primary.withOpacity(0.2),
+                    width: 2,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF667eea).withOpacity(0.4),
-                      blurRadius: 24.r, // ✅ REDUCIDO de 30
-                      offset: Offset(0, 12.h), // ✅ REDUCIDO de 15
-                    ),
-                  ],
                 ),
                 child: Lottie.asset(
                   'assets/animations/spash_screen.json',
-                  width: 100.w, // ✅ REDUCIDO de 120
+                  width: 100.w,
                   height: 100.h,
                   fit: BoxFit.contain,
                 ),
               ),
             ),
-            SizedBox(height: 40.h), // ✅ REDUCIDO de 48
+            SizedBox(height: 40.h),
             // Título
             Text(
               'Administración de Gastos',
               style: GoogleFonts.lato(
-                fontSize: 28.sp, // ✅ REDUCIDO de 32
+                fontSize: 28.sp,
                 fontWeight: FontWeight.bold,
-                color:
-                    themeManager.isDarkMode
-                        ? Colors.white
-                        : const Color(0xFF2D3436),
+                color: theme.colorScheme.onSurface,
                 letterSpacing: 1.2,
               ),
             ),
-            SizedBox(height: 6.h), // ✅ REDUCIDO de 8
+            SizedBox(height: 6.h),
             Text(
               'Tu gestor financiero personal',
               style: GoogleFonts.openSans(
-                fontSize: 12.sp, // ✅ REDUCIDO de 14
-                color:
-                    themeManager.isDarkMode
-                        ? Colors.grey.shade400
-                        : Colors.grey.shade600,
+                fontSize: 12.sp,
+                color: theme.colorScheme.secondary.withOpacity(0.7),
               ),
             ),
 
             SizedBox(height: 52.h), // ✅ REDUCIDO de 64
             // Contenedor de progreso
             Container(
-              margin: EdgeInsets.symmetric(
-                horizontal: 40.w,
-              ), // ✅ REDUCIDO de 48
-              padding: EdgeInsets.all(20.r), // ✅ REDUCIDO de 24
+              margin: EdgeInsets.symmetric(horizontal: 40.w),
+              padding: EdgeInsets.all(20.r),
               decoration: BoxDecoration(
-                color:
-                    themeManager.isDarkMode
-                        ? Colors.grey.shade800.withOpacity(0.5)
-                        : Colors.white,
-                borderRadius: BorderRadius.circular(18.r), // ✅ REDUCIDO de 20
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(18.r),
+                border: Border.all(
+                  color: theme.colorScheme.secondary.withOpacity(0.2),
+                  width: 1.5,
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color:
-                        themeManager.isDarkMode
-                            ? Colors.black.withOpacity(0.3)
-                            : Colors.grey.withOpacity(0.1),
-                    blurRadius: 16.r, // ✅ REDUCIDO de 20
-                    offset: Offset(0, 8.h), // ✅ REDUCIDO de 10
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 8.r,
+                    offset: Offset(0, 2.h),
                   ),
                 ],
               ),
@@ -465,10 +432,7 @@ class _LoadingScreenState extends State<LoadingScreen>
                     style: GoogleFonts.lato(
                       fontSize: 13.sp,
                       fontWeight: FontWeight.w600,
-                      color:
-                          themeManager.isDarkMode
-                              ? Colors.white
-                              : const Color(0xFF2D3436),
+                      color: theme.colorScheme.onSurface,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -487,8 +451,10 @@ class _LoadingScreenState extends State<LoadingScreen>
                         decoration: BoxDecoration(
                           color:
                               _dotsCount > index
-                                  ? const Color(0xFF667eea)
-                                  : Colors.grey.shade400,
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.secondary.withOpacity(
+                                    0.3,
+                                  ),
                           shape: BoxShape.circle,
                         ),
                       );
@@ -503,11 +469,8 @@ class _LoadingScreenState extends State<LoadingScreen>
             Text(
               'Preparando tu experiencia financiera',
               style: GoogleFonts.openSans(
-                fontSize: 11.sp, // ✅ REDUCIDO de 13
-                color:
-                    themeManager.isDarkMode
-                        ? Colors.grey.shade500
-                        : Colors.grey.shade600,
+                fontSize: 11.sp,
+                color: theme.colorScheme.secondary.withOpacity(0.6),
                 fontStyle: FontStyle.italic,
               ),
             ),

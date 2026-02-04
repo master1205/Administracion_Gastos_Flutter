@@ -133,26 +133,22 @@ class ReportesScreenState extends State<ReportesScreen>
     required ThemeManager themeManager,
   }) {
     final isExpanded = _expandedYears[year] ?? false;
+    final theme = Theme.of(context);
 
     return Container(
-      margin: EdgeInsets.symmetric(
-        horizontal: 12.w,
-        vertical: 6.h,
-      ), // ✅ REDUCIDO de 14/7
+      margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
       decoration: BoxDecoration(
-        color:
-            themeManager.isDarkMode
-                ? Colors.grey.shade800.withOpacity(0.5)
-                : Colors.white,
-        borderRadius: BorderRadius.circular(16.r), // ✅ REDUCIDO de 18
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(
+          color: theme.colorScheme.secondary.withOpacity(0.25),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
-            color:
-                themeManager.isDarkMode
-                    ? Colors.black.withOpacity(0.2)
-                    : Colors.grey.withOpacity(0.1),
-            blurRadius: 10.r, // ✅ REDUCIDO de 12
-            offset: Offset(0, 3.h), // ✅ REDUCIDO de 4
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8.r,
+            offset: Offset(0, 2.h),
           ),
         ],
       ),
@@ -161,55 +157,51 @@ class ReportesScreenState extends State<ReportesScreen>
         child: ExpansionTile(
           key: ValueKey('expansion_$year'),
           initiallyExpanded: isExpanded,
-          tilePadding: EdgeInsets.symmetric(
-            horizontal: 16.w,
-            vertical: 6.h,
-          ), // ✅ REDUCIDO de 18/7
-          childrenPadding: EdgeInsets.only(bottom: 8.h), // ✅ REDUCIDO de 10
+          tilePadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
+          childrenPadding: EdgeInsets.only(bottom: 8.h),
           leading: Container(
-            padding: EdgeInsets.all(10.r), // ✅ REDUCIDO de 11
+            padding: EdgeInsets.all(10.r),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-              ),
-              borderRadius: BorderRadius.circular(10.r), // ✅ REDUCIDO de 11
+              color: theme.colorScheme.primary.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(10.r),
             ),
             child: Icon(
               Icons.folder_rounded,
-              color: Colors.white,
+              color: theme.colorScheme.primary,
               size: 20.sp,
-            ), // ✅ REDUCIDO de 22
+            ),
           ),
           title: Text(
             'Año $year',
             style: GoogleFonts.lato(
-              fontSize: 15.sp, // ✅ REDUCIDO de 16
+              fontSize: 15.sp,
               fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface,
             ),
           ),
           subtitle: Padding(
-            padding: EdgeInsets.only(top: 2.h), // ✅ REDUCIDO de 3
+            padding: EdgeInsets.only(top: 2.h),
             child: Text(
               '${reportes.length} reporte${reportes.length != 1 ? 's' : ''}',
-              style: TextStyle(
+              style: GoogleFonts.openSans(
                 fontSize: 11.sp,
-                color: Colors.grey.shade600,
-              ), // ✅ REDUCIDO de 12
+                color: theme.colorScheme.secondary.withOpacity(0.7),
+              ),
             ),
           ),
           trailing: AnimatedRotation(
             turns: isExpanded ? 0.5 : 0,
             duration: _animationDuration,
             child: Container(
-              padding: EdgeInsets.all(6.r), // ✅ REDUCIDO de 7
+              padding: EdgeInsets.all(6.r),
               decoration: BoxDecoration(
-                color: const Color(0xFF667eea).withOpacity(0.1),
+                color: theme.colorScheme.secondary.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.keyboard_arrow_down_rounded,
-                color: const Color(0xFF667eea),
-                size: 18.sp, // ✅ REDUCIDO de 20
+                color: theme.colorScheme.secondary,
+                size: 18.sp,
               ),
             ),
           ),
@@ -234,25 +226,17 @@ class ReportesScreenState extends State<ReportesScreen>
     required Reporte reporte,
     required ThemeManager themeManager,
   }) {
+    final theme = Theme.of(context);
     return BounceTapButton(
       onTap: () => _openReport(reporte.file),
       child: Container(
-        margin: EdgeInsets.symmetric(
-          horizontal: 10.w,
-          vertical: 3.h,
-        ), // ✅ REDUCIDO de 11
+        margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 3.h),
         decoration: BoxDecoration(
-          color:
-              themeManager.isDarkMode
-                  ? Colors.grey.shade900.withOpacity(0.3)
-                  : Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(10.r), // ✅ REDUCIDO de 11
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(10.r),
           border: Border.all(
-            color:
-                themeManager.isDarkMode
-                    ? Colors.grey.shade700
-                    : Colors.grey.shade200,
-            width: 1.w,
+            color: theme.colorScheme.secondary.withOpacity(0.2),
+            width: 1.5,
           ),
         ),
         child: Material(
@@ -261,24 +245,22 @@ class ReportesScreenState extends State<ReportesScreen>
             onTap: () => _openReport(reporte.file),
             borderRadius: BorderRadius.circular(10.r),
             child: Padding(
-              padding: EdgeInsets.all(12.r), // ✅ REDUCIDO de 14
+              padding: EdgeInsets.all(12.r),
               child: Row(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(10.r), // ✅ REDUCIDO de 11
+                    padding: EdgeInsets.all(10.r),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFf093fb), Color(0xFFF5576c)],
-                      ),
+                      color: Colors.red.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10.r),
                     ),
                     child: Icon(
                       Icons.picture_as_pdf_rounded,
-                      color: Colors.white,
-                      size: 20.sp, // ✅ REDUCIDO de 22
+                      color: Colors.red.shade600,
+                      size: 20.sp,
                     ),
                   ),
-                  SizedBox(width: 12.w), // ✅ REDUCIDO de 14
+                  SizedBox(width: 12.w),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -286,26 +268,31 @@ class ReportesScreenState extends State<ReportesScreen>
                         Text(
                           reporte.name,
                           style: GoogleFonts.lato(
-                            fontSize: 13.sp, // ✅ REDUCIDO de 14
-                            fontWeight: FontWeight.bold,
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurface,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        SizedBox(height: 2.h), // ✅ REDUCIDO de 3
+                        SizedBox(height: 2.h),
                         Row(
                           children: [
                             Icon(
                               Icons.calendar_today_rounded,
-                              size: 12.sp, // ✅ REDUCIDO de 13
-                              color: Colors.grey.shade600,
+                              size: 12.sp,
+                              color: theme.colorScheme.secondary.withOpacity(
+                                0.7,
+                              ),
                             ),
-                            SizedBox(width: 4.w), // ✅ REDUCIDO de 5
+                            SizedBox(width: 4.w),
                             Text(
                               reporte.fechaCorte,
-                              style: TextStyle(
-                                fontSize: 11.sp, // ✅ REDUCIDO de 12
-                                color: Colors.grey.shade600,
+                              style: GoogleFonts.openSans(
+                                fontSize: 11.sp,
+                                color: theme.colorScheme.secondary.withOpacity(
+                                  0.7,
+                                ),
                               ),
                             ),
                           ],
@@ -314,15 +301,15 @@ class ReportesScreenState extends State<ReportesScreen>
                     ),
                   ),
                   Container(
-                    padding: EdgeInsets.all(6.r), // ✅ REDUCIDO de 7
+                    padding: EdgeInsets.all(6.r),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF667eea).withOpacity(0.1),
+                      color: theme.colorScheme.secondary.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      Icons.arrow_forward_rounded,
-                      color: const Color(0xFF667eea),
-                      size: 16.sp, // ✅ REDUCIDO de 18
+                      Icons.chevron_right,
+                      color: theme.colorScheme.secondary,
+                      size: 16.sp,
                     ),
                   ),
                 ],
@@ -335,25 +322,23 @@ class ReportesScreenState extends State<ReportesScreen>
   }
 
   Widget _buildLoadingIndicator(ThemeManager themeManager) {
+    final theme = Theme.of(context);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           CircularProgressIndicator(
             valueColor: AlwaysStoppedAnimation<Color>(
-              themeManager.isDarkMode ? Colors.white : const Color(0xFF667eea),
+              theme.colorScheme.primary,
             ),
-            strokeWidth: 2.5.w, // ✅ REDUCIDO de 3
+            strokeWidth: 2.5.w,
           ),
-          SizedBox(height: 12.h), // ✅ REDUCIDO de 14
+          SizedBox(height: 12.h),
           Text(
             'Cargando reportes...',
-            style: TextStyle(
-              color:
-                  themeManager.isDarkMode
-                      ? Colors.white70
-                      : Colors.grey.shade600,
-              fontSize: 12.sp, // ✅ REDUCIDO de 13
+            style: GoogleFonts.openSans(
+              color: theme.colorScheme.secondary,
+              fontSize: 12.sp,
             ),
           ),
         ],
@@ -362,40 +347,41 @@ class ReportesScreenState extends State<ReportesScreen>
   }
 
   Widget _buildErrorState(dynamic error) {
+    final theme = Theme.of(context);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: EdgeInsets.all(24.r), // ✅ REDUCIDO de 28
+            padding: EdgeInsets.all(24.r),
             decoration: BoxDecoration(
               color: Colors.red.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.error_outline_rounded,
-              size: 60.sp, // ✅ REDUCIDO de 70
+              size: 60.sp,
               color: Colors.red.shade400,
             ),
           ),
-          SizedBox(height: 16.h), // ✅ REDUCIDO de 20
+          SizedBox(height: 16.h),
           Text(
             'Error al cargar reportes',
             style: GoogleFonts.lato(
-              fontSize: 16.sp, // ✅ REDUCIDO de 18
+              fontSize: 16.sp,
               fontWeight: FontWeight.bold,
-              color: Colors.grey.shade700,
+              color: theme.colorScheme.onBackground,
             ),
           ),
-          SizedBox(height: 5.h), // ✅ REDUCIDO de 6
+          SizedBox(height: 5.h),
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 32.w), // ✅ REDUCIDO de 35
+            padding: EdgeInsets.symmetric(horizontal: 32.w),
             child: Text(
               error.toString(),
-              style: TextStyle(
+              style: GoogleFonts.openSans(
                 fontSize: 12.sp,
-                color: Colors.grey.shade500,
-              ), // ✅ REDUCIDO de 13
+                color: theme.colorScheme.secondary.withOpacity(0.7),
+              ),
               textAlign: TextAlign.center,
             ),
           ),
@@ -473,24 +459,17 @@ class ReportesScreenState extends State<ReportesScreen>
                 tween: Tween(begin: 0.0, end: 1.0),
                 duration: const Duration(milliseconds: 300),
                 builder: (context, value, child) {
+                  final theme = Theme.of(context);
                   return Opacity(
                     opacity: value,
                     child: Container(
                       height: 3.h,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            const Color(0xFF667eea).withOpacity(0.0),
-                            const Color(0xFF667eea),
-                            const Color(0xFF764ba2),
-                            const Color(0xFF764ba2).withOpacity(0.0),
-                          ],
-                        ),
-                      ),
                       child: LinearProgressIndicator(
-                        backgroundColor: Colors.transparent,
+                        backgroundColor: theme.colorScheme.primary.withOpacity(
+                          0.1,
+                        ),
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.white.withOpacity(0.5),
+                          theme.colorScheme.primary,
                         ),
                       ),
                     ),

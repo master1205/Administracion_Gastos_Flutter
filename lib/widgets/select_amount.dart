@@ -323,7 +323,8 @@ class _SelectAmountWidgetState extends State<SelectAmountWidget> {
   @override
   Widget build(BuildContext context) {
     _focusAttachment.reparent();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     String amountConverted = amount.isEmpty ? "0" : amount;
     double calculatedAmount = calculateResult(amountConverted);
     String displayAmount = amount.isEmpty ? "0" : amount;
@@ -341,10 +342,10 @@ class _SelectAmountWidgetState extends State<SelectAmountWidget> {
                 // Resultado formateado
                 Text(
                   formatMoney(calculatedAmount),
-                  style: GoogleFonts.lato(
+                  style: GoogleFonts.poppins(
                     fontSize: 32.sp,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black87,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
                   ),
                   textAlign: TextAlign.end,
                 ),
@@ -356,10 +357,7 @@ class _SelectAmountWidgetState extends State<SelectAmountWidget> {
                       displayAmount,
                       style: GoogleFonts.lato(
                         fontSize: 16.sp,
-                        color:
-                            isDark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade600,
+                        color: theme.colorScheme.secondary.withOpacity(0.6),
                       ),
                       textAlign: TextAlign.end,
                       maxLines: 2,
@@ -371,32 +369,56 @@ class _SelectAmountWidgetState extends State<SelectAmountWidget> {
           ),
 
         // Teclado numérico
-        Padding(padding: widget.padding, child: _buildNumberPad(isDark)),
+        Padding(padding: widget.padding, child: _buildNumberPad(theme)),
 
         // Botón siguiente
         if (widget.next != null) ...[
           SizedBox(height: 16.h),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.w),
-            child: ElevatedButton(
-              onPressed:
-                  (calculatedAmount > 0 || widget.allowZero)
-                      ? widget.next
-                      : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                padding: EdgeInsets.symmetric(vertical: 14.h),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.r),
+            child: Container(
+              decoration: BoxDecoration(
+                color:
+                    (calculatedAmount > 0 || widget.allowZero)
+                        ? theme.colorScheme.secondary.withOpacity(0.08)
+                        : theme.colorScheme.secondary.withOpacity(0.03),
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(
+                  color:
+                      (calculatedAmount > 0 || widget.allowZero)
+                          ? theme.colorScheme.secondary.withOpacity(0.2)
+                          : theme.colorScheme.secondary.withOpacity(0.1),
+                  width: 1,
                 ),
-                elevation: 0,
               ),
-              child: Text(
-                widget.nextLabel ?? 'Continuar',
-                style: GoogleFonts.lato(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap:
+                      (calculatedAmount > 0 || widget.allowZero)
+                          ? widget.next
+                          : null,
+                  borderRadius: BorderRadius.circular(12.r),
+                  splashColor: theme.colorScheme.secondary.withOpacity(0.1),
+                  highlightColor: theme.colorScheme.secondary.withOpacity(0.05),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(vertical: 14.h),
+                    child: Center(
+                      child: Text(
+                        widget.nextLabel ?? 'Continuar',
+                        style: GoogleFonts.poppins(
+                          fontSize: 15.sp,
+                          fontWeight: FontWeight.w600,
+                          color:
+                              (calculatedAmount > 0 || widget.allowZero)
+                                  ? theme.colorScheme.secondary
+                                  : theme.colorScheme.secondary.withOpacity(
+                                    0.4,
+                                  ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -406,15 +428,19 @@ class _SelectAmountWidgetState extends State<SelectAmountWidget> {
     );
   }
 
-  Widget _buildNumberPad(bool isDark) {
-    final buttonColor = isDark ? Colors.grey.shade800 : Colors.white;
-    final buttonTextColor = isDark ? Colors.white : Colors.black87;
+  Widget _buildNumberPad(ThemeData theme) {
+    final buttonColor = theme.colorScheme.surface;
+    final buttonTextColor = theme.colorScheme.onSurface;
 
     return Container(
       constraints: BoxConstraints(maxWidth: 400.w),
       decoration: BoxDecoration(
-        color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: theme.colorScheme.secondary.withOpacity(0.15),
+          width: 1,
+        ),
       ),
       padding: EdgeInsets.all(8.r),
       child: Column(
@@ -611,20 +637,30 @@ class _SelectAmountWidgetState extends State<SelectAmountWidget> {
     return Material(
       color: bgColor,
       borderRadius: BorderRadius.circular(12.r),
+      elevation: 0,
       child: InkWell(
         onTap: onTap,
         onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(12.r),
+        splashColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+        highlightColor: Theme.of(context).colorScheme.primary.withOpacity(0.05),
         child: Container(
           height: 56.h,
           alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+              width: 1,
+            ),
+          ),
           child:
               icon != null
                   ? Icon(icon, size: 24.sp, color: textColor)
                   : Text(
                     label,
-                    style: GoogleFonts.lato(
-                      fontSize: 24.sp,
+                    style: GoogleFonts.poppins(
+                      fontSize: 22.sp,
                       fontWeight: FontWeight.w600,
                       color: textColor,
                     ),
@@ -655,9 +691,10 @@ Future<double?> showSelectAmountBottomSheet(
               ? MediaQuery.of(context).viewInsets.bottom
               : MediaQuery.of(context).viewPadding.bottom;
 
+      final theme = Theme.of(context);
       return Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
+          color: theme.scaffoldBackgroundColor,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
         ),
         padding: EdgeInsets.only(top: 16.h, bottom: bottomPadding + 16.h),
@@ -672,20 +709,24 @@ Future<double?> showSelectAmountBottomSheet(
                   Expanded(
                     child: Text(
                       title,
-                      style: GoogleFonts.lato(
+                      style: GoogleFonts.poppins(
                         fontSize: 20.sp,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close),
+                    icon: Icon(Icons.close, color: theme.colorScheme.onSurface),
                   ),
                 ],
               ),
             ),
-            Divider(height: 1),
+            Divider(
+              height: 1,
+              color: theme.colorScheme.secondary.withOpacity(0.2),
+            ),
 
             // Widget de selección de monto
             SelectAmountWidget(

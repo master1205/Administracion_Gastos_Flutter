@@ -183,7 +183,7 @@ class _HeadsUpNotificationState extends State<_HeadsUpNotification>
             child: Material(
               color: Colors.transparent,
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
                 decoration: BoxDecoration(
                   color: widget.backgroundColor,
                   borderRadius: BorderRadius.circular(10.r),
@@ -198,8 +198,8 @@ class _HeadsUpNotificationState extends State<_HeadsUpNotification>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(widget.icon, color: widget.iconColor, size: 18.sp),
-                    SizedBox(width: 8.w),
+                    Icon(widget.icon, color: widget.iconColor, size: 22.sp),
+                    SizedBox(width: 10.w),
                     Flexible(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,29 +209,30 @@ class _HeadsUpNotificationState extends State<_HeadsUpNotification>
                             widget.message,
                             style: GoogleFonts.lato(
                               color: Colors.white,
-                              fontSize: 12.sp,
+                              fontSize: 14.sp,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           if (widget.subtitle != null) ...[
+                            SizedBox(height: 2.h),
                             Text(
                               widget.subtitle!,
                               style: GoogleFonts.openSans(
                                 color: Colors.white.withOpacity(0.9),
-                                fontSize: 10.sp,
+                                fontSize: 12.sp,
                               ),
                             ),
                           ],
                         ],
                       ),
                     ),
-                    SizedBox(width: 8.w),
+                    SizedBox(width: 10.w),
                     InkWell(
                       onTap: _dismiss,
                       child: Icon(
                         Icons.close,
                         color: widget.iconColor,
-                        size: 16.sp,
+                        size: 18.sp,
                       ),
                     ),
                   ],

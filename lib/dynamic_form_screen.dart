@@ -315,30 +315,16 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
   }
 
   Future<void> _selectDate(BuildContext context) async {
-    final themeManager = Provider.of<ThemeManager>(context, listen: false);
     final picked = await showDatePicker(
       context: context,
       initialDate: selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
       builder: (context, child) {
+        final theme = Theme.of(context);
         return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: ColorScheme.light(
-              primary: widget.color,
-              onPrimary: Colors.white,
-              surface:
-                  themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
-              onSurface: themeManager.isDarkMode ? Colors.white : Colors.black,
-            ),
-            dialogBackgroundColor:
-                themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-              ),
-            ),
+          data: theme.copyWith(
+            dialogBackgroundColor: theme.colorScheme.surface,
           ),
           child: child!,
         );
@@ -558,25 +544,15 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
   }
 
   Widget _buildHeader(ThemeManager themeManager) {
+    final theme = Theme.of(context);
     return Container(
       padding: EdgeInsets.all(16.r),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [widget.color, widget.color.withOpacity(0.7)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: theme.colorScheme.primary.withOpacity(0.12),
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(24.r),
           bottomRight: Radius.circular(24.r),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: widget.color.withOpacity(0.3),
-            blurRadius: 15.r,
-            offset: Offset(0, 8.h),
-          ),
-        ],
       ),
       child: SafeArea(
         child: Column(
@@ -585,13 +561,13 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
               children: [
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: theme.colorScheme.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10.r),
                   ),
                   child: IconButton(
                     icon: Icon(
                       Icons.arrow_back,
-                      color: Colors.white,
+                      color: theme.colorScheme.primary,
                       size: 20.sp,
                     ),
                     onPressed: () async {
@@ -610,13 +586,17 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                     vertical: 6.h,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: theme.colorScheme.primary.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(16.r),
+                    border: Border.all(
+                      color: theme.colorScheme.primary.withOpacity(0.3),
+                      width: 1,
+                    ),
                   ),
                   child: Text(
                     widget.transaction != null ? 'Editar' : 'Nueva',
-                    style: GoogleFonts.lato(
-                      color: Colors.white,
+                    style: GoogleFonts.poppins(
+                      color: theme.colorScheme.primary,
                       fontSize: 12.sp,
                       fontWeight: FontWeight.w600,
                     ),
@@ -628,30 +608,35 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
             Container(
               padding: EdgeInsets.all(14.r),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: theme.colorScheme.primary.withOpacity(0.15),
                 shape: BoxShape.circle,
+                border: Border.all(
+                  color: theme.colorScheme.primary.withOpacity(0.3),
+                  width: 1.5,
+                ),
               ),
               child: Icon(
                 _getTransactionIcon(),
                 size: 36.sp,
-                color: Colors.white,
+                color: theme.colorScheme.primary,
               ),
             ),
             SizedBox(height: 12.h),
             Text(
               widget.transactionType,
-              style: GoogleFonts.lato(
+              style: GoogleFonts.poppins(
                 fontSize: 20.sp,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                color: theme.colorScheme.primary,
               ),
             ),
             SizedBox(height: 4.h),
             Text(
               _getTransactionSubtitle(),
-              style: GoogleFonts.openSans(
+              style: GoogleFonts.poppins(
                 fontSize: 12.sp,
-                color: Colors.white.withOpacity(0.9),
+                fontWeight: FontWeight.w400,
+                color: theme.colorScheme.secondary.withOpacity(0.7),
               ),
             ),
           ],
@@ -691,17 +676,19 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
   }
 
   Widget _buildSectionTitle(String title, ThemeManager themeManager) {
+    final theme = Theme.of(context);
     return Text(
       title,
-      style: GoogleFonts.lato(
+      style: GoogleFonts.poppins(
         fontSize: 13.sp,
-        fontWeight: FontWeight.bold,
-        color: themeManager.isDarkMode ? Colors.white : const Color(0xFF2D3436),
+        fontWeight: FontWeight.w600,
+        color: theme.colorScheme.onSurface,
       ),
     );
   }
 
   Widget _buildAmountField(ThemeManager themeManager) {
+    final theme = Theme.of(context);
     final currentAmount =
         _amountController.text.isNotEmpty
             ? double.tryParse(_amountController.text.replaceAll(',', '')) ?? 0.0
@@ -735,43 +722,30 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
       },
       child: Container(
         decoration: BoxDecoration(
-          color: themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+          color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(12.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8.r,
-              offset: Offset(0, 3.h),
-            ),
-          ],
+          border: Border.all(
+            color: theme.colorScheme.secondary.withOpacity(0.15),
+            width: 1,
+          ),
         ),
         child: Container(
-          padding: EdgeInsets.only(
-            left: 8.w,
-            right: 16.w,
-            top: 8.h,
-            bottom: 8.h,
-          ),
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
           child: Row(
             children: [
               Container(
                 padding: EdgeInsets.all(8.r),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [widget.color, widget.color.withOpacity(0.7)],
-                  ),
+                  color: theme.colorScheme.primary.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(10.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: widget.color.withOpacity(0.3),
-                      blurRadius: 4.r,
-                      offset: Offset(0, 2.h),
-                    ),
-                  ],
+                  border: Border.all(
+                    color: theme.colorScheme.primary.withOpacity(0.2),
+                    width: 1,
+                  ),
                 ),
                 child: Icon(
                   Icons.attach_money_rounded,
-                  color: Colors.white,
+                  color: theme.colorScheme.primary,
                   size: 20.sp,
                 ),
               ),
@@ -779,15 +753,13 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
               Expanded(
                 child: Text(
                   displayText.isNotEmpty ? displayText : '\$0.00',
-                  style: GoogleFonts.lato(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
+                  style: GoogleFonts.poppins(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w600,
                     color:
                         displayText.isNotEmpty
-                            ? (themeManager.isDarkMode
-                                ? Colors.white
-                                : const Color(0xFF2D3436))
-                            : Colors.grey.shade400,
+                            ? theme.colorScheme.onSurface
+                            : theme.colorScheme.secondary.withOpacity(0.4),
                   ),
                 ),
               ),
@@ -799,51 +771,40 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
   }
 
   Widget _buildDescriptionField(ThemeManager themeManager) {
+    final theme = Theme.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8.r,
-            offset: Offset(0, 3.h),
-          ),
-        ],
+        border: Border.all(
+          color: theme.colorScheme.secondary.withOpacity(0.15),
+          width: 1,
+        ),
       ),
       child: TextFormField(
         controller: _descriptionController,
         textCapitalization: TextCapitalization.words,
-        style: GoogleFonts.openSans(
+        style: GoogleFonts.poppins(
           fontSize: 13.sp,
-          color:
-              themeManager.isDarkMode ? Colors.white : const Color(0xFF2D3436),
+          fontWeight: FontWeight.w400,
+          color: theme.colorScheme.onSurface,
         ),
         decoration: InputDecoration(
           hintText: 'Ej: Compra de supermercado',
-          hintStyle: GoogleFonts.openSans(
-            color: Colors.grey.shade400,
+          hintStyle: GoogleFonts.poppins(
+            color: theme.colorScheme.secondary.withOpacity(0.4),
             fontSize: 12.sp,
           ),
           prefixIcon: Container(
             margin: EdgeInsets.all(10.r),
             padding: EdgeInsets.all(6.r),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [widget.color, widget.color.withOpacity(0.7)],
-              ),
+              color: theme.colorScheme.primary.withOpacity(0.12),
               borderRadius: BorderRadius.circular(10.r),
-              boxShadow: [
-                BoxShadow(
-                  color: widget.color.withOpacity(0.3),
-                  blurRadius: 4.r,
-                  offset: Offset(0, 2.h),
-                ),
-              ],
             ),
             child: Icon(
               Icons.description_rounded,
-              color: Colors.white,
+              color: theme.colorScheme.primary,
               size: 20.sp,
             ),
           ),
@@ -852,8 +813,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
             borderSide: BorderSide.none,
           ),
           filled: true,
-          fillColor:
-              themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+          fillColor: theme.colorScheme.surface,
           contentPadding: EdgeInsets.symmetric(
             horizontal: 16.w,
             vertical: 16.h,
@@ -864,39 +824,28 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
   }
 
   Widget _buildDateSelector(ThemeManager themeManager) {
+    final theme = Theme.of(context);
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
       decoration: BoxDecoration(
-        color: themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8.r,
-            offset: Offset(0, 3.h),
-          ),
-        ],
+        border: Border.all(
+          color: theme.colorScheme.secondary.withOpacity(0.15),
+          width: 1,
+        ),
       ),
       child: Row(
         children: [
           Container(
             padding: EdgeInsets.all(6.r),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [widget.color, widget.color.withOpacity(0.7)],
-              ),
+              color: theme.colorScheme.primary.withOpacity(0.12),
               borderRadius: BorderRadius.circular(10.r),
-              boxShadow: [
-                BoxShadow(
-                  color: widget.color.withOpacity(0.3),
-                  blurRadius: 4.r,
-                  offset: Offset(0, 2.h),
-                ),
-              ],
             ),
             child: Icon(
               Icons.calendar_today_rounded,
-              color: Colors.white,
+              color: theme.colorScheme.primary,
               size: 20.sp,
             ),
           ),
@@ -933,6 +882,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
     ThemeManager themeManager,
     List<Categoria> categories,
   ) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -940,33 +890,25 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
           padding: EdgeInsets.symmetric(horizontal: 4.w),
           child: Text(
             'Categoría',
-            style: GoogleFonts.lato(
+            style: GoogleFonts.poppins(
               fontSize: 13.sp,
-              fontWeight: FontWeight.bold,
-              color:
-                  themeManager.isDarkMode
-                      ? Colors.white
-                      : const Color(0xFF2D3436),
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface,
             ),
           ),
         ),
         SizedBox(height: 8.h),
         Container(
           decoration: BoxDecoration(
-            color:
-                themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+            color: theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(12.r),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 8.r,
-                offset: Offset(0, 3.h),
-              ),
-            ],
+            border: Border.all(
+              color: theme.colorScheme.secondary.withOpacity(0.15),
+              width: 1,
+            ),
           ),
           child: DropdownButtonFormField<Categoria>(
-            dropdownColor:
-                themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+            dropdownColor: theme.colorScheme.surface,
             value:
                 categories.contains(selectedCategory) ? selectedCategory : null,
             decoration: InputDecoration(
@@ -975,8 +917,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                 borderSide: BorderSide.none,
               ),
               filled: true,
-              fillColor:
-                  themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+              fillColor: theme.colorScheme.surface,
               contentPadding: EdgeInsets.symmetric(
                 horizontal: 16.w,
                 vertical: 14.h,
@@ -984,14 +925,14 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
             ),
             hint: Text(
               'Selecciona una categoría',
-              style: GoogleFonts.openSans(
-                color: Colors.grey.shade500,
+              style: GoogleFonts.poppins(
+                color: theme.colorScheme.secondary.withOpacity(0.5),
                 fontSize: 12.sp,
               ),
             ),
             icon: Icon(
               Icons.keyboard_arrow_down_rounded,
-              color: Colors.white,
+              color: theme.colorScheme.onSurface,
               size: 20.sp,
             ),
             isExpanded: true,
@@ -1007,38 +948,23 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                         Container(
                           padding: EdgeInsets.all(4.r),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                widget.color,
-                                widget.color.withOpacity(0.7),
-                              ],
-                            ),
+                            color: theme.colorScheme.primary.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(6.r),
-                            boxShadow: [
-                              BoxShadow(
-                                color: widget.color.withOpacity(0.3),
-                                blurRadius: 4.r,
-                                offset: Offset(0, 2.h),
-                              ),
-                            ],
                           ),
                           child: Icon(
                             _getIconFromString(category.imagen),
                             size: 14.sp,
-                            color: Colors.white,
+                            color: theme.colorScheme.primary,
                           ),
                         ),
                         SizedBox(width: 10.w),
                         Flexible(
                           child: Text(
                             category.categoria,
-                            style: GoogleFonts.openSans(
+                            style: GoogleFonts.poppins(
                               fontSize: 13.sp,
                               fontWeight: FontWeight.w500,
-                              color:
-                                  themeManager.isDarkMode
-                                      ? Colors.white
-                                      : const Color(0xFF2D3436),
+                              color: theme.colorScheme.onSurface,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1060,6 +986,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
     Account? selectedValue,
     Function(Account?) onChanged,
   ) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1067,33 +994,25 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
           padding: EdgeInsets.symmetric(horizontal: 4.w),
           child: Text(
             label,
-            style: GoogleFonts.lato(
+            style: GoogleFonts.poppins(
               fontSize: 13.sp,
-              fontWeight: FontWeight.bold,
-              color:
-                  themeManager.isDarkMode
-                      ? Colors.white
-                      : const Color(0xFF2D3436),
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface,
             ),
           ),
         ),
         SizedBox(height: 8.h),
         Container(
           decoration: BoxDecoration(
-            color:
-                themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+            color: theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(12.r),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 8.r,
-                offset: Offset(0, 3.h),
-              ),
-            ],
+            border: Border.all(
+              color: theme.colorScheme.secondary.withOpacity(0.15),
+              width: 1,
+            ),
           ),
           child: DropdownButtonFormField<Account>(
-            dropdownColor:
-                themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+            dropdownColor: theme.colorScheme.surface,
             value: accounts.contains(selectedValue) ? selectedValue : null,
             decoration: InputDecoration(
               border: OutlineInputBorder(
@@ -1101,8 +1020,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                 borderSide: BorderSide.none,
               ),
               filled: true,
-              fillColor:
-                  themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+              fillColor: theme.colorScheme.surface,
               contentPadding: EdgeInsets.symmetric(
                 horizontal: 16.w,
                 vertical: 12.h,
@@ -1110,14 +1028,14 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
             ),
             hint: Text(
               'Selecciona una cuenta',
-              style: GoogleFonts.openSans(
-                color: Colors.grey.shade500,
+              style: GoogleFonts.poppins(
+                color: theme.colorScheme.secondary.withOpacity(0.5),
                 fontSize: 12.sp,
               ),
             ),
             icon: Icon(
               Icons.keyboard_arrow_down_rounded,
-              color: Colors.white,
+              color: theme.colorScheme.onSurface,
               size: 20.sp,
             ),
             isExpanded: true,
@@ -1132,20 +1050,8 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                         Container(
                           padding: EdgeInsets.all(6.r),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                widget.color,
-                                widget.color.withOpacity(0.7),
-                              ],
-                            ),
+                            color: theme.colorScheme.primary.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(8.r),
-                            boxShadow: [
-                              BoxShadow(
-                                color: widget.color.withOpacity(0.3),
-                                blurRadius: 4.r,
-                                offset: Offset(0, 2.h),
-                              ),
-                            ],
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(4.r),
@@ -1153,12 +1059,12 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                               'assets/images/${account.imagen}.png',
                               width: 20.w,
                               height: 20.h,
-                              color: Colors.white,
+                              color: theme.colorScheme.primary,
                               colorBlendMode: BlendMode.srcIn,
                               errorBuilder: (context, error, stackTrace) {
                                 return Icon(
                                   Icons.account_balance_wallet,
-                                  color: Colors.white,
+                                  color: theme.colorScheme.primary,
                                   size: 20.sp,
                                 );
                               },
@@ -1169,13 +1075,10 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                         Flexible(
                           child: Text(
                             account.nombre,
-                            style: GoogleFonts.openSans(
+                            style: GoogleFonts.poppins(
                               fontSize: 13.sp,
                               fontWeight: FontWeight.w500,
-                              color:
-                                  themeManager.isDarkMode
-                                      ? Colors.white
-                                      : const Color(0xFF2D3436),
+                              color: theme.colorScheme.onSurface,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1191,27 +1094,25 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
   }
 
   Widget _buildSubmitButton({bool enabled = true}) {
+    final theme = Theme.of(context);
     return BounceTapButton(
       onTap: (isRegistering || !enabled) ? null : _registerTransaction,
       child: Container(
         width: double.infinity,
         height: 46.h,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors:
-                enabled
-                    ? [widget.color, widget.color.withOpacity(0.8)]
-                    : [Colors.grey.shade400, Colors.grey.shade400],
-          ),
+          color:
+              enabled
+                  ? theme.colorScheme.secondary.withOpacity(0.08)
+                  : theme.colorScheme.secondary.withOpacity(0.03),
           borderRadius: BorderRadius.circular(12.r),
-          boxShadow: [
-            BoxShadow(
-              color: (enabled ? widget.color : Colors.grey.shade400)
-                  .withOpacity(0.4),
-              blurRadius: 10.r,
-              offset: Offset(0, 4.h),
-            ),
-          ],
+          border: Border.all(
+            color:
+                enabled
+                    ? theme.colorScheme.secondary.withOpacity(0.2)
+                    : theme.colorScheme.secondary.withOpacity(0.1),
+            width: 1,
+          ),
         ),
         child: Material(
           color: Colors.transparent,
@@ -1234,7 +1135,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                         children: [
                           Icon(
                             Icons.check_circle_outline,
-                            color: Colors.white,
+                            color: theme.colorScheme.secondary,
                             size: 20.sp,
                           ),
                           SizedBox(width: 8.w),
@@ -1242,10 +1143,10 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                             widget.transaction != null
                                 ? 'Actualizar'
                                 : 'Registrar',
-                            style: GoogleFonts.lato(
-                              color: Colors.white,
+                            style: GoogleFonts.poppins(
+                              color: theme.colorScheme.secondary,
                               fontSize: 14.sp,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -1321,16 +1222,15 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
         }
       },
       child: Scaffold(
-        backgroundColor:
-            themeManager.isDarkMode
-                ? Colors.grey.shade900
-                : Colors.grey.shade50,
+        backgroundColor: Theme.of(context).colorScheme.background,
         body:
             isLoading
                 ? Center(
                   child: CircularProgressIndicator(
                     strokeWidth: 3.w,
-                    valueColor: AlwaysStoppedAnimation<Color>(widget.color),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                 )
                 : Column(

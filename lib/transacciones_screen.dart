@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:notificaciones/widgets/confirmation_dialog.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -20,7 +21,9 @@ import 'componentes/empty_states.dart';
 import 'componentes/shimmer_widgets.dart';
 
 class TransaccionesScreen extends StatefulWidget {
-  const TransaccionesScreen({Key? key}) : super(key: key);
+  final String? cuentaFiltro;
+
+  const TransaccionesScreen({Key? key, this.cuentaFiltro}) : super(key: key);
 
   @override
   TransaccionesScreenState createState() => TransaccionesScreenState();
@@ -36,6 +39,8 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
   final FirestoreService _firestoreService = FirestoreService();
   StreamSubscription<List<Transaction>>? _transaccionesSubscription;
   List<Transaction> _transacciones = [];
+  List<Transaction> _transaccionesFiltradas = [];
+  String? _cuentaFiltroActual;
   bool _isLoading = true;
   bool _isManualRefresh = false;
 
@@ -54,6 +59,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
   @override
   void initState() {
     super.initState();
+    _cuentaFiltroActual = widget.cuentaFiltro;
     WidgetsBinding.instance.addObserver(this);
     _initializeDateFormatting();
     _loadData();
@@ -97,6 +103,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
             if (mounted) {
               setState(() {
                 _transacciones = transacciones;
+                _aplicarFiltro();
                 _isLoading = false;
               });
             }
@@ -124,6 +131,30 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
   Future<void> refreshData() async {
     setState(() => _isManualRefresh = true);
     _loadData();
+  }
+
+  void _aplicarFiltro() {
+    if (_cuentaFiltroActual == null || _cuentaFiltroActual!.isEmpty) {
+      _transaccionesFiltradas = _transacciones;
+    } else {
+      _transaccionesFiltradas =
+          _transacciones.where((t) {
+            return t.cuenta == _cuentaFiltroActual ||
+                t.cuentaOrigen == _cuentaFiltroActual ||
+                t.cuentaDestino == _cuentaFiltroActual;
+          }).toList();
+    }
+  }
+
+  void _limpiarFiltro() {
+    setState(() {
+      _cuentaFiltroActual = null;
+      _aplicarFiltro();
+    });
+    // Si se abrió con filtro desde otra pantalla, regresar
+    if (widget.cuentaFiltro != null) {
+      Navigator.of(context).pop();
+    }
   }
 
   // Tutorial Methods
@@ -536,160 +567,149 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
 
     showDialog(
       context: context,
-      builder:
-          (context) => Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20.r),
-            ), // ✅ REDUCIDO de 24
-            child: Container(
-              constraints: BoxConstraints(maxWidth: 280.w), // ✅ REDUCIDO de 350
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(16.r), // ✅ REDUCIDO de 20
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(20.r),
-                        topRight: Radius.circular(20.r),
+      builder: (context) {
+        final theme = Theme.of(context);
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.r),
+          ),
+          backgroundColor: theme.colorScheme.surface,
+          child: Container(
+            constraints: BoxConstraints(maxWidth: 280.w),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(16.r),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: theme.colorScheme.primary.withOpacity(0.2),
+                        width: 1.5,
                       ),
                     ),
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(10.r), // ✅ REDUCIDO de 12
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.3),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.calendar_today_rounded,
-                            color: Colors.white,
-                            size: 24.sp,
-                          ), // ✅ REDUCIDO de 28
-                        ),
-                        SizedBox(height: 10.h), // ✅ REDUCIDO de 12
-                        Text(
-                          'Resumen del Día',
-                          style: TextStyle(
-                            fontSize: 17.sp, // ✅ REDUCIDO de 20
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        SizedBox(height: 4.h), // ✅ REDUCIDO de 6
-                        Text(
-                          capitalizedDate,
-                          style: TextStyle(
-                            fontSize: 11.sp, // ✅ REDUCIDO de 12
-                            color: Colors.white.withOpacity(0.9),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20.r),
+                      topRight: Radius.circular(20.r),
                     ),
                   ),
-                  Padding(
-                    padding: EdgeInsets.all(16.r), // ✅ REDUCIDO de 20
-                    child: Column(
-                      children:
-                          totals.entries.map((entry) {
-                            final (icon, color) = _getIconAndColorForType(
-                              entry.key,
-                            );
-                            return Container(
-                              margin: EdgeInsets.only(
-                                bottom: 8.h,
-                              ), // ✅ REDUCIDO de 10
-                              padding: EdgeInsets.all(11.r), // ✅ REDUCIDO de 14
-                              decoration: BoxDecoration(
-                                color: color.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(10.r),
-                                border: Border.all(
-                                  color: color.withOpacity(0.3),
-                                  width: 1.w,
-                                ),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(10.r),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withOpacity(0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.calendar_today_rounded,
+                          color: theme.colorScheme.primary,
+                          size: 24.sp,
+                        ),
+                      ),
+                      SizedBox(height: 10.h),
+                      Text(
+                        'Resumen del Día',
+                        style: GoogleFonts.lato(
+                          fontSize: 17.sp,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        capitalizedDate,
+                        style: GoogleFonts.openSans(
+                          fontSize: 11.sp,
+                          color: theme.colorScheme.secondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.all(16.r),
+                  child: Column(
+                    children:
+                        totals.entries.map((entry) {
+                          final (icon, color) = _getIconAndColorForType(
+                            entry.key,
+                          );
+                          return Container(
+                            margin: EdgeInsets.only(bottom: 8.h),
+                            padding: EdgeInsets.all(11.r),
+                            decoration: BoxDecoration(
+                              color: color.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(10.r),
+                              border: Border.all(
+                                color: color.withOpacity(0.25),
+                                width: 1.5,
                               ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: EdgeInsets.all(
-                                      7.r,
-                                    ), // ✅ REDUCIDO de 9
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [color, color.withOpacity(0.7)],
-                                      ),
-                                      borderRadius: BorderRadius.circular(8.r),
-                                    ),
-                                    child: Icon(
-                                      icon,
-                                      color: Colors.white,
-                                      size: 16.sp,
-                                    ), // ✅ REDUCIDO de 18
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(7.r),
+                                  decoration: BoxDecoration(
+                                    color: color.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(8.r),
                                   ),
-                                  SizedBox(width: 11.w), // ✅ REDUCIDO de 14
-                                  Expanded(
-                                    child: Text(
-                                      entry.key,
-                                      style: TextStyle(
-                                        fontSize: 13.sp,
-                                        fontWeight: FontWeight.w600,
-                                      ), // ✅ REDUCIDO de 14
-                                    ),
-                                  ),
-                                  Text(
-                                    _currencyFormat.format(entry.value.abs()),
+                                  child: Icon(icon, color: color, size: 16.sp),
+                                ),
+                                SizedBox(width: 11.w),
+                                Expanded(
+                                  child: Text(
+                                    entry.key,
                                     style: GoogleFonts.lato(
-                                      fontSize: 13.sp, // ✅ REDUCIDO de 14
-                                      fontWeight: FontWeight.bold,
-                                      color: color,
+                                      fontSize: 13.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: theme.colorScheme.onSurface,
                                     ),
                                   ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      16.w,
-                      0,
-                      16.w,
-                      16.h,
-                    ), // ✅ REDUCIDO de 20
-                    child: Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                        ),
-                        borderRadius: BorderRadius.circular(10.r),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => Navigator.of(context).pop(),
-                          borderRadius: BorderRadius.circular(10.r),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              vertical: 11.h,
-                            ), // ✅ REDUCIDO de 12
-                            child: Center(
-                              child: Text(
-                                'Cerrar',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13.sp, // ✅ REDUCIDO de 14
-                                  fontWeight: FontWeight.bold,
                                 ),
+                                Text(
+                                  _currencyFormat.format(entry.value.abs()),
+                                  style: GoogleFonts.lato(
+                                    fontSize: 13.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color: color,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 16.h),
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.secondary.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(10.r),
+                      border: Border.all(
+                        color: theme.colorScheme.secondary.withOpacity(0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => Navigator.of(context).pop(),
+                        borderRadius: BorderRadius.circular(10.r),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(vertical: 11.h),
+                          child: Center(
+                            child: Text(
+                              'Cerrar',
+                              style: GoogleFonts.lato(
+                                color: theme.colorScheme.secondary,
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
@@ -697,10 +717,12 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
+        );
+      },
     );
   }
 
@@ -736,7 +758,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
   }
 
   Widget _buildDateHeader(String fecha, List<Transaction> dailyTransactions) {
-    final themeManager = Provider.of<ThemeManager>(context);
+    final theme = Theme.of(context);
     String formattedDate = DateFormat(
       'EEEE, d MMMM',
       'es_ES',
@@ -749,70 +771,45 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
       key: isFirstHeader ? _dateHeaderKey : null,
       onTap: () => _showDailyTransactions(fecha, dailyTransactions),
       child: Container(
-        margin: EdgeInsets.symmetric(
-          horizontal: 12.w,
-          vertical: 8.h,
-        ), // ✅ REDUCIDO de 14/10
-        padding: EdgeInsets.symmetric(
-          horizontal: 12.w,
-          vertical: 7.h,
-        ), // ✅ REDUCIDO de 14/9
+        margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors:
-                themeManager.isDarkMode
-                    ? [Colors.grey.shade800, Colors.grey.shade900]
-                    : [
-                      const Color(0xFF667eea).withOpacity(0.1),
-                      const Color(0xFF764ba2).withOpacity(0.1),
-                    ],
-          ),
+          color: theme.colorScheme.secondary.withOpacity(0.05),
           borderRadius: BorderRadius.circular(10.r),
           border: Border.all(
-            color:
-                themeManager.isDarkMode
-                    ? Colors.grey.shade700
-                    : const Color(0xFF667eea).withOpacity(0.3),
-            width: 1.w,
+            color: theme.colorScheme.secondary.withOpacity(0.2),
+            width: 1.5,
           ),
         ),
         child: Row(
           children: [
             Container(
-              padding: EdgeInsets.all(6.r), // ✅ REDUCIDO de 7
+              padding: EdgeInsets.all(7.r),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                ),
-                borderRadius: BorderRadius.circular(7.r),
+                color: theme.colorScheme.secondary.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8.r),
               ),
               child: Icon(
                 Icons.calendar_today_rounded,
-                size: 13.sp,
-                color: Colors.white,
-              ), // ✅ REDUCIDO de 14
+                size: 14.sp,
+                color: theme.colorScheme.secondary,
+              ),
             ),
-            SizedBox(width: 9.w), // ✅ REDUCIDO de 10
+            SizedBox(width: 10.w),
             Expanded(
               child: Text(
                 formattedDate,
                 style: GoogleFonts.lato(
-                  fontSize: 12.sp, // ✅ REDUCIDO de 13
-                  fontWeight: FontWeight.bold,
-                  color:
-                      themeManager.isDarkMode
-                          ? Colors.white
-                          : const Color(0xFF2D3436),
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onBackground,
                 ),
               ),
             ),
             Icon(
               Icons.info_outline_rounded,
-              size: 15.sp, // ✅ REDUCIDO de 16
-              color:
-                  themeManager.isDarkMode
-                      ? Colors.grey.shade400
-                      : const Color(0xFF667eea),
+              size: 16.sp,
+              color: theme.colorScheme.secondary,
             ),
           ],
         ),
@@ -835,7 +832,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
         children: [
           SlidableAction(
             onPressed: (context) => _showEditConfirmation(transaction),
-            backgroundColor: Colors.blue,
+            backgroundColor: Colors.blue.shade400,
             foregroundColor: Colors.white,
             icon: Icons.edit_rounded,
             label: 'Editar',
@@ -852,7 +849,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
         children: [
           SlidableAction(
             onPressed: (context) => _showDeleteConfirmation(transaction),
-            backgroundColor: Colors.red,
+            backgroundColor: Colors.red.shade400,
             foregroundColor: Colors.white,
             icon: Icons.delete_rounded,
             label: 'Eliminar',
@@ -866,24 +863,16 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
       child: BounceTapButton(
         child: Container(
           key: isFirst ? _firstTransactionKey : null,
-          margin: EdgeInsets.symmetric(
-            horizontal: 12.w,
-            vertical: 4.h,
-          ), // ✅ REDUCIDO de 14/5
+          margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
           decoration: BoxDecoration(
-            color:
-                themeManager.isDarkMode
-                    ? Colors.grey.shade800.withOpacity(0.5)
-                    : Colors.white,
-            borderRadius: BorderRadius.circular(14.r),
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: color.withOpacity(0.25), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color:
-                    themeManager.isDarkMode
-                        ? Colors.black.withOpacity(0.2)
-                        : color.withOpacity(0.1),
+                color: Colors.black.withOpacity(0.03),
                 blurRadius: 8.r,
-                offset: Offset(0, 3.h),
+                offset: Offset(0, 2.h),
               ),
             ],
           ),
@@ -891,43 +880,38 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
             contentPadding: EdgeInsets.symmetric(
               horizontal: 12.w,
               vertical: 8.h,
-            ), // ✅ REDUCIDO de 14/10
+            ),
             leading: Container(
-              padding: EdgeInsets.all(9.r), // ✅ REDUCIDO de 11
+              padding: EdgeInsets.all(10.r),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [color, color.withOpacity(0.7)],
-                ),
+                color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10.r),
               ),
-              child: Icon(
-                icon,
-                color: Colors.white,
-                size: 20.sp,
-              ), // ✅ REDUCIDO de 22
+              child: Icon(icon, color: color, size: 20.sp),
             ),
             title: Text(
               transaction.descripcion,
               style: GoogleFonts.lato(
-                fontWeight: FontWeight.bold,
-                fontSize: 13.sp, // ✅ REDUCIDO de 14
+                fontWeight: FontWeight.w600,
+                fontSize: 14.sp,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             subtitle: Padding(
-              padding: EdgeInsets.only(top: 6.h), // ✅ REDUCIDO de 7
+              padding: EdgeInsets.only(top: 6.h),
               child: Wrap(
-                spacing: 4.w, // ✅ REDUCIDO de 5
-                runSpacing: 2.h, // ✅ REDUCIDO de 3
+                spacing: 4.w,
+                runSpacing: 2.h,
                 children: _buildTransactionBadges(transaction, color),
               ),
             ),
             trailing: Text(
               _currencyFormat.format(transaction.monto.abs()),
               style: GoogleFonts.lato(
-                fontSize: 13.sp, // ✅ REDUCIDO de 14
-                fontWeight: FontWeight.bold,
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w700,
                 color: color,
               ),
             ),
@@ -1008,16 +992,13 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
 
   // Confirmation Dialogs
   Future<void> _showEditConfirmation(Transaction transaction) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showConfirmationDialog(
       context: context,
-      builder:
-          (context) => _buildConfirmationDialog(
-            title: 'Editar Transacción',
-            message: '¿Deseas editar esta transacción?',
-            confirmText: 'Editar',
-            confirmColor: Colors.blue,
-            icon: Icons.edit_rounded,
-          ),
+      title: 'Editar Transacción',
+      message: '¿Deseas editar esta transacción?',
+      confirmText: 'Editar',
+      confirmColor: Theme.of(context).colorScheme.secondary,
+      icon: Icons.edit_rounded,
     );
 
     if (confirmed == true) {
@@ -1026,17 +1007,14 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
   }
 
   Future<void> _showDeleteConfirmation(Transaction transaction) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showConfirmationDialog(
       context: context,
-      builder:
-          (context) => _buildConfirmationDialog(
-            title: 'Eliminar Transacción',
-            message:
-                '¿Estás seguro de eliminar esta transacción? Esta acción no se puede deshacer.',
-            confirmText: 'Eliminar',
-            confirmColor: Colors.red,
-            icon: Icons.delete_rounded,
-          ),
+      title: 'Eliminar Transacción',
+      message:
+          '¿Estás seguro de eliminar esta transacción? Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar',
+      confirmColor: Colors.red.shade400,
+      icon: Icons.delete_rounded,
     );
 
     if (confirmed == true) {
@@ -1044,104 +1022,53 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
     }
   }
 
-  Widget _buildConfirmationDialog({
-    required String title,
-    required String message,
-    required String confirmText,
-    required Color confirmColor,
-    required IconData icon,
-  }) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
-      child: Container(
-        constraints: BoxConstraints(maxWidth: 280.w), // ✅ REDUCIDO de 350
-        padding: EdgeInsets.all(16.r), // ✅ REDUCIDO de 20
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: EdgeInsets.all(12.r), // ✅ REDUCIDO de 14
+  Widget _buildFiltroCuentaChip() {
+    final theme = Theme.of(context);
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.secondary.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(
+          color: theme.colorScheme.secondary.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.filter_alt_rounded,
+            color: theme.colorScheme.secondary,
+            size: 16.sp,
+          ),
+          SizedBox(width: 6.w),
+          Text(
+            'Cuenta: $_cuentaFiltroActual',
+            style: GoogleFonts.poppins(
+              color: theme.colorScheme.secondary,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(width: 8.w),
+          GestureDetector(
+            onTap: _limpiarFiltro,
+            child: Container(
+              padding: EdgeInsets.all(4.r),
               decoration: BoxDecoration(
-                color: confirmColor.withOpacity(0.1),
+                color: theme.colorScheme.secondary.withOpacity(0.15),
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                icon,
-                size: 30.sp,
-                color: confirmColor,
-              ), // ✅ REDUCIDO de 36
+                Icons.close_rounded,
+                color: theme.colorScheme.secondary,
+                size: 14.sp,
+              ),
             ),
-            SizedBox(height: 13.h), // ✅ REDUCIDO de 16
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.bold,
-              ), // ✅ REDUCIDO de 18
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 8.h), // ✅ REDUCIDO de 10
-            Text(
-              message,
-              style: TextStyle(
-                fontSize: 12.sp,
-                color: Colors.grey.shade600,
-              ), // ✅ REDUCIDO de 13
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 16.h), // ✅ REDUCIDO de 20
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    style: OutlinedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(
-                        vertical: 10.h,
-                      ), // ✅ REDUCIDO de 12
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.r),
-                      ),
-                      side: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    child: Text('Cancelar', style: TextStyle(fontSize: 13.sp)),
-                  ),
-                ),
-                SizedBox(width: 8.w), // ✅ REDUCIDO de 10
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [confirmColor, confirmColor.withOpacity(0.8)],
-                      ),
-                      borderRadius: BorderRadius.circular(10.r),
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => Navigator.of(context).pop(true),
-                        borderRadius: BorderRadius.circular(10.r),
-                        child: Container(
-                          padding: EdgeInsets.symmetric(vertical: 10.h),
-                          child: Center(
-                            child: Text(
-                              confirmText,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13.sp,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1158,11 +1085,21 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
       backgroundColor: bgColor,
       body: Stack(
         children: [
-          _isLoading
-              ? const TransactionListShimmer(itemCount: 8)
-              : _transacciones.isEmpty
-              ? _buildEmptyState()
-              : _buildTransactionsList(_transacciones),
+          Column(
+            children: [
+              // Chip de filtro activo
+              if (_cuentaFiltroActual != null) _buildFiltroCuentaChip(),
+              // Lista de transacciones
+              Expanded(
+                child:
+                    _isLoading
+                        ? const TransactionListShimmer(itemCount: 8)
+                        : _transaccionesFiltradas.isEmpty
+                        ? _buildEmptyState()
+                        : _buildTransactionsList(_transaccionesFiltradas),
+              ),
+            ],
+          ),
           // Indicador sutil de recarga (solo refresh manual)
           if (_isManualRefresh)
             Positioned(

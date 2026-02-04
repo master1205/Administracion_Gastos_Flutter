@@ -96,6 +96,7 @@ class _CrearCategoriaScreenState extends State<CrearCategoriaScreen> {
   @override
   Widget build(BuildContext context) {
     final themeManager = Provider.of<ThemeManager>(context);
+    final theme = Theme.of(context);
     final isDark = themeManager.isDarkMode;
     final isEdit = widget.categoria != null;
     final colorTipo = _getColorForTipo(_tipoSeleccionado);
@@ -111,13 +112,12 @@ class _CrearCategoriaScreenState extends State<CrearCategoriaScreen> {
       },
       child: Scaffold(
         resizeToAvoidBottomInset: true,
-        backgroundColor:
-            isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FA),
+        backgroundColor: theme.colorScheme.background,
         appBar: AppBar(
-          backgroundColor: colorTipo,
+          backgroundColor: theme.colorScheme.surface,
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.close, color: Colors.white),
+            icon: Icon(Icons.close, color: theme.colorScheme.onSurface),
             onPressed: () async {
               final shouldPop = await _onWillPop();
               if (shouldPop && mounted) {
@@ -129,8 +129,8 @@ class _CrearCategoriaScreenState extends State<CrearCategoriaScreen> {
             isEdit ? 'Editar Categoría' : 'Nueva Categoría',
             style: GoogleFonts.poppins(
               fontSize: 20.sp,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface,
             ),
           ),
         ),
@@ -139,34 +139,37 @@ class _CrearCategoriaScreenState extends State<CrearCategoriaScreen> {
             // Header con ícono
             Container(
               width: double.infinity,
-              padding: EdgeInsets.all(24.r),
+              padding: EdgeInsets.symmetric(vertical: 24.h),
               decoration: BoxDecoration(
-                color: colorTipo,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(24.r),
-                  bottomRight: Radius.circular(24.r),
+                color: colorTipo.withOpacity(0.08),
+                border: Border(
+                  bottom: BorderSide(
+                    color: colorTipo.withOpacity(0.15),
+                    width: 1,
+                  ),
                 ),
               ),
               child: Column(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(20.r),
+                    padding: EdgeInsets.all(16.r),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: colorTipo.withOpacity(0.12),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       _iconoSeleccionado,
-                      color: Colors.white,
-                      size: 48.sp,
+                      color: colorTipo,
+                      size: 40.sp,
                     ),
                   ),
                   SizedBox(height: 12.h),
                   Text(
                     'Personaliza tu categoría',
                     style: GoogleFonts.poppins(
-                      fontSize: 14.sp,
-                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 13.sp,
+                      color: theme.colorScheme.secondary.withOpacity(0.7),
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
@@ -196,10 +199,9 @@ class _CrearCategoriaScreenState extends State<CrearCategoriaScreen> {
                         prefixIcon: Icons.label_outline,
                         isDark: isDark,
                         color: colorTipo,
+                        theme: theme,
                       ),
-                      style: TextStyle(
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
+                      style: TextStyle(color: theme.colorScheme.onSurface),
                     ),
                     SizedBox(height: 20.h),
 
@@ -256,46 +258,47 @@ class _CrearCategoriaScreenState extends State<CrearCategoriaScreen> {
                         }
                       },
                       child: Container(
-                        padding: EdgeInsets.all(20.r),
+                        padding: EdgeInsets.all(18.r),
                         decoration: BoxDecoration(
-                          color:
-                              isDark ? const Color(0xFF2A2A2A) : Colors.white,
-                          borderRadius: BorderRadius.circular(16.r),
+                          color: theme.colorScheme.surface,
+                          borderRadius: BorderRadius.circular(14.r),
                           border: Border.all(
-                            color: colorTipo.withOpacity(0.3),
-                            width: 2,
+                            color: theme.colorScheme.secondary.withOpacity(0.2),
+                            width: 1,
                           ),
                         ),
                         child: Row(
                           children: [
                             Container(
-                              padding: EdgeInsets.all(12.r),
+                              padding: EdgeInsets.all(10.r),
                               decoration: BoxDecoration(
-                                color: colorTipo.withOpacity(0.1),
+                                color: colorTipo.withOpacity(0.12),
                                 borderRadius: BorderRadius.circular(12.r),
                               ),
                               child: Icon(
                                 _iconoSeleccionado,
                                 color: colorTipo,
-                                size: 32.sp,
+                                size: 28.sp,
                               ),
                             ),
-                            SizedBox(width: 16.w),
+                            SizedBox(width: 14.w),
                             Expanded(
                               child: Text(
                                 'Toca para cambiar el ícono',
                                 style: GoogleFonts.poppins(
                                   fontSize: 14.sp,
-                                  color:
-                                      isDark
-                                          ? Colors.grey.shade400
-                                          : Colors.grey.shade600,
+                                  color: theme.colorScheme.secondary
+                                      .withOpacity(0.7),
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ),
                             Icon(
                               Icons.chevron_right,
-                              color: Colors.grey.shade400,
+                              color: theme.colorScheme.secondary.withOpacity(
+                                0.4,
+                              ),
+                              size: 20.sp,
                             ),
                           ],
                         ),
@@ -361,17 +364,17 @@ class _CrearCategoriaScreenState extends State<CrearCategoriaScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: colorTipo,
               foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: 16.h),
+              padding: EdgeInsets.symmetric(vertical: 15.h),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r),
+                borderRadius: BorderRadius.circular(14.r),
               ),
-              elevation: 4,
+              elevation: 0,
             ),
             child: Text(
               isEdit ? 'Actualizar Categoría' : 'Crear Categoría',
               style: GoogleFonts.poppins(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.bold,
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -393,46 +396,48 @@ class _CrearCategoriaScreenState extends State<CrearCategoriaScreen> {
   }
 
   Widget _buildTipoChip(String tipo, Color color, bool isDark) {
+    final theme = Theme.of(context);
     final isSelected = _tipoSeleccionado == tipo;
     return GestureDetector(
       onTap: () => setState(() => _tipoSeleccionado = tipo),
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 16.h),
+        padding: EdgeInsets.symmetric(vertical: 14.h),
         decoration: BoxDecoration(
           color:
-              isSelected
-                  ? color.withOpacity(0.15)
-                  : (isDark ? const Color(0xFF2A2A2A) : Colors.white),
+              isSelected ? color.withOpacity(0.1) : theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(12.r),
           border: Border.all(
             color:
                 isSelected
-                    ? color
-                    : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
-            width: isSelected ? 2 : 1,
+                    ? color.withOpacity(0.3)
+                    : theme.colorScheme.secondary.withOpacity(0.2),
+            width: isSelected ? 1.5 : 1,
           ),
         ),
         child: Column(
           children: [
             Icon(
               tipo == 'Gasto'
-                  ? Icons.arrow_downward
-                  : (tipo == 'Ingreso' ? Icons.arrow_upward : Icons.payment),
-              color: isSelected ? color : Colors.grey.shade400,
-              size: 24.sp,
+                  ? Icons.arrow_downward_rounded
+                  : (tipo == 'Ingreso'
+                      ? Icons.arrow_upward_rounded
+                      : Icons.payment_rounded),
+              color:
+                  isSelected
+                      ? color
+                      : theme.colorScheme.secondary.withOpacity(0.5),
+              size: 22.sp,
             ),
-            SizedBox(height: 4.h),
+            SizedBox(height: 6.h),
             Text(
               tipo,
               style: GoogleFonts.poppins(
                 fontSize: 12.sp,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 color:
                     isSelected
                         ? color
-                        : (isDark
-                            ? Colors.grey.shade400
-                            : Colors.grey.shade600),
+                        : theme.colorScheme.secondary.withOpacity(0.7),
               ),
             ),
           ],
@@ -446,44 +451,44 @@ class _CrearCategoriaScreenState extends State<CrearCategoriaScreen> {
     required IconData prefixIcon,
     required bool isDark,
     required Color color,
+    required ThemeData theme,
   }) {
     return InputDecoration(
       hintText: hintText,
-      hintStyle: GoogleFonts.openSans(
-        color: Colors.grey.shade400,
-        fontSize: 12.sp,
+      hintStyle: GoogleFonts.poppins(
+        color: theme.colorScheme.secondary.withOpacity(0.5),
+        fontSize: 14.sp,
       ),
       prefixIcon: Container(
         margin: EdgeInsets.all(10.r),
-        padding: EdgeInsets.all(6.r),
+        padding: EdgeInsets.all(8.r),
         decoration: BoxDecoration(
-          gradient: LinearGradient(colors: [color, color.withOpacity(0.7)]),
+          color: color.withOpacity(0.12),
           borderRadius: BorderRadius.circular(10.r),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.3),
-              blurRadius: 4.r,
-              offset: Offset(0, 2.h),
-            ),
-          ],
         ),
-        child: Icon(prefixIcon, color: Colors.white, size: 20.sp),
+        child: Icon(prefixIcon, color: color, size: 20.sp),
       ),
       filled: true,
-      fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+      fillColor: theme.colorScheme.surface,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide.none,
+        borderSide: BorderSide(
+          color: theme.colorScheme.secondary.withOpacity(0.2),
+          width: 1,
+        ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide.none,
+        borderSide: BorderSide(
+          color: theme.colorScheme.secondary.withOpacity(0.2),
+          width: 1,
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide(color: color, width: 2),
+        borderSide: BorderSide(color: color, width: 1.5),
       ),
-      contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+      contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
     );
   }
 }

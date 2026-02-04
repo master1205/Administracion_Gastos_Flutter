@@ -115,181 +115,169 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder:
-          (context) => Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24.r),
+      builder: (context) {
+        final theme = Theme.of(context);
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.r),
+          ),
+          elevation: 0,
+          backgroundColor: theme.colorScheme.surface,
+          child: Container(
+            padding: EdgeInsets.all(24.r),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(20.r),
+              border: Border.all(
+                color: theme.colorScheme.primary.withOpacity(0.2),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 20.r,
+                  offset: Offset(0, 6.h),
+                ),
+              ],
             ),
-            elevation: 0,
-            backgroundColor: Colors.transparent,
-            child: Container(
-              padding: EdgeInsets.all(24.r),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 25.r,
-                    offset: Offset(0, 8.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 70.w,
+                  height: 70.w,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: theme.colorScheme.primary.withOpacity(0.15),
                   ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 80.w,
-                    height: 80.w,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF667eea).withOpacity(0.3),
-                          blurRadius: 18.r,
-                          offset: Offset(0, 8.h),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      Icons.waving_hand_rounded,
-                      size: 40.sp,
-                      color: Colors.white,
-                    ),
+                  child: Icon(
+                    Icons.waving_hand_rounded,
+                    size: 36.sp,
+                    color: theme.colorScheme.primary,
                   ),
-                  SizedBox(height: 20.h),
-                  Text(
-                    '¡Bienvenido!',
-                    style: TextStyle(
-                      fontSize: 24.sp,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF2D3436),
-                    ),
+                ),
+                SizedBox(height: 18.h),
+                Text(
+                  '¡Bienvenido!',
+                  style: TextStyle(
+                    fontSize: 22.sp,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
                   ),
-                  SizedBox(height: 6.h),
-                  Text(
-                    'Personaliza tu experiencia',
-                    style: TextStyle(
-                      fontSize: 13.sp,
-                      color: Colors.grey.shade600,
-                      fontWeight: FontWeight.w500,
-                    ),
+                ),
+                SizedBox(height: 6.h),
+                Text(
+                  'Personaliza tu experiencia',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: theme.colorScheme.secondary,
+                    fontWeight: FontWeight.w500,
                   ),
-                  SizedBox(height: 24.h),
-                  TextField(
-                    controller: controller,
-                    textCapitalization: TextCapitalization.words,
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w500,
+                ),
+                SizedBox(height: 20.h),
+                TextField(
+                  controller: controller,
+                  textCapitalization: TextCapitalization.words,
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Ingresa tu nombre',
+                    hintStyle: TextStyle(
+                      color: theme.colorScheme.secondary.withOpacity(0.5),
+                      fontWeight: FontWeight.w400,
                     ),
-                    decoration: InputDecoration(
-                      hintText: 'Ingresa tu nombre',
-                      hintStyle: TextStyle(
-                        color: Colors.grey.shade400,
-                        fontWeight: FontWeight.w400,
+                    prefixIcon: Container(
+                      margin: EdgeInsets.all(10.r),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(10.r),
                       ),
-                      prefixIcon: Container(
-                        margin: EdgeInsets.all(10.r),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                          ),
-                          borderRadius: BorderRadius.circular(10.r),
-                        ),
-                        child: Icon(
-                          Icons.person_rounded,
-                          color: Colors.white,
-                          size: 18.sp,
-                        ),
+                      child: Icon(
+                        Icons.person_rounded,
+                        color: theme.colorScheme.primary,
+                        size: 18.sp,
                       ),
-                      filled: true,
-                      fillColor: Colors.grey.shade50,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14.r),
-                        borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: theme.colorScheme.secondary.withOpacity(0.05),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                      borderSide: BorderSide(
+                        color: theme.colorScheme.secondary.withOpacity(0.2),
+                        width: 1.5,
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14.r),
-                        borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                      borderSide: BorderSide(
+                        color: theme.colorScheme.primary,
+                        width: 2.w,
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14.r),
-                        borderSide: BorderSide(
-                          color: const Color(0xFF667eea),
-                          width: 2.w,
-                        ),
-                      ),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 16.w,
-                        vertical: 16.h,
-                      ),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 14.h,
                     ),
                   ),
-                  SizedBox(height: 20.h),
-                  Container(
-                    width: double.infinity,
-                    height: 50.h,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                      ),
-                      borderRadius: BorderRadius.circular(14.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF667eea).withOpacity(0.4),
-                          blurRadius: 10.r,
-                          offset: Offset(0, 5.h),
-                        ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () async {
-                          if (controller.text.trim().isNotEmpty) {
-                            final name = controller.text.trim();
-                            final prefs = await SharedPreferences.getInstance();
-                            await prefs.setString(_userNameKey, name);
-                            setState(() => _userName = name);
-                            if (mounted) Navigator.of(context).pop();
-                          }
-                        },
-                        borderRadius: BorderRadius.circular(14.r),
-                        child: Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Comenzar',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 15.sp,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              SizedBox(width: 6.w),
-                              Icon(
-                                Icons.arrow_forward_rounded,
+                ),
+                SizedBox(height: 18.h),
+                Container(
+                  width: double.infinity,
+                  height: 48.h,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary,
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () async {
+                        if (controller.text.trim().isNotEmpty) {
+                          final name = controller.text.trim();
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setString(_userNameKey, name);
+                          setState(() => _userName = name);
+                          if (mounted) Navigator.of(context).pop();
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(12.r),
+                      child: Center(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Comenzar',
+                              style: TextStyle(
                                 color: Colors.white,
-                                size: 18.sp,
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
                               ),
-                            ],
-                          ),
+                            ),
+                            SizedBox(width: 6.w),
+                            Icon(
+                              Icons.arrow_forward_rounded,
+                              color: Colors.white,
+                              size: 16.sp,
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
+        );
+      },
     );
   }
 
@@ -818,6 +806,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     ];
 
+    final theme = Theme.of(context);
+
     return Drawer(
       width: 280.w,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
@@ -842,59 +832,36 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               width: double.infinity,
               padding: EdgeInsets.fromLTRB(20.w, 50.h, 20.w, 28.h),
               decoration: BoxDecoration(
-                gradient:
-                    themeManager.isDarkMode
-                        ? LinearGradient(
-                          colors: [Colors.grey.shade800, Colors.grey.shade900],
-                        )
-                        : const LinearGradient(
-                          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                        ),
+                color: theme.colorScheme.primary.withOpacity(0.08),
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(26.r),
                   bottomRight: Radius.circular(26.r),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color:
-                        themeManager.isDarkMode
-                            ? Colors.black.withOpacity(0.3)
-                            : const Color(0xFF667eea).withOpacity(0.3),
-                    blurRadius: 18.r,
-                    offset: Offset(0, 8.h),
+                border: Border(
+                  bottom: BorderSide(
+                    color: theme.colorScheme.primary.withOpacity(0.15),
+                    width: 1.5,
                   ),
-                ],
+                ),
               ),
               child: Column(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(3.r),
+                    padding: EdgeInsets.all(14.r),
                     decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withOpacity(0.15),
                       shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.white.withOpacity(0.8),
-                          Colors.white.withOpacity(0.4),
-                        ],
-                      ),
                     ),
-                    child: Container(
-                      padding: EdgeInsets.all(14.r),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Image.asset(
-                        'assets/icons/cochinito.png',
-                        height: 44.h,
-                      ),
+                    child: Image.asset(
+                      'assets/icons/cochinito.png',
+                      height: 44.h,
                     ),
                   ),
                   SizedBox(height: 14.h),
                   Text(
                     'Hola, $_userName',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: theme.colorScheme.onSurface,
                       fontSize: 20.sp,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.5,
@@ -907,13 +874,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       vertical: 5.h,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: theme.colorScheme.primary.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(18.r),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withOpacity(0.2),
+                        width: 1,
+                      ),
                     ),
                     child: Text(
                       'Administrador',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: theme.colorScheme.primary,
                         fontSize: 12.sp,
                         fontWeight: FontWeight.w600,
                       ),
@@ -934,19 +905,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     child: Container(
                       margin: EdgeInsets.only(bottom: 10.h),
                       decoration: BoxDecoration(
-                        color:
-                            themeManager.isDarkMode
-                                ? Colors.grey.shade800.withOpacity(0.5)
-                                : Colors.white,
+                        color: theme.colorScheme.surface,
                         borderRadius: BorderRadius.circular(14.r),
+                        border: Border.all(
+                          color: theme.colorScheme.secondary.withOpacity(0.25),
+                          width: 1.5,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color:
-                                themeManager.isDarkMode
-                                    ? Colors.black.withOpacity(0.2)
-                                    : Colors.grey.withOpacity(0.1),
+                            color: Colors.black.withOpacity(0.03),
                             blurRadius: 8.r,
-                            offset: Offset(0, 3.h),
+                            offset: Offset(0, 2.h),
                           ),
                         ],
                       ),
@@ -962,17 +931,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 Container(
                                   padding: EdgeInsets.all(10.r),
                                   decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        item.color,
-                                        item.color.withOpacity(0.7),
-                                      ],
-                                    ),
+                                    color: item.color.withOpacity(0.15),
                                     borderRadius: BorderRadius.circular(10.r),
                                   ),
                                   child: Icon(
                                     item.icon,
-                                    color: Colors.white,
+                                    color: item.color,
                                     size: 20.sp,
                                   ),
                                 ),
@@ -987,10 +951,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                         style: TextStyle(
                                           fontSize: 14.sp,
                                           fontWeight: FontWeight.bold,
-                                          color:
-                                              themeManager.isDarkMode
-                                                  ? Colors.white
-                                                  : const Color(0xFF2D3436),
+                                          color: theme.colorScheme.onSurface,
                                         ),
                                       ),
                                       SizedBox(height: 2.h),
@@ -998,10 +959,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                         item.subtitle,
                                         style: TextStyle(
                                           fontSize: 11.sp,
-                                          color:
-                                              themeManager.isDarkMode
-                                                  ? Colors.grey.shade400
-                                                  : Colors.grey.shade600,
+                                          color: theme.colorScheme.secondary
+                                              .withOpacity(0.7),
                                         ),
                                       ),
                                     ],
@@ -1026,10 +985,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 else
                                   Icon(
                                     Icons.chevron_right_rounded,
-                                    color:
-                                        themeManager.isDarkMode
-                                            ? Colors.grey.shade600
-                                            : Colors.grey.shade400,
+                                    color: theme.colorScheme.secondary
+                                        .withOpacity(0.5),
                                     size: 18.sp,
                                   ),
                               ],
@@ -1046,12 +1003,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               padding: EdgeInsets.all(18.r),
               child: Column(
                 children: [
-                  Divider(
-                    color:
-                        themeManager.isDarkMode
-                            ? Colors.grey.shade800
-                            : Colors.grey.shade300,
-                  ),
+                  Divider(color: theme.colorScheme.secondary.withOpacity(0.2)),
                   SizedBox(height: 10.h),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -1059,20 +1011,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       Icon(
                         Icons.info_outline_rounded,
                         size: 14.sp,
-                        color:
-                            themeManager.isDarkMode
-                                ? Colors.grey.shade600
-                                : Colors.grey.shade500,
+                        color: theme.colorScheme.secondary.withOpacity(0.6),
                       ),
                       SizedBox(width: 6.w),
                       Text(
                         'Versión 1.0.0',
                         style: TextStyle(
                           fontSize: 12.sp,
-                          color:
-                              themeManager.isDarkMode
-                                  ? Colors.grey.shade600
-                                  : Colors.grey.shade500,
+                          color: theme.colorScheme.secondary.withOpacity(0.6),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -1221,44 +1167,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       key: _scaffoldKey,
       drawer: _buildDrawer(),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: theme.colorScheme.surface,
         elevation: 0,
         centerTitle: true,
-        leading: Container(
-          margin: EdgeInsets.all(7.r),
-          decoration: BoxDecoration(
-            color:
-                themeManager.isDarkMode
-                    ? Colors.grey.shade800.withOpacity(0.5)
-                    : Colors.white.withOpacity(0.5),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 6.r,
-                offset: Offset(0, 2.h),
-              ),
-            ],
+        leading: IconButton(
+          key: _drawerButtonKey,
+          icon: Icon(
+            Icons.menu_rounded,
+            color: theme.colorScheme.onSurface,
+            size: 22.sp,
           ),
-          child: IconButton(
-            key: _drawerButtonKey,
-            icon: Icon(
-              Icons.menu_rounded,
-              color: themeManager.isDarkMode ? Colors.white : Colors.black87,
-              size: 18.sp,
-            ),
-            onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-          ),
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
         title: Column(
           children: [
             Text(
               _getTimeGreeting(),
               style: TextStyle(
-                color:
-                    themeManager.isDarkMode
-                        ? Colors.grey.shade400
-                        : Colors.grey.shade600,
+                color: theme.colorScheme.secondary.withOpacity(0.7),
                 fontSize: 10.sp,
                 fontWeight: FontWeight.w500,
               ),
@@ -1267,7 +1193,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Text(
               _userName.isEmpty ? "Usuario" : _userName,
               style: TextStyle(
-                color: themeManager.isDarkMode ? Colors.white : Colors.black87,
+                color: theme.colorScheme.onSurface,
                 fontSize: 15.sp,
                 fontWeight: FontWeight.bold,
               ),
@@ -1275,33 +1201,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ],
         ),
         actions: [
-          Container(
-            margin: EdgeInsets.all(7.r),
-            decoration: BoxDecoration(
-              color:
-                  themeManager.isDarkMode
-                      ? Colors.grey.shade800.withOpacity(0.5)
-                      : Colors.white.withOpacity(0.5),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 6.r,
-                  offset: Offset(0, 2.h),
-                ),
-              ],
+          IconButton(
+            key: _themeButtonKey,
+            icon: Icon(
+              themeManager.isDarkMode
+                  ? Icons.dark_mode_rounded
+                  : Icons.light_mode_rounded,
+              color: theme.colorScheme.onSurface,
+              size: 22.sp,
             ),
-            child: IconButton(
-              key: _themeButtonKey,
-              icon: Icon(
-                themeManager.isDarkMode
-                    ? Icons.dark_mode_rounded
-                    : Icons.light_mode_rounded,
-                color: themeManager.isDarkMode ? Colors.white : Colors.black87,
-                size: 18.sp,
-              ),
-              onPressed: () => themeManager.toggleTheme(),
-            ),
+            onPressed: () => themeManager.toggleTheme(),
           ),
         ],
       ),
@@ -1319,63 +1228,48 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 18.r,
-              offset: Offset(0, -4.h),
+          border: Border(
+            top: BorderSide(
+              color: theme.colorScheme.secondary.withOpacity(0.1),
+              width: 1,
+            ),
+          ),
+        ),
+        child: BottomNavigationBar(
+          backgroundColor: theme.colorScheme.surface,
+          elevation: 0,
+          items: [
+            _buildNavItem(Icons.home_rounded, Icons.home_outlined, 'Inicio', 0),
+            _buildNavItem(
+              Icons.swap_horiz_rounded,
+              Icons.swap_horiz_outlined,
+              'Transacciones',
+              1,
+            ),
+            _buildNavItem(
+              Icons.bar_chart_rounded,
+              Icons.bar_chart_outlined,
+              'Gráficas',
+              2,
+            ),
+            _buildNavItem(
+              Icons.description_rounded,
+              Icons.description_outlined,
+              'Reportes',
+              3,
             ),
           ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(22.r),
-            topRight: Radius.circular(22.r),
-          ),
-          child: BottomNavigationBar(
-            backgroundColor:
-                themeManager.isDarkMode ? Colors.grey.shade900 : Colors.white,
-            elevation: 0,
-            items: [
-              _buildNavItem(
-                Icons.home_rounded,
-                Icons.home_outlined,
-                'Inicio',
-                0,
-              ),
-              _buildNavItem(
-                Icons.swap_horiz_rounded,
-                Icons.swap_horiz_outlined,
-                'Transacciones',
-                1,
-              ),
-              _buildNavItem(
-                Icons.bar_chart_rounded,
-                Icons.bar_chart_outlined,
-                'Gráficas',
-                2,
-              ),
-              _buildNavItem(
-                Icons.description_rounded,
-                Icons.description_outlined,
-                'Reportes',
-                3,
-              ),
-            ],
-            currentIndex: _selectedIndex,
-            selectedItemColor: const Color(0xFF667eea),
-            unselectedItemColor:
-                themeManager.isDarkMode
-                    ? Colors.grey.shade600
-                    : Colors.grey.shade400,
-            type: BottomNavigationBarType.fixed,
-            showSelectedLabels: true,
-            showUnselectedLabels: true,
-            selectedFontSize: 10.sp,
-            unselectedFontSize: 9.sp,
-            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-            onTap: _onItemTapped,
-          ),
+          currentIndex: _selectedIndex,
+          selectedItemColor: theme.colorScheme.primary,
+          unselectedItemColor: theme.colorScheme.secondary.withOpacity(0.5),
+          type: BottomNavigationBarType.fixed,
+          showSelectedLabels: true,
+          showUnselectedLabels: true,
+          selectedFontSize: 11.sp,
+          unselectedFontSize: 10.sp,
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
+          onTap: _onItemTapped,
         ),
       ),
       floatingActionButton: _buildExpandableFab(),

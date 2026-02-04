@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:notificaciones/widgets/confirmation_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -169,30 +170,13 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
   Future<void> _eliminarNotificacion(int index) async {
     final notif = notificaciones[index];
 
-    final confirmar = await showDialog<bool>(
+    final confirmar = await showConfirmationDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text(
-              '¿Eliminar notificación?',
-              style: GoogleFonts.lato(fontWeight: FontWeight.bold),
-            ),
-            content: Text(
-              'Esta acción no se puede deshacer.',
-              style: GoogleFonts.openSans(),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text('Cancelar', style: GoogleFonts.openSans()),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                child: Text('Eliminar', style: GoogleFonts.openSans()),
-              ),
-            ],
-          ),
+      title: '¿Eliminar notificación?',
+      message: 'Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar',
+      confirmColor: Colors.red.shade400,
+      icon: Icons.delete_rounded,
     );
 
     if (confirmar == true) {
@@ -243,6 +227,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
   @override
   Widget build(BuildContext context) {
     final themeManager = Provider.of<ThemeManager>(context);
+    final theme = Theme.of(context);
 
     return Scaffold(
       backgroundColor:
@@ -252,15 +237,23 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
           'Notificaciones',
           style: GoogleFonts.lato(fontWeight: FontWeight.bold, fontSize: 20.sp),
         ),
-        backgroundColor: const Color(0xFFf093fb),
+        backgroundColor: theme.colorScheme.surface,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, size: 22.sp),
+          icon: Icon(
+            Icons.arrow_back,
+            size: 22.sp,
+            color: theme.colorScheme.onSurface,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.add_circle_outline, size: 26.sp),
+            icon: Icon(
+              Icons.add_circle_outline,
+              size: 26.sp,
+              color: theme.colorScheme.primary,
+            ),
             onPressed: _crearNotificacion,
           ),
         ],
@@ -270,8 +263,8 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
               ? Center(
                 child: CircularProgressIndicator(
                   strokeWidth: 3.w,
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFFf093fb),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    theme.colorScheme.primary,
                   ),
                 ),
               )
@@ -369,20 +362,21 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
   }
 
   Widget _buildInfoCard(ThemeManager themeManager) {
+    final theme = Theme.of(context);
     return Container(
       padding: EdgeInsets.all(16.r),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFf093fb), Color(0xFFf5576c)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: theme.colorScheme.primary.withOpacity(0.2),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFf093fb).withOpacity(0.3),
-            blurRadius: 10.r,
-            offset: Offset(0, 4.h),
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8.r,
+            offset: Offset(0, 2.h),
           ),
         ],
       ),
@@ -391,12 +385,12 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
           Container(
             padding: EdgeInsets.all(12.r),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: theme.colorScheme.primary.withOpacity(0.15),
               borderRadius: BorderRadius.circular(12.r),
             ),
             child: Icon(
               Icons.notifications_active_rounded,
-              color: Colors.white,
+              color: theme.colorScheme.primary,
               size: 32.sp,
             ),
           ),
@@ -408,7 +402,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                 Text(
                   'Notificaciones Personalizadas',
                   style: GoogleFonts.lato(
-                    color: Colors.white,
+                    color: theme.colorScheme.onSurface,
                     fontSize: 16.sp,
                     fontWeight: FontWeight.bold,
                   ),
@@ -417,7 +411,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                 Text(
                   '${notificaciones.where((n) => n.activa).length} activas de ${notificaciones.length} totales',
                   style: GoogleFonts.openSans(
-                    color: Colors.white.withOpacity(0.9),
+                    color: theme.colorScheme.secondary.withOpacity(0.7),
                     fontSize: 12.sp,
                   ),
                 ),
@@ -425,7 +419,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                 Text(
                   '$pendingNotificationsCount notificaciones programadas',
                   style: GoogleFonts.openSans(
-                    color: Colors.white.withOpacity(0.8),
+                    color: theme.colorScheme.secondary.withOpacity(0.6),
                     fontSize: 11.sp,
                   ),
                 ),
@@ -442,18 +436,20 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
     int index,
     ThemeManager themeManager,
   ) {
+    final theme = Theme.of(context);
     final color = Color(int.parse('0xFF${notif.color}'));
 
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
       decoration: BoxDecoration(
-        color: themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: color.withOpacity(0.25), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(0.03),
             blurRadius: 8.r,
-            offset: Offset(0, 3.h),
+            offset: Offset(0, 2.h),
           ),
         ],
       ),
@@ -491,10 +487,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                             style: GoogleFonts.lato(
                               fontSize: 15.sp,
                               fontWeight: FontWeight.bold,
-                              color:
-                                  themeManager.isDarkMode
-                                      ? Colors.white
-                                      : Colors.black87,
+                              color: theme.colorScheme.onSurface,
                             ),
                           ),
                           SizedBox(height: 2.h),
@@ -521,7 +514,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                   notif.mensaje,
                   style: GoogleFonts.openSans(
                     fontSize: 12.sp,
-                    color: Colors.grey.shade600,
+                    color: theme.colorScheme.secondary.withOpacity(0.7),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -551,10 +544,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                             notif.diasTexto,
                             style: GoogleFonts.openSans(
                               fontSize: 11.sp,
-                              color:
-                                  themeManager.isDarkMode
-                                      ? Colors.white70
-                                      : Colors.black87,
+                              color: theme.colorScheme.onSurface,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -619,24 +609,17 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
     IconData icono,
     ThemeManager themeManager,
   ) {
+    final theme = Theme.of(context);
     return Row(
       children: [
-        Icon(
-          icono,
-          size: 22.sp,
-          color:
-              themeManager.isDarkMode ? Colors.white : const Color(0xFF667eea),
-        ),
+        Icon(icono, size: 22.sp, color: theme.colorScheme.primary),
         SizedBox(width: 10.w),
         Text(
           titulo,
           style: GoogleFonts.lato(
             fontSize: 17.sp,
             fontWeight: FontWeight.bold,
-            color:
-                themeManager.isDarkMode
-                    ? Colors.white
-                    : const Color(0xFF2D3436),
+            color: theme.colorScheme.onSurface,
           ),
         ),
       ],
@@ -652,15 +635,17 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
     IconData icono,
     ThemeManager themeManager,
   ) {
+    final theme = Theme.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: color.withOpacity(0.25), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(0.03),
             blurRadius: 8.r,
-            offset: Offset(0, 3.h),
+            offset: Offset(0, 2.h),
           ),
         ],
       ),
@@ -671,7 +656,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
             Container(
               padding: EdgeInsets.all(12.r),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12.r),
               ),
               child: Icon(icono, color: color, size: 28.sp),
@@ -686,10 +671,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                     style: GoogleFonts.lato(
                       fontSize: 15.sp,
                       fontWeight: FontWeight.bold,
-                      color:
-                          themeManager.isDarkMode
-                              ? Colors.white
-                              : Colors.black87,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
                   SizedBox(height: 2.h),
@@ -706,7 +688,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                     mensaje,
                     style: GoogleFonts.openSans(
                       fontSize: 11.sp,
-                      color: Colors.grey.shade600,
+                      color: theme.colorScheme.secondary.withOpacity(0.7),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -717,7 +699,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: Colors.green.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(8.r),
                 border: Border.all(
                   color: Colors.green.withOpacity(0.3),
@@ -747,19 +729,23 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
   }
 
   Widget _buildEmptyPersonalizadas() {
+    final theme = Theme.of(context);
     return Container(
       padding: EdgeInsets.all(24.r),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.grey.shade300, width: 2.w),
+        border: Border.all(
+          color: theme.colorScheme.secondary.withOpacity(0.2),
+          width: 1.5,
+        ),
       ),
       child: Column(
         children: [
           Icon(
             Icons.notification_add_outlined,
             size: 60.sp,
-            color: Colors.grey.shade400,
+            color: theme.colorScheme.secondary.withOpacity(0.4),
           ),
           SizedBox(height: 12.h),
           Text(
@@ -767,7 +753,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
             style: GoogleFonts.lato(
               fontSize: 15.sp,
               fontWeight: FontWeight.bold,
-              color: Colors.grey.shade700,
+              color: theme.colorScheme.onSurface,
             ),
           ),
           SizedBox(height: 6.h),
@@ -775,7 +761,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
             'Crea recordatorios personalizados con tu horario',
             style: GoogleFonts.openSans(
               fontSize: 12.sp,
-              color: Colors.grey.shade600,
+              color: theme.colorScheme.secondary.withOpacity(0.7),
             ),
             textAlign: TextAlign.center,
           ),
@@ -788,8 +774,8 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
               style: GoogleFonts.lato(fontSize: 13.sp),
             ),
             style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFf093fb),
-              backgroundColor: const Color(0xFFf093fb).withOpacity(0.1),
+              foregroundColor: theme.colorScheme.primary,
+              backgroundColor: theme.colorScheme.primary.withOpacity(0.12),
               padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10.r),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:notificaciones/widgets/confirmation_dialog.dart';
 import 'package:notificaciones/services/firestore_service.dart';
 import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
@@ -25,16 +26,20 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
   @override
   Widget build(BuildContext context) {
     final themeManager = Provider.of<ThemeManager>(context);
+    final theme = Theme.of(context);
     final isDark = themeManager.isDarkMode;
 
     return Scaffold(
-      backgroundColor:
-          isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FA),
+      backgroundColor: theme.colorScheme.background,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: widget.headerColor ?? const Color(0xFF667eea),
+        backgroundColor: theme.colorScheme.surface,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white, size: 20.sp),
+          icon: Icon(
+            Icons.arrow_back,
+            color: theme.colorScheme.onSurface,
+            size: 22.sp,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -42,33 +47,29 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
           style: GoogleFonts.poppins(
             fontSize: 20.sp,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: theme.colorScheme.onSurface,
           ),
         ),
-        actions: [
-          // Filtros
-          PopupMenuButton<String>(
-            icon: Icon(Icons.filter_list_rounded, color: Colors.white),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16.r),
-            ),
-            onSelected: (value) {
-              setState(() {
-                _filtroTipo = value;
-              });
-            },
-            itemBuilder:
-                (context) => [
-                  const PopupMenuItem(value: 'Todas', child: Text('Todas')),
-                  const PopupMenuItem(value: 'Gasto', child: Text('Gastos')),
-                  const PopupMenuItem(value: 'Pago', child: Text('Pagos')),
-                  const PopupMenuItem(
-                    value: 'Ingreso',
-                    child: Text('Ingresos'),
-                  ),
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(60.h),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildFilterChip('Todas', theme),
+                  SizedBox(width: 8.w),
+                  _buildFilterChip('Gasto', theme),
+                  SizedBox(width: 8.w),
+                  _buildFilterChip('Pago', theme),
+                  SizedBox(width: 8.w),
+                  _buildFilterChip('Ingreso', theme),
                 ],
+              ),
+            ),
           ),
-        ],
+        ),
       ),
       body: StreamBuilder<List<Map<String, dynamic>>>(
         stream: _firestoreService.obtenerCategorias(),
@@ -119,68 +120,82 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
       floatingActionButton: AnimateFABDelayed(
         fab: FloatingActionButton(
           onPressed: () => _mostrarDialogoCategoria(context),
-          backgroundColor:
-              themeManager.isDarkMode
-                  ? const Color(0xFF2D2D2D)
-                  : const Color(0xFF667eea),
+          backgroundColor: theme.colorScheme.surface,
+          foregroundColor: theme.colorScheme.primary,
+          elevation: 0,
           shape: const CircleBorder(),
-          child: Icon(Icons.add_rounded, color: Colors.white, size: 28.sp),
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: theme.colorScheme.secondary.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Center(
+              child: Icon(
+                Icons.add_rounded,
+                color: theme.colorScheme.primary,
+                size: 26.sp,
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
 
   Widget _buildEmptyState(bool isDark) {
+    final theme = Theme.of(context);
     return Center(
       child: SlideFadeTransition(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ScaleIn(
-              child: Container(
-                padding: EdgeInsets.all(32.r),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFF06B6D4).withOpacity(0.15),
-                      const Color(0xFF8B5CF6).withOpacity(0.15),
-                    ],
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 32.w),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ScaleIn(
+                child: Container(
+                  padding: EdgeInsets.all(28.r),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withOpacity(0.08),
+                    shape: BoxShape.circle,
                   ),
-                  shape: BoxShape.circle,
+                  child: Icon(
+                    Icons.category_outlined,
+                    size: 64.sp,
+                    color: theme.colorScheme.primary.withOpacity(0.6),
+                  ),
                 ),
-                child: Icon(
-                  Icons.widgets_rounded,
-                  size: 80.sp,
-                  color: const Color(0xFF06B6D4),
+              ),
+              SizedBox(height: 28.h),
+              Text(
+                'Sin categorías',
+                style: GoogleFonts.poppins(
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
-            ),
-            SizedBox(height: 24.h),
-            Text(
-              'Sin categorías',
-              style: GoogleFonts.poppins(
-                fontSize: 22.sp,
-                fontWeight: FontWeight.w700,
-                color: isDark ? Colors.white : Colors.black87,
+              SizedBox(height: 10.h),
+              Text(
+                'Crea tu primera categoría para\norganizar tus transacciones',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 14.sp,
+                  color: theme.colorScheme.secondary.withOpacity(0.6),
+                  height: 1.6,
+                ),
               ),
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              'Crea tu primera categoría para\norganizar tus transacciones',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 14.sp,
-                color: isDark ? Colors.grey.shade600 : Colors.grey.shade500,
-                height: 1.5,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildCategoriaCard(Map<String, dynamic> categoria, bool isDark) {
+    final theme = Theme.of(context);
     final tipoTransaccion = categoria['tipoTransaccion'] ?? 'Gasto';
     final color = _getColorForTipo(tipoTransaccion);
 
@@ -189,47 +204,37 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
     final iconData = _getIconFromString(iconCode);
 
     return Container(
-      margin: EdgeInsets.only(bottom: 14.h),
+      margin: EdgeInsets.only(bottom: 12.h),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(20.r),
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16.r),
         border: Border.all(
-          color: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
-          width: 1.5,
+          color: theme.colorScheme.secondary.withOpacity(0.15),
+          width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.1),
-            blurRadius: 20.r,
-            offset: Offset(0, 8.h),
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
-            blurRadius: 8.r,
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10.r,
             offset: Offset(0, 2.h),
           ),
         ],
       ),
       child: Padding(
-        padding: EdgeInsets.all(18.r),
+        padding: EdgeInsets.all(16.r),
         child: Row(
           children: [
-            // Icono con gradiente
+            // Icono
             Container(
-              width: 58.w,
-              height: 58.h,
+              width: 54.w,
+              height: 54.h,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [color.withOpacity(0.15), color.withOpacity(0.05)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16.r),
-                border: Border.all(color: color.withOpacity(0.2), width: 1.5),
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(14.r),
               ),
-              child: Icon(iconData, color: color, size: 28.sp),
+              child: Icon(iconData, color: color, size: 26.sp),
             ),
-            SizedBox(width: 16.w),
+            SizedBox(width: 14.w),
             // Información
             Expanded(
               child: Column(
@@ -238,31 +243,32 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                   Text(
                     categoria['categoria'] ?? '',
                     style: GoogleFonts.poppins(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white : Colors.black87,
-                      letterSpacing: -0.3,
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
-                  SizedBox(height: 4.h),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 10.w,
-                      vertical: 4.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    child: Text(
-                      tipoTransaccion,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12.sp,
-                        color: color,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.3,
+                  SizedBox(height: 6.h),
+                  Row(
+                    children: [
+                      Container(
+                        width: 6.w,
+                        height: 6.h,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    ),
+                      SizedBox(width: 6.w),
+                      Text(
+                        tipoTransaccion,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13.sp,
+                          color: theme.colorScheme.secondary.withOpacity(0.8),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -271,43 +277,32 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                GestureDetector(
+                InkWell(
                   onTap:
                       () => _mostrarDialogoCategoria(
                         context,
                         categoria: categoria,
                       ),
+                  borderRadius: BorderRadius.circular(10.r),
                   child: Container(
-                    padding: EdgeInsets.all(10.r),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFF06B6D4).withOpacity(0.15),
-                          const Color(0xFF3B82F6).withOpacity(0.15),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
+                    padding: EdgeInsets.all(8.r),
                     child: Icon(
-                      Icons.edit_rounded,
-                      color: const Color(0xFF06B6D4),
-                      size: 18.sp,
+                      Icons.edit_outlined,
+                      color: theme.colorScheme.secondary.withOpacity(0.6),
+                      size: 20.sp,
                     ),
                   ),
                 ),
-                SizedBox(width: 10.w),
-                GestureDetector(
+                SizedBox(width: 4.w),
+                InkWell(
                   onTap: () => _confirmarEliminar(categoria),
+                  borderRadius: BorderRadius.circular(10.r),
                   child: Container(
-                    padding: EdgeInsets.all(10.r),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEF4444).withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
+                    padding: EdgeInsets.all(8.r),
                     child: Icon(
-                      Icons.delete_rounded,
-                      color: const Color(0xFFEF4444),
-                      size: 18.sp,
+                      Icons.delete_outline_rounded,
+                      color: const Color(0xFFEF4444).withOpacity(0.7),
+                      size: 20.sp,
                     ),
                   ),
                 ),
@@ -564,111 +559,14 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
 
     if (!mounted) return;
 
-    final themeManager = Provider.of<ThemeManager>(context, listen: false);
-    final isDark = themeManager.isDarkMode;
-
-    final confirmar = await showModalBottomSheet<bool>(
+    final confirmar = await showConfirmationDialog(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder:
-          (context) => Container(
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-            ),
-            padding: EdgeInsets.all(28.r),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: EdgeInsets.all(20.r),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.warning_rounded,
-                    color: Colors.red,
-                    size: 48.sp,
-                  ),
-                ),
-                SizedBox(height: 20.h),
-                Text(
-                  '¿Eliminar categoría?',
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 22.sp,
-                    color: isDark ? Colors.white : Colors.black87,
-                  ),
-                ),
-                SizedBox(height: 12.h),
-                Text(
-                  '¿Estás seguro de eliminar "${categoria['categoria']}"?',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14.sp,
-                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                    height: 1.4,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 8.h),
-                Text(
-                  'Esta acción no se puede deshacer',
-                  style: GoogleFonts.poppins(
-                    fontSize: 13.sp,
-                    color: Colors.red,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                SizedBox(height: 28.h),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: 16.h),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          side: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        child: Text(
-                          'Cancelar',
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15.sp,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 12.w),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 16.h),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          elevation: 2,
-                        ),
-                        child: Text(
-                          'Eliminar',
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15.sp,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+      title: '¿Eliminar categoría?',
+      message:
+          '¿Estás seguro de eliminar "${categoria['categoria']}"? Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar',
+      confirmColor: Colors.red.shade400,
+      icon: Icons.delete_outline_rounded,
     );
 
     if (confirmar == true) {
@@ -686,6 +584,73 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
           );
         }
       }
+    }
+  }
+
+  Widget _buildFilterChip(String label, ThemeData theme) {
+    final isSelected = _filtroTipo == label;
+    final color = _getColorForLabel(label);
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _filtroTipo = label;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+        decoration: BoxDecoration(
+          color:
+              isSelected ? color.withOpacity(0.12) : theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(
+            color:
+                isSelected
+                    ? color.withOpacity(0.3)
+                    : theme.colorScheme.secondary.withOpacity(0.2),
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isSelected) ...[
+              Container(
+                width: 6.w,
+                height: 6.h,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              SizedBox(width: 6.w),
+            ],
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 13.sp,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color:
+                    isSelected
+                        ? color
+                        : theme.colorScheme.secondary.withOpacity(0.8),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getColorForLabel(String label) {
+    switch (label) {
+      case 'Ingreso':
+        return const Color(0xFF10B981);
+      case 'Pago':
+        return const Color(0xFFF59E0B);
+      case 'Gasto':
+        return const Color(0xFFEF4444);
+      case 'Todas':
+      default:
+        return const Color(0xFF8B5CF6);
     }
   }
 }

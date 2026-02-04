@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:notificaciones/widgets/confirmation_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'componentes/heads_up_notification.dart';
@@ -30,32 +31,28 @@ class _CuentasScreenState extends State<CuentasScreen> {
     final themeManager = Provider.of<ThemeManager>(context);
     final cuentas = dataProvider.cuentas;
 
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor:
-          themeManager.isDarkMode
-              ? const Color(0xFF0F172A)
-              : const Color(0xFFF8FAFC),
+      backgroundColor: theme.colorScheme.background,
       appBar: AppBar(
-        title: Text(
-          'Administrar Cuentas',
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.bold,
-            fontSize: 20.sp,
-          ),
-        ),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
+        backgroundColor: theme.colorScheme.surface,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, size: 20.sp),
+          icon: Icon(
+            Icons.arrow_back,
+            color: theme.colorScheme.onSurface,
+            size: 22.sp,
+          ),
           onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Cuentas',
+          style: GoogleFonts.poppins(
+            fontSize: 20.sp,
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onSurface,
+          ),
         ),
       ),
       body:
@@ -87,56 +84,82 @@ class _CuentasScreenState extends State<CuentasScreen> {
       floatingActionButton: AnimateFABDelayed(
         fab: FloatingActionButton(
           onPressed: () => _mostrarDialogoCrearCuenta(context),
-          backgroundColor:
-              themeManager.isDarkMode
-                  ? const Color(0xFF6366F1)
-                  : const Color(0xFF6366F1),
+          backgroundColor: theme.colorScheme.surface,
+          foregroundColor: theme.colorScheme.primary,
+          elevation: 0,
           shape: const CircleBorder(),
-          elevation: 6,
-          child: Icon(Icons.add_rounded, color: Colors.white, size: 28.sp),
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: theme.colorScheme.secondary.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Center(
+              child: Icon(
+                Icons.add_rounded,
+                color: theme.colorScheme.primary,
+                size: 26.sp,
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
 
   Widget _buildEmptyState() {
+    final theme = Theme.of(context);
     return Center(
       child: SlideFadeTransition(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ScaleIn(
-              child: Icon(
-                Icons.account_balance_wallet_outlined,
-                size: 100.sp,
-                color: Colors.grey.shade400,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 32.w),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ScaleIn(
+                child: Container(
+                  padding: EdgeInsets.all(28.r),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withOpacity(0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.account_balance_wallet_outlined,
+                    size: 64.sp,
+                    color: theme.colorScheme.primary.withOpacity(0.6),
+                  ),
+                ),
               ),
-            ),
-            SizedBox(height: 20.h),
-            Text(
-              'No hay cuentas registradas',
-              style: GoogleFonts.lato(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade600,
+              SizedBox(height: 28.h),
+              Text(
+                'Sin cuentas',
+                style: GoogleFonts.poppins(
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface,
+                ),
               ),
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              'Contacta al administrador para agregar cuentas',
-              style: GoogleFonts.openSans(
-                fontSize: 14.sp,
-                color: Colors.grey.shade500,
+              SizedBox(height: 10.h),
+              Text(
+                'Agrega tu primera cuenta para\ncomenzar a administrar tu dinero',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 14.sp,
+                  color: theme.colorScheme.secondary.withOpacity(0.6),
+                  height: 1.6,
+                ),
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildResumenTotal(List<Account> cuentas, ThemeManager themeManager) {
+    final theme = Theme.of(context);
     final saldoTotal = cuentas.fold<double>(
       0,
       (sum, cuenta) => sum + cuenta.saldo,
@@ -144,24 +167,19 @@ class _CuentasScreenState extends State<CuentasScreen> {
 
     return Container(
       margin: EdgeInsets.only(bottom: 8.h),
-      padding: EdgeInsets.all(28.r),
+      padding: EdgeInsets.all(24.r),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6), Color(0xFFEC4899)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(
+          color: theme.colorScheme.primary.withOpacity(0.2),
+          width: 1.5,
         ),
-        borderRadius: BorderRadius.circular(24.r),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF6366F1).withOpacity(0.3),
-            blurRadius: 24.r,
-            offset: Offset(0, 12.h),
-          ),
-          BoxShadow(
-            color: const Color(0xFF8B5CF6).withOpacity(0.2),
-            blurRadius: 16.r,
-            offset: Offset(0, 4.h),
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10.r,
+            offset: Offset(0, 2.h),
           ),
         ],
       ),
@@ -171,35 +189,52 @@ class _CuentasScreenState extends State<CuentasScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: EdgeInsets.all(10.r),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.25),
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Icon(
-                  Icons.account_balance_wallet_rounded,
-                  color: Colors.white,
-                  size: 24.sp,
-                ),
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(10.r),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                    child: Icon(
+                      Icons.account_balance_wallet_rounded,
+                      color: theme.colorScheme.primary,
+                      size: 22.sp,
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Text(
+                    'Saldo Total',
+                    style: GoogleFonts.poppins(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                ],
               ),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.25),
+                  color: theme.colorScheme.secondary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20.r),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.credit_card, color: Colors.white, size: 14.sp),
+                    Icon(
+                      Icons.credit_card,
+                      color: theme.colorScheme.secondary.withOpacity(0.7),
+                      size: 14.sp,
+                    ),
                     SizedBox(width: 6.w),
                     Text(
                       '${cuentas.length} cuenta${cuentas.length != 1 ? 's' : ''}',
-                      style: GoogleFonts.lato(
+                      style: GoogleFonts.poppins(
                         fontSize: 12.sp,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.secondary.withOpacity(0.8),
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
@@ -209,42 +244,37 @@ class _CuentasScreenState extends State<CuentasScreen> {
           ),
           SizedBox(height: 20.h),
           Text(
-            'SALDO TOTAL',
-            style: GoogleFonts.inter(
-              color: Colors.white.withOpacity(0.85),
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.5,
-            ),
-          ),
-          SizedBox(height: 10.h),
-          Text(
             _currencyFormat.format(saldoTotal),
-            style: GoogleFonts.inter(
-              color: Colors.white,
-              fontSize: 36.sp,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -1.5,
+            style: GoogleFonts.poppins(
+              color: theme.colorScheme.primary,
+              fontSize: 32.sp,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -1,
               height: 1.1,
             ),
           ),
-          SizedBox(height: 16.h),
+          SizedBox(height: 14.h),
           Container(
             padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: theme.colorScheme.secondary.withOpacity(0.08),
               borderRadius: BorderRadius.circular(8.r),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.info_outline, color: Colors.white, size: 16.sp),
-                SizedBox(width: 8.w),
+                Icon(
+                  Icons.info_outline,
+                  color: theme.colorScheme.secondary.withOpacity(0.6),
+                  size: 14.sp,
+                ),
+                SizedBox(width: 6.w),
                 Text(
-                  'Toca una cuenta para editar su saldo',
-                  style: GoogleFonts.openSans(
-                    color: Colors.white.withOpacity(0.9),
+                  'Toca una cuenta para editar',
+                  style: GoogleFonts.poppins(
+                    color: theme.colorScheme.secondary.withOpacity(0.7),
                     fontSize: 11.sp,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -256,33 +286,23 @@ class _CuentasScreenState extends State<CuentasScreen> {
   }
 
   Widget _buildCuentaCard(Account cuenta, ThemeManager themeManager) {
+    final theme = Theme.of(context);
     final saldoColor =
         cuenta.saldo >= 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444);
 
     return Container(
-      margin: EdgeInsets.only(bottom: 16.h),
+      margin: EdgeInsets.only(bottom: 12.h),
       decoration: BoxDecoration(
-        color: themeManager.isDarkMode ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(20.r),
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16.r),
         border: Border.all(
-          color:
-              themeManager.isDarkMode
-                  ? const Color(0xFF334155)
-                  : const Color(0xFFE2E8F0),
-          width: 1.5,
+          color: theme.colorScheme.secondary.withOpacity(0.15),
+          width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color:
-                themeManager.isDarkMode
-                    ? Colors.black.withOpacity(0.3)
-                    : const Color(0xFF6366F1).withOpacity(0.08),
-            blurRadius: 16.r,
-            offset: Offset(0, 4.h),
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8.r,
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10.r,
             offset: Offset(0, 2.h),
           ),
         ],
@@ -298,41 +318,30 @@ class _CuentasScreenState extends State<CuentasScreen> {
               children: [
                 // Imagen/Icono de la cuenta
                 Container(
-                  width: 68.w,
-                  height: 68.h,
+                  width: 54.w,
+                  height: 54.h,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFF6366F1).withOpacity(0.15),
-                        const Color(0xFF8B5CF6).withOpacity(0.15),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(18.r),
-                    border: Border.all(
-                      color: const Color(0xFF6366F1).withOpacity(0.1),
-                      width: 1,
-                    ),
+                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(14.r),
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16.r),
+                    borderRadius: BorderRadius.circular(14.r),
                     child: Image.asset(
                       'assets/images/${cuenta.imagen}.png',
-                      width: 64.w,
-                      height: 64.h,
+                      width: 54.w,
+                      height: 54.h,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return Icon(
                           Icons.account_balance_wallet_rounded,
-                          color: const Color(0xFF667eea),
-                          size: 32.sp,
+                          color: theme.colorScheme.primary,
+                          size: 26.sp,
                         );
                       },
                     ),
                   ),
                 ),
-                SizedBox(width: 16.w),
+                SizedBox(width: 14.w),
                 // Información de la cuenta
                 Expanded(
                   child: Column(
@@ -340,14 +349,10 @@ class _CuentasScreenState extends State<CuentasScreen> {
                     children: [
                       Text(
                         cuenta.nombre,
-                        style: GoogleFonts.inter(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w700,
-                          color:
-                              themeManager.isDarkMode
-                                  ? Colors.white
-                                  : const Color(0xFF1E293B),
-                          letterSpacing: -0.3,
+                        style: GoogleFonts.poppins(
+                          fontSize: 15.sp,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurface,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -359,16 +364,20 @@ class _CuentasScreenState extends State<CuentasScreen> {
                           children: [
                             Icon(
                               Icons.person_outline,
-                              size: 14.sp,
-                              color: Colors.grey.shade600,
+                              size: 13.sp,
+                              color: theme.colorScheme.secondary.withOpacity(
+                                0.6,
+                              ),
                             ),
                             SizedBox(width: 4.w),
                             Expanded(
                               child: Text(
                                 cuenta.beneficiario!,
-                                style: GoogleFonts.openSans(
-                                  fontSize: 13.sp,
-                                  color: Colors.grey.shade600,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12.sp,
+                                  color: theme.colorScheme.secondary
+                                      .withOpacity(0.7),
+                                  fontWeight: FontWeight.w400,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -384,15 +393,19 @@ class _CuentasScreenState extends State<CuentasScreen> {
                           children: [
                             Icon(
                               Icons.credit_card,
-                              size: 14.sp,
-                              color: Colors.grey.shade500,
+                              size: 13.sp,
+                              color: theme.colorScheme.secondary.withOpacity(
+                                0.5,
+                              ),
                             ),
                             SizedBox(width: 4.w),
                             Text(
                               '•••• ${cuenta.numeroTarjeta!.substring(cuenta.numeroTarjeta!.length - 4)}',
                               style: GoogleFonts.robotoMono(
-                                fontSize: 12.sp,
-                                color: Colors.grey.shade500,
+                                fontSize: 11.sp,
+                                color: theme.colorScheme.secondary.withOpacity(
+                                  0.6,
+                                ),
                                 letterSpacing: 1.2,
                               ),
                             ),
@@ -408,9 +421,9 @@ class _CuentasScreenState extends State<CuentasScreen> {
                   children: [
                     Text(
                       _currencyFormat.format(cuenta.saldo),
-                      style: GoogleFonts.inter(
-                        fontSize: 19.sp,
-                        fontWeight: FontWeight.w800,
+                      style: GoogleFonts.poppins(
+                        fontSize: 17.sp,
+                        fontWeight: FontWeight.w700,
                         color: saldoColor,
                         letterSpacing: -0.5,
                       ),
@@ -420,40 +433,31 @@ class _CuentasScreenState extends State<CuentasScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         // Botón editar
-                        GestureDetector(
+                        InkWell(
                           onTap: () => _mostrarDialogoEditarSaldo(cuenta),
+                          borderRadius: BorderRadius.circular(10.r),
                           child: Container(
-                            padding: EdgeInsets.all(9.r),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  const Color(0xFF6366F1).withOpacity(0.12),
-                                  const Color(0xFF8B5CF6).withOpacity(0.12),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(10.r),
-                            ),
+                            padding: EdgeInsets.all(8.r),
                             child: Icon(
-                              Icons.edit_rounded,
-                              size: 17.sp,
-                              color: const Color(0xFF6366F1),
+                              Icons.edit_outlined,
+                              size: 20.sp,
+                              color: theme.colorScheme.secondary.withOpacity(
+                                0.6,
+                              ),
                             ),
                           ),
                         ),
-                        SizedBox(width: 10.w),
+                        SizedBox(width: 4.w),
                         // Botón eliminar
-                        GestureDetector(
+                        InkWell(
                           onTap: () => _confirmarEliminarCuenta(cuenta),
+                          borderRadius: BorderRadius.circular(10.r),
                           child: Container(
-                            padding: EdgeInsets.all(9.r),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEF4444).withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(10.r),
-                            ),
+                            padding: EdgeInsets.all(8.r),
                             child: Icon(
-                              Icons.delete_rounded,
-                              size: 17.sp,
-                              color: const Color(0xFFEF4444),
+                              Icons.delete_outline_rounded,
+                              size: 20.sp,
+                              color: const Color(0xFFEF4444).withOpacity(0.7),
                             ),
                           ),
                         ),
@@ -604,200 +608,14 @@ class _CuentasScreenState extends State<CuentasScreen> {
       return;
     }
 
-    final themeManager = Provider.of<ThemeManager>(context, listen: false);
-
-    final confirmar = await showModalBottomSheet<bool>(
+    final confirmar = await showConfirmationDialog(
       context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder:
-          (context) => Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 20.w,
-                    vertical: 16.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(24.r),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.delete_forever_rounded,
-                        color: Colors.red,
-                        size: 24.sp,
-                      ),
-                      SizedBox(width: 12.w),
-                      Expanded(
-                        child: Text(
-                          '¿Eliminar cuenta?',
-                          style: GoogleFonts.lato(
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.bold,
-                            color:
-                                themeManager.isDarkMode
-                                    ? Colors.white
-                                    : Colors.black87,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        icon: Icon(
-                          Icons.close,
-                          color: Colors.grey.shade600,
-                          size: 20.sp,
-                        ),
-                        padding: EdgeInsets.zero,
-                        constraints: BoxConstraints(),
-                      ),
-                    ],
-                  ),
-                ),
-                // Content
-                Padding(
-                  padding: EdgeInsets.all(28.r),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(20.r),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.delete_forever_rounded,
-                          size: 48.sp,
-                          color: Colors.red,
-                        ),
-                      ),
-                      SizedBox(height: 24.h),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 16.w,
-                          vertical: 12.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFef4444).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12.r),
-                          border: Border.all(
-                            color: const Color(
-                              0xFFef4444,
-                            ).withValues(alpha: 0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Text(
-                              cuenta.nombre,
-                              style: GoogleFonts.lato(
-                                fontSize: 16.sp,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFFef4444),
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            SizedBox(height: 4.h),
-                            Text(
-                              _currencyFormat.format(cuenta.saldo),
-                              style: GoogleFonts.lato(
-                                fontSize: 20.sp,
-                                fontWeight: FontWeight.bold,
-                                color:
-                                    themeManager.isDarkMode
-                                        ? Colors.white
-                                        : Colors.black87,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 16.h),
-                      Text(
-                        'Esta acción es permanente y no se puede deshacer',
-                        style: GoogleFonts.openSans(
-                          fontSize: 13.sp,
-                          color: Colors.grey.shade600,
-                          height: 1.4,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 28.h),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              style: OutlinedButton.styleFrom(
-                                padding: EdgeInsets.symmetric(vertical: 14.h),
-                                side: BorderSide(
-                                  color: Colors.grey.shade300,
-                                  width: 1.5,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12.r),
-                                ),
-                              ),
-                              child: Text(
-                                'Cancelar',
-                                style: GoogleFonts.lato(
-                                  fontSize: 15.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.grey.shade700,
-                                ),
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 12.w),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFef4444),
-                                padding: EdgeInsets.symmetric(vertical: 14.h),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12.r),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.delete_outline, size: 18.sp),
-                                  SizedBox(width: 6.w),
-                                  Text(
-                                    'Eliminar',
-                                    style: GoogleFonts.lato(
-                                      fontSize: 15.sp,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+      title: '¿Eliminar cuenta?',
+      message:
+          'Se eliminará "${cuenta.nombre}" con saldo ${_currencyFormat.format(cuenta.saldo)}. Esta acción es permanente y no se puede deshacer.',
+      confirmText: 'Eliminar',
+      confirmColor: Colors.red.shade400,
+      icon: Icons.delete_forever_rounded,
     );
 
     if (confirmar == true) {

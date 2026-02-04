@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:notificaciones/widgets/confirmation_dialog.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'api_service.dart';
@@ -214,108 +215,14 @@ class _MetasScreenState extends State<MetasScreen> {
   }
 
   Future<void> _eliminarMeta(int index) async {
-    final confirmar = await showModalBottomSheet<bool>(
+    final confirmar = await showConfirmationDialog(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder:
-          (context) => Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-            ),
-            padding: EdgeInsets.all(24.r),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Ícono de advertencia
-                Container(
-                  padding: EdgeInsets.all(16.r),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.warning_rounded,
-                    color: Colors.red,
-                    size: 48.sp,
-                  ),
-                ),
-                SizedBox(height: 20.h),
-                Text(
-                  '¿Eliminar meta?',
-                  style: GoogleFonts.lato(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 22.sp,
-                  ),
-                ),
-                SizedBox(height: 12.h),
-                Text(
-                  'Se eliminará "${_metasNotifier.value[index].nombre}" y su cuenta de ahorro asociada.',
-                  style: GoogleFonts.openSans(
-                    fontSize: 14.sp,
-                    color: Colors.grey.shade600,
-                    height: 1.4,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 8.h),
-                Text(
-                  'Esta acción no se puede deshacer',
-                  style: GoogleFonts.openSans(
-                    fontSize: 13.sp,
-                    color: Colors.red,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                SizedBox(height: 28.h),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: 16.h),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          side: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        child: Text(
-                          'Cancelar',
-                          style: GoogleFonts.lato(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15.sp,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 12.w),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 16.h),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          elevation: 2,
-                        ),
-                        child: Text(
-                          'Eliminar',
-                          style: GoogleFonts.lato(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15.sp,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+      title: '¿Eliminar meta?',
+      message:
+          'Se eliminará "${_metasNotifier.value[index].nombre}" y su cuenta de ahorro asociada. Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar',
+      confirmColor: Colors.red.shade400,
+      icon: Icons.delete_outline_rounded,
     );
 
     if (confirmar == true) {
@@ -380,19 +287,29 @@ class _MetasScreenState extends State<MetasScreen> {
   @override
   Widget build(BuildContext context) {
     final themeManager = Provider.of<ThemeManager>(context);
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor:
-          themeManager.isDarkMode
-              ? const Color(0xFF121212)
-              : const Color(0xFFF5F7FA),
+      backgroundColor: theme.colorScheme.background,
       appBar: AppBar(
-        title: Text(
-          'Metas de Ahorro',
-          style: GoogleFonts.lato(fontWeight: FontWeight.bold, fontSize: 20.sp),
-        ),
-        backgroundColor: widget.headerColor ?? const Color(0xFF4CAF50),
+        backgroundColor: theme.colorScheme.surface,
         elevation: 0,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back,
+            color: theme.colorScheme.onSurface,
+            size: 22.sp,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Metas',
+          style: GoogleFonts.poppins(
+            fontSize: 20.sp,
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
       ),
       body: Stack(
         children: [
@@ -477,133 +394,122 @@ class _MetasScreenState extends State<MetasScreen> {
       floatingActionButton: AnimateFABDelayed(
         fab: FloatingActionButton(
           onPressed: _crearMeta,
-          backgroundColor:
-              themeManager.isDarkMode
-                  ? const Color(0xFF2D2D2D)
-                  : const Color(0xFF667eea),
+          backgroundColor: theme.colorScheme.surface,
+          foregroundColor: theme.colorScheme.primary,
+          elevation: 0,
           shape: const CircleBorder(),
-          elevation: 4,
-          child: Icon(Icons.add, color: Colors.white, size: 28.sp),
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: theme.colorScheme.secondary.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Center(
+              child: Icon(
+                Icons.add_rounded,
+                color: theme.colorScheme.primary,
+                size: 26.sp,
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
 
   Widget _buildEmptyState(ThemeManager themeManager) {
+    final theme = Theme.of(context);
     return Center(
       child: SlideFadeTransition(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ScaleIn(
-              child: Container(
-                padding: EdgeInsets.all(40.r),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Color(0xFF667eea).withOpacity(0.1),
-                      Color(0xFF764ba2).withOpacity(0.1),
-                    ],
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 32.w),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ScaleIn(
+                child: Container(
+                  padding: EdgeInsets.all(28.r),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withOpacity(0.08),
+                    shape: BoxShape.circle,
                   ),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.savings_outlined,
-                  size: 80.sp,
-                  color: Color(0xFF667eea),
+                  child: Icon(
+                    Icons.savings_outlined,
+                    size: 64.sp,
+                    color: theme.colorScheme.primary.withOpacity(0.6),
+                  ),
                 ),
               ),
-            ),
-            SizedBox(height: 24.h),
-            Text(
-              'Sin metas por ahora',
-              style: GoogleFonts.lato(
-                fontSize: 22.sp,
-                fontWeight: FontWeight.bold,
-                color: themeManager.isDarkMode ? Colors.white : Colors.black87,
+              SizedBox(height: 28.h),
+              Text(
+                'Sin metas',
+                style: GoogleFonts.poppins(
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface,
+                ),
               ),
-            ),
-            SizedBox(height: 8.h),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 40.w),
-              child: Text(
-                '¡Crea tu primera meta de ahorro y empieza a cumplir tus sueños!',
+              SizedBox(height: 10.h),
+              Text(
+                'Crea tu primera meta de ahorro\ny empieza a cumplir tus sueños',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.openSans(
+                style: GoogleFonts.poppins(
                   fontSize: 14.sp,
-                  color: Colors.grey,
-                  height: 1.5,
+                  color: theme.colorScheme.secondary.withOpacity(0.6),
+                  height: 1.6,
                 ),
               ),
-            ),
-            SizedBox(height: 32.h),
-            ElevatedButton.icon(
-              onPressed: _crearMeta,
-              icon: Icon(Icons.add_circle_outline),
-              label: Text(
-                'Crear Primera Meta',
-                style: GoogleFonts.lato(fontWeight: FontWeight.w600),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF667eea),
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                elevation: 3,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildMetaCard(Meta meta, int index, ThemeManager themeManager) {
+    final theme = Theme.of(context);
     final colorHex = int.parse('FF${meta.color}', radix: 16);
     final color = Color(colorHex);
 
     return Container(
-      margin: EdgeInsets.only(bottom: 16.h),
+      margin: EdgeInsets.only(bottom: 12.h),
       decoration: BoxDecoration(
-        color: themeManager.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: color.withOpacity(0.2), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 8,
-            offset: Offset(0, 2),
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10.r,
+            offset: Offset(0, 2.h),
           ),
         ],
       ),
       child: Column(
         children: [
-          // Header compacto con gradiente
+          // Header sin gradiente
           Container(
             padding: EdgeInsets.all(16.r),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [color, color.withOpacity(0.8)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
+              color: color.withOpacity(0.08),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(15.r)),
             ),
             child: Column(
               children: [
                 Row(
                   children: [
                     Container(
-                      padding: EdgeInsets.all(12.r),
+                      padding: EdgeInsets.all(10.r),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.25),
+                        color: color.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(12.r),
                       ),
                       child: Icon(
                         _getIconData(meta.icono),
-                        color: Colors.white,
-                        size: 28.sp,
+                        color: color,
+                        size: 24.sp,
                       ),
                     ),
                     SizedBox(width: 12.w),
@@ -613,18 +519,21 @@ class _MetasScreenState extends State<MetasScreen> {
                         children: [
                           Text(
                             meta.nombre,
-                            style: GoogleFonts.lato(
-                              color: Colors.white,
-                              fontSize: 18.sp,
-                              fontWeight: FontWeight.bold,
+                            style: GoogleFonts.poppins(
+                              color: theme.colorScheme.onSurface,
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           if (meta.descripcion.isNotEmpty)
                             Text(
                               meta.descripcion,
-                              style: GoogleFonts.openSans(
-                                color: Colors.white.withOpacity(0.9),
-                                fontSize: 13.sp,
+                              style: GoogleFonts.poppins(
+                                color: theme.colorScheme.secondary.withOpacity(
+                                  0.7,
+                                ),
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w400,
                               ),
                             ),
                         ],
@@ -632,36 +541,46 @@ class _MetasScreenState extends State<MetasScreen> {
                     ),
                   ],
                 ),
-                SizedBox(height: 16.h),
+                SizedBox(height: 14.h),
                 // Barra de progreso
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(8.r),
+                  borderRadius: BorderRadius.circular(6.r),
                   child: LinearProgressIndicator(
                     value: meta.progreso / 100,
-                    backgroundColor: Colors.white.withOpacity(0.3),
-                    valueColor: AlwaysStoppedAnimation(Colors.white),
-                    minHeight: 8.h,
+                    backgroundColor: color.withOpacity(0.15),
+                    valueColor: AlwaysStoppedAnimation(color),
+                    minHeight: 6.h,
                   ),
                 ),
-                SizedBox(height: 8.h),
+                SizedBox(height: 10.h),
                 // Montos
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       '\$${NumberFormat('#,##0.00', 'es').format(meta.montoActual)} / \$${NumberFormat('#,##0.00', 'es').format(meta.montoObjetivo)}',
-                      style: GoogleFonts.openSans(
-                        color: Colors.white,
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w600,
+                      style: GoogleFonts.poppins(
+                        color: theme.colorScheme.secondary.withOpacity(0.8),
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                    Text(
-                      '${meta.progreso.toStringAsFixed(0)}%',
-                      style: GoogleFonts.lato(
-                        color: Colors.white,
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 8.w,
+                        vertical: 4.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(6.r),
+                      ),
+                      child: Text(
+                        '${meta.progreso.toStringAsFixed(0)}%',
+                        style: GoogleFonts.poppins(
+                          color: color,
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],
@@ -680,80 +599,98 @@ class _MetasScreenState extends State<MetasScreen> {
                     Expanded(
                       child: Container(
                         padding: EdgeInsets.symmetric(
-                          horizontal: 12.w,
+                          horizontal: 10.w,
                           vertical: 8.h,
                         ),
                         decoration: BoxDecoration(
-                          color:
-                              themeManager.isDarkMode
-                                  ? Colors.grey.shade800
-                                  : Colors.grey.shade200,
+                          color: theme.colorScheme.secondary.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(8.r),
+                          border: Border.all(
+                            color: theme.colorScheme.secondary.withOpacity(
+                              0.15,
+                            ),
+                            width: 1,
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
                               Icons.calendar_today_outlined,
-                              size: 14.sp,
-                              color: Colors.grey,
+                              size: 13.sp,
+                              color: theme.colorScheme.secondary.withOpacity(
+                                0.6,
+                              ),
                             ),
                             SizedBox(width: 6.w),
                             Text(
                               'Inicio',
-                              style: GoogleFonts.openSans(
+                              style: GoogleFonts.poppins(
                                 fontSize: 11.sp,
-                                color: Colors.grey,
+                                color: theme.colorScheme.secondary.withOpacity(
+                                  0.5,
+                                ),
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                             SizedBox(width: 4.w),
                             Text(
                               _formatDate(meta.fechaInicio),
-                              style: GoogleFonts.lato(
+                              style: GoogleFonts.poppins(
                                 fontSize: 12.sp,
                                 fontWeight: FontWeight.w600,
+                                color: theme.colorScheme.onSurface,
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
-                    SizedBox(width: 12.w),
+                    SizedBox(width: 10.w),
                     Expanded(
                       child: Container(
                         padding: EdgeInsets.symmetric(
-                          horizontal: 12.w,
+                          horizontal: 10.w,
                           vertical: 8.h,
                         ),
                         decoration: BoxDecoration(
-                          color:
-                              themeManager.isDarkMode
-                                  ? Colors.grey.shade800
-                                  : Colors.grey.shade200,
+                          color: theme.colorScheme.secondary.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(8.r),
+                          border: Border.all(
+                            color: theme.colorScheme.secondary.withOpacity(
+                              0.15,
+                            ),
+                            width: 1,
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
                               Icons.flag_outlined,
-                              size: 14.sp,
-                              color: Colors.grey,
+                              size: 13.sp,
+                              color: theme.colorScheme.secondary.withOpacity(
+                                0.6,
+                              ),
                             ),
                             SizedBox(width: 6.w),
                             Text(
                               'Objetivo',
-                              style: GoogleFonts.openSans(
+                              style: GoogleFonts.poppins(
                                 fontSize: 11.sp,
-                                color: Colors.grey,
+                                color: theme.colorScheme.secondary.withOpacity(
+                                  0.5,
+                                ),
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                             SizedBox(width: 4.w),
                             Text(
                               _formatDate(meta.fechaObjetivo),
-                              style: GoogleFonts.lato(
+                              style: GoogleFonts.poppins(
                                 fontSize: 12.sp,
                                 fontWeight: FontWeight.w600,
+                                color: theme.colorScheme.onSurface,
                               ),
                             ),
                           ],
@@ -766,25 +703,32 @@ class _MetasScreenState extends State<MetasScreen> {
                   SizedBox(height: 12.h),
                   Container(
                     width: double.infinity,
-                    padding: EdgeInsets.symmetric(vertical: 10.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 12.w,
+                      vertical: 8.h,
+                    ),
                     decoration: BoxDecoration(
-                      color: Colors.orange.shade700.withOpacity(0.15),
+                      color: const Color(0xFFF59E0B).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8.r),
+                      border: Border.all(
+                        color: const Color(0xFFF59E0B).withOpacity(0.2),
+                        width: 1,
+                      ),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          Icons.timer,
-                          size: 16.sp,
-                          color: Colors.orange.shade700,
+                          Icons.schedule_outlined,
+                          size: 14.sp,
+                          color: const Color(0xFFF59E0B),
                         ),
                         SizedBox(width: 6.w),
                         Text(
                           '${meta.diasRestantes} días restantes',
-                          style: GoogleFonts.openSans(
-                            fontSize: 13.sp,
-                            color: Colors.orange.shade700,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12.sp,
+                            color: const Color(0xFFF59E0B),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -793,19 +737,34 @@ class _MetasScreenState extends State<MetasScreen> {
                   ),
                 ],
                 SizedBox(height: 12.h),
-                // Botones con íconos simples
+                // Botones minimalistas
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    IconButton(
-                      onPressed: () => _editarMeta(index),
-                      icon: Icon(Icons.edit, color: Colors.blue, size: 24.sp),
-                      tooltip: 'Editar',
+                    InkWell(
+                      onTap: () => _editarMeta(index),
+                      borderRadius: BorderRadius.circular(10.r),
+                      child: Container(
+                        padding: EdgeInsets.all(8.r),
+                        child: Icon(
+                          Icons.edit_outlined,
+                          color: theme.colorScheme.secondary.withOpacity(0.6),
+                          size: 20.sp,
+                        ),
+                      ),
                     ),
-                    IconButton(
-                      onPressed: () => _eliminarMeta(index),
-                      icon: Icon(Icons.delete, color: Colors.red, size: 24.sp),
-                      tooltip: 'Eliminar',
+                    SizedBox(width: 4.w),
+                    InkWell(
+                      onTap: () => _eliminarMeta(index),
+                      borderRadius: BorderRadius.circular(10.r),
+                      child: Container(
+                        padding: EdgeInsets.all(8.r),
+                        child: Icon(
+                          Icons.delete_outline_rounded,
+                          color: const Color(0xFFEF4444).withOpacity(0.7),
+                          size: 20.sp,
+                        ),
+                      ),
                     ),
                   ],
                 ),

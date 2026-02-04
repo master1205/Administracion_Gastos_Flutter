@@ -16,102 +16,88 @@ class DiscardChangesDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
-      elevation: 0,
-      backgroundColor: Colors.transparent,
       child: Container(
-        constraints: BoxConstraints(maxWidth: 340.w),
+        constraints: BoxConstraints(maxWidth: 280.w),
+        padding: EdgeInsets.all(16.r),
         decoration: BoxDecoration(
-          color: isDarkMode ? Colors.grey.shade900 : Colors.white,
+          color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(20.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 20.r,
-              offset: Offset(0, 10.h),
-            ),
-          ],
+          border: Border.all(
+            color: theme.colorScheme.secondary.withOpacity(0.15),
+            width: 1,
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Icono superior
+            // Icono
             Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(20.r),
+              padding: EdgeInsets.all(12.r),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFfa709a), Color(0xFFfee140)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+                color: theme.colorScheme.primary.withOpacity(0.12),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: theme.colorScheme.primary.withOpacity(0.2),
+                  width: 1,
                 ),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
               ),
               child: Icon(
                 Icons.warning_rounded,
-                size: 48.sp,
-                color: Colors.white,
+                size: 30.sp,
+                color: theme.colorScheme.primary,
               ),
             ),
+            SizedBox(height: 13.h),
 
-            // Contenido
-            Padding(
-              padding: EdgeInsets.all(20.r),
-              child: Column(
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.lato(
-                      fontSize: 20.sp,
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white : Colors.black87,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 12.h),
-                  Text(
-                    message,
-                    style: GoogleFonts.lato(
-                      fontSize: 14.sp,
-                      color:
-                          isDarkMode
-                              ? Colors.grey.shade400
-                              : Colors.grey.shade600,
-                      height: 1.4,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 24.h),
-
-                  // Botones
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildButton(
-                          context: context,
-                          label: 'Cancelar',
-                          onPressed: () => Navigator.of(context).pop(false),
-                          isPrimary: false,
-                          isDarkMode: isDarkMode,
-                        ),
-                      ),
-                      SizedBox(width: 12.w),
-                      Expanded(
-                        child: _buildButton(
-                          context: context,
-                          label: 'Descartar',
-                          onPressed: () => Navigator.of(context).pop(true),
-                          isPrimary: true,
-                          isDarkMode: isDarkMode,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+            // Título
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface,
               ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 8.h),
+
+            // Mensaje
+            Text(
+              message,
+              style: GoogleFonts.poppins(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w400,
+                color: theme.colorScheme.secondary.withOpacity(0.7),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 16.h),
+
+            // Botones
+            Row(
+              children: [
+                Expanded(
+                  child: _buildButton(
+                    context: context,
+                    label: 'Cancelar',
+                    onPressed: () => Navigator.of(context).pop(false),
+                    isPrimary: false,
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: _buildButton(
+                    context: context,
+                    label: 'Descartar',
+                    onPressed: () => Navigator.of(context).pop(true),
+                    isPrimary: true,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -124,41 +110,46 @@ class DiscardChangesDialog extends StatelessWidget {
     required String label,
     required VoidCallback onPressed,
     required bool isPrimary,
-    required bool isDarkMode,
   }) {
+    final theme = Theme.of(context);
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onPressed,
         borderRadius: BorderRadius.circular(12.r),
+        splashColor: (isPrimary
+                ? theme.colorScheme.secondary
+                : theme.colorScheme.secondary)
+            .withOpacity(0.1),
+        highlightColor: (isPrimary
+                ? theme.colorScheme.secondary
+                : theme.colorScheme.secondary)
+            .withOpacity(0.05),
         child: Container(
           padding: EdgeInsets.symmetric(vertical: 12.h),
           decoration: BoxDecoration(
-            gradient:
-                isPrimary
-                    ? const LinearGradient(
-                      colors: [Color(0xFFfa709a), Color(0xFFfee140)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                    : null,
             color:
                 isPrimary
-                    ? null
-                    : (isDarkMode
-                        ? Colors.grey.shade800
-                        : Colors.grey.shade200),
+                    ? theme.colorScheme.secondary.withOpacity(0.08)
+                    : theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(
+              color:
+                  isPrimary
+                      ? theme.colorScheme.secondary.withOpacity(0.2)
+                      : theme.colorScheme.secondary.withOpacity(0.2),
+              width: 1,
+            ),
           ),
           child: Text(
             label,
-            style: GoogleFonts.lato(
+            style: GoogleFonts.poppins(
               fontSize: 14.sp,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               color:
                   isPrimary
-                      ? Colors.white
-                      : (isDarkMode ? Colors.white : Colors.black87),
+                      ? theme.colorScheme.secondary
+                      : theme.colorScheme.onSurface,
             ),
             textAlign: TextAlign.center,
           ),

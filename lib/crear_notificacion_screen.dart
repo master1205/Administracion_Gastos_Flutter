@@ -132,6 +132,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
   @override
   Widget build(BuildContext context) {
     final themeManager = Provider.of<ThemeManager>(context);
+    final theme = Theme.of(context);
     final isEdit = widget.notificacion != null;
 
     return Scaffold(
@@ -140,12 +141,19 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
       appBar: AppBar(
         title: Text(
           isEdit ? 'Editar Notificación' : 'Nueva Notificación',
-          style: GoogleFonts.lato(fontWeight: FontWeight.bold, fontSize: 20.sp),
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600,
+            fontSize: 18.sp,
+          ),
         ),
-        backgroundColor: Color(int.parse('0xFF$_selectedColor')),
+        backgroundColor: theme.colorScheme.surface,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.close, size: 22.sp),
+          icon: Icon(
+            Icons.close,
+            size: 22.sp,
+            color: theme.colorScheme.onSurface,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -208,20 +216,17 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
   }
 
   Widget _buildSeccionTitulo(String titulo, IconData icono) {
+    final theme = Theme.of(context);
     return Row(
       children: [
-        Icon(
-          icono,
-          size: 20.sp,
-          color: Color(int.parse('0xFF$_selectedColor')),
-        ),
+        Icon(icono, size: 20.sp, color: theme.colorScheme.primary),
         SizedBox(width: 8.w),
         Text(
           titulo,
-          style: GoogleFonts.lato(
-            fontSize: 16.sp,
-            fontWeight: FontWeight.bold,
-            color: Color(int.parse('0xFF$_selectedColor')),
+          style: GoogleFonts.poppins(
+            fontSize: 15.sp,
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.primary,
           ),
         ),
       ],
@@ -237,39 +242,50 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
     int maxLines = 1,
     String? Function(String?)? validator,
   }) {
+    final theme = Theme.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8.r,
-            offset: Offset(0, 3.h),
-          ),
-        ],
+        border: Border.all(
+          color: theme.colorScheme.secondary.withOpacity(0.15),
+          width: 1,
+        ),
       ),
       child: TextFormField(
         controller: controller,
         maxLines: maxLines,
-        style: GoogleFonts.openSans(
+        style: GoogleFonts.poppins(
           fontSize: 13.sp,
-          color: themeManager.isDarkMode ? Colors.white : Colors.black87,
+          fontWeight: FontWeight.w400,
+          color: theme.colorScheme.onSurface,
         ),
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
-          prefixIcon: Icon(
-            icon,
-            color: Color(int.parse('0xFF$_selectedColor')),
+          labelStyle: GoogleFonts.poppins(
+            color: theme.colorScheme.secondary.withOpacity(0.7),
+            fontSize: 12.sp,
+          ),
+          hintStyle: GoogleFonts.poppins(
+            color: theme.colorScheme.secondary.withOpacity(0.4),
+            fontSize: 12.sp,
+          ),
+          prefixIcon: Container(
+            margin: EdgeInsets.all(10.r),
+            padding: EdgeInsets.all(6.r),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            child: Icon(icon, color: theme.colorScheme.primary, size: 20.sp),
           ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12.r),
             borderSide: BorderSide.none,
           ),
           filled: true,
-          fillColor:
-              themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+          fillColor: theme.colorScheme.surface,
         ),
         validator: validator,
       ),
@@ -277,25 +293,23 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
   }
 
   Widget _buildSelectorHora(ThemeManager themeManager) {
+    final theme = Theme.of(context);
     return Container(
       padding: EdgeInsets.all(16.r),
       decoration: BoxDecoration(
-        color: themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8.r,
-            offset: Offset(0, 3.h),
-          ),
-        ],
+        border: Border.all(
+          color: theme.colorScheme.secondary.withOpacity(0.15),
+          width: 1,
+        ),
       ),
       child: Row(
         children: [
           Container(
             padding: EdgeInsets.all(10.r),
             decoration: BoxDecoration(
-              color: Color(int.parse('0xFF$_selectedColor')).withOpacity(0.1),
+              color: theme.colorScheme.primary.withOpacity(0.12),
               borderRadius: BorderRadius.circular(10.r),
             ),
             child: Icon(
@@ -566,36 +580,31 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
   }
 
   Widget _buildBotonGuardar() {
+    final theme = Theme.of(context);
     return Container(
       height: 50.h,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Color(int.parse('0xFF$_selectedColor')),
-            Color(int.parse('0xFF$_selectedColor')).withOpacity(0.8),
-          ],
-        ),
+        color: theme.colorScheme.secondary.withOpacity(0.08),
         borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: Color(int.parse('0xFF$_selectedColor')).withOpacity(0.4),
-            blurRadius: 10.r,
-            offset: Offset(0, 4.h),
-          ),
-        ],
+        border: Border.all(
+          color: theme.colorScheme.secondary.withOpacity(0.2),
+          width: 1,
+        ),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: _guardarNotificacion,
           borderRadius: BorderRadius.circular(12.r),
+          splashColor: theme.colorScheme.secondary.withOpacity(0.1),
+          highlightColor: theme.colorScheme.secondary.withOpacity(0.05),
           child: Center(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
                   Icons.check_circle_outline,
-                  color: Colors.white,
+                  color: theme.colorScheme.secondary,
                   size: 22.sp,
                 ),
                 SizedBox(width: 8.w),
@@ -603,10 +612,10 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
                   widget.notificacion != null
                       ? 'Actualizar'
                       : 'Crear Notificación',
-                  style: GoogleFonts.lato(
-                    color: Colors.white,
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.bold,
+                  style: GoogleFonts.poppins(
+                    color: theme.colorScheme.secondary,
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'componentes/heads_up_notification.dart';
+import 'componentes/color_picker_tile.dart';
 import 'theme_provider.dart';
 import 'services/biometric_service.dart';
 
@@ -81,16 +82,16 @@ class _AjustesScreenState extends State<AjustesScreen> {
   @override
   Widget build(BuildContext context) {
     final themeManager = Provider.of<ThemeManager>(context);
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor:
-          themeManager.isDarkMode ? Colors.grey.shade900 : Colors.grey.shade50,
+      backgroundColor: theme.colorScheme.background,
       appBar: AppBar(
         title: Text(
           'Ajustes',
           style: GoogleFonts.lato(fontWeight: FontWeight.bold, fontSize: 20.sp),
         ),
-        backgroundColor: const Color(0xFF30cfd0),
+        backgroundColor: theme.colorScheme.surface,
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, size: 22.sp),
@@ -118,7 +119,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 (value) => themeManager.toggleTheme(),
                 themeManager,
               ),
-              Divider(height: 1.h),
+              const ColorPickerTile(),
               _buildListTile(
                 'Moneda',
                 moneda,
@@ -126,7 +127,6 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 () => _mostrarSelectorMoneda(),
                 themeManager,
               ),
-              Divider(height: 1.h),
               _buildListTile(
                 'Idioma',
                 idioma,
@@ -136,8 +136,6 @@ class _AjustesScreenState extends State<AjustesScreen> {
               ),
             ],
           ),
-
-          SizedBox(height: 20.h),
 
           // NOTIFICACIONES
           _buildSeccionTitulo(
@@ -159,7 +157,6 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 },
                 themeManager,
               ),
-              Divider(height: 1.h),
               _buildSwitchTile(
                 'Sonido',
                 'Reproducir sonido',
@@ -172,7 +169,6 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 themeManager,
                 enabled: notificacionesActivas,
               ),
-              Divider(height: 1.h),
               _buildSwitchTile(
                 'Vibración',
                 'Vibrar al recibir notificación',
@@ -187,8 +183,6 @@ class _AjustesScreenState extends State<AjustesScreen> {
               ),
             ],
           ),
-
-          SizedBox(height: 20.h),
 
           // PRIVACIDAD
           _buildSeccionTitulo('Privacidad', Icons.lock_outlined, themeManager),
@@ -206,7 +200,6 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 },
                 themeManager,
               ),
-              Divider(height: 1.h),
               _buildListTile(
                 'Bloqueo con PIN',
                 'No configurado',
@@ -215,7 +208,6 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 themeManager,
               ),
               if (biometricAvailable) ...[
-                Divider(height: 1.h),
                 _buildSwitchTile(
                   'Autenticación biométrica',
                   biometricType,
@@ -227,8 +219,6 @@ class _AjustesScreenState extends State<AjustesScreen> {
               ],
             ],
           ),
-
-          SizedBox(height: 20.h),
 
           // DATOS
           _buildSeccionTitulo('Datos', Icons.storage_outlined, themeManager),
@@ -242,7 +232,6 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 () => _exportarDatos(),
                 themeManager,
               ),
-              Divider(height: 1.h),
               _buildListTile(
                 'Limpiar caché',
                 'Liberar espacio',
@@ -252,8 +241,6 @@ class _AjustesScreenState extends State<AjustesScreen> {
               ),
             ],
           ),
-
-          SizedBox(height: 20.h),
 
           // ACERCA DE
           _buildSeccionTitulo('Acerca de', Icons.info_outlined, themeManager),
@@ -267,7 +254,6 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 null,
                 themeManager,
               ),
-              Divider(height: 1.h),
               _buildListTile(
                 'Términos y condiciones',
                 '',
@@ -275,7 +261,6 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 () => _mostrarTerminos(),
                 themeManager,
               ),
-              Divider(height: 1.h),
               _buildListTile(
                 'Política de privacidad',
                 '',
@@ -283,7 +268,6 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 () => _mostrarPrivacidad(),
                 themeManager,
               ),
-              Divider(height: 1.h),
               _buildListTile(
                 'Calificar app',
                 '',
@@ -314,21 +298,24 @@ class _AjustesScreenState extends State<AjustesScreen> {
     IconData icono,
     ThemeManager themeManager,
   ) {
+    final theme = Theme.of(context);
     return Padding(
-      padding: EdgeInsets.only(left: 4.w, bottom: 12.h),
+      padding: EdgeInsets.only(left: 8.w, bottom: 8.h, top: 16.h),
       child: Row(
         children: [
-          Icon(icono, size: 20.sp, color: const Color(0xFF30cfd0)),
-          SizedBox(width: 10.w),
+          Icon(
+            icono,
+            size: 18.sp,
+            color: theme.colorScheme.secondary.withOpacity(0.7),
+          ),
+          SizedBox(width: 8.w),
           Text(
             titulo,
             style: GoogleFonts.lato(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.bold,
-              color:
-                  themeManager.isDarkMode
-                      ? Colors.white
-                      : const Color(0xFF2D3436),
+              fontSize: 13.sp,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+              color: theme.colorScheme.secondary.withOpacity(0.7),
             ),
           ),
         ],
@@ -340,20 +327,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
     ThemeManager themeManager, {
     required List<Widget> children,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10.r,
-            offset: Offset(0, 4.h),
-          ),
-        ],
-      ),
-      child: Column(children: children),
-    );
+    return Column(children: children);
   }
 
   Widget _buildSwitchTile(
@@ -365,43 +339,52 @@ class _AjustesScreenState extends State<AjustesScreen> {
     ThemeManager themeManager, {
     bool enabled = true,
   }) {
-    return ListTile(
-      contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
-      leading: Icon(
-        icono,
-        color: enabled ? const Color(0xFF30cfd0) : Colors.grey,
-        size: 24.sp,
+    final theme = Theme.of(context);
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.5.h),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: theme.colorScheme.secondary.withOpacity(enabled ? 0.3 : 0.15),
+          width: 1.5,
+        ),
+        borderRadius: BorderRadius.circular(12.r),
+        color: theme.colorScheme.background,
       ),
-      title: Text(
-        titulo,
-        style: GoogleFonts.lato(
-          fontSize: 14.sp,
-          fontWeight: FontWeight.w600,
+      child: ListTile(
+        contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 2.h),
+        leading: Icon(
+          icono,
           color:
               enabled
-                  ? (themeManager.isDarkMode ? Colors.white : Colors.black87)
-                  : Colors.grey,
+                  ? theme.colorScheme.secondary
+                  : theme.colorScheme.secondary.withOpacity(0.3),
+          size: 22.sp,
         ),
-      ),
-      subtitle: Text(
-        subtitulo,
-        style: GoogleFonts.openSans(
-          fontSize: 11.sp,
-          color: Colors.grey.shade600,
+        title: Text(
+          titulo,
+          style: GoogleFonts.lato(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w600,
+            color:
+                enabled
+                    ? theme.colorScheme.onBackground
+                    : theme.colorScheme.onBackground.withOpacity(0.4),
+          ),
         ),
-      ),
-      trailing: Switch(
-        value: value,
-        onChanged: enabled ? onChanged : null,
-        activeColor: const Color(0xFF30cfd0),
-        inactiveTrackColor:
-            themeManager.isDarkMode
-                ? Colors.grey.shade700
-                : Colors.grey.shade300,
-        inactiveThumbColor:
-            themeManager.isDarkMode
-                ? Colors.grey.shade500
-                : Colors.grey.shade400,
+        subtitle: Text(
+          subtitulo,
+          style: GoogleFonts.openSans(
+            fontSize: 11.sp,
+            color: theme.colorScheme.secondary.withOpacity(enabled ? 0.6 : 0.3),
+          ),
+        ),
+        trailing: Switch(
+          value: value,
+          onChanged: enabled ? onChanged : null,
+          activeColor: theme.colorScheme.primary,
+          inactiveTrackColor: theme.colorScheme.secondary.withOpacity(0.2),
+          inactiveThumbColor: theme.colorScheme.secondary.withOpacity(0.4),
+        ),
       ),
     );
   }
@@ -413,35 +396,59 @@ class _AjustesScreenState extends State<AjustesScreen> {
     VoidCallback? onTap,
     ThemeManager themeManager,
   ) {
-    return ListTile(
-      contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
-      leading: Icon(icono, color: const Color(0xFF30cfd0), size: 24.sp),
-      title: Text(
-        titulo,
-        style: GoogleFonts.lato(
-          fontSize: 14.sp,
-          fontWeight: FontWeight.w600,
-          color: themeManager.isDarkMode ? Colors.white : Colors.black87,
+    final theme = Theme.of(context);
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.5.h),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: theme.colorScheme.secondary.withOpacity(0.3),
+          width: 1.5,
         ),
+        borderRadius: BorderRadius.circular(12.r),
+        color: theme.colorScheme.background,
       ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (trailing != null && trailing.isNotEmpty)
-            Text(
-              trailing,
-              style: GoogleFonts.openSans(
-                fontSize: 12.sp,
-                color: Colors.grey.shade600,
+      child: ListTile(
+        contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 2.h),
+        leading: Icon(icono, color: theme.colorScheme.secondary, size: 22.sp),
+        title: Text(
+          titulo,
+          style: GoogleFonts.lato(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onBackground,
+          ),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (trailing != null && trailing.isNotEmpty)
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Text(
+                  trailing,
+                  style: GoogleFonts.openSans(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.secondary,
+                  ),
+                ),
               ),
-            ),
-          if (onTap != null) ...[
-            SizedBox(width: 8.w),
-            Icon(Icons.chevron_right, size: 20.sp, color: Colors.grey.shade400),
+            if (onTap != null) ...[
+              SizedBox(width: 8.w),
+              Icon(
+                Icons.chevron_right,
+                size: 20.sp,
+                color: theme.colorScheme.secondary,
+              ),
+            ],
           ],
-        ],
+        ),
+        onTap: onTap,
       ),
-      onTap: onTap,
     );
   }
 
@@ -474,6 +481,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
   // Métodos auxiliares
   void _mostrarSelectorMoneda() {
     final themeManager = Provider.of<ThemeManager>(context, listen: false);
+    final theme = Theme.of(context);
     showDialog(
       context: context,
       builder:
@@ -506,7 +514,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
                       ),
                       value: m,
                       groupValue: moneda,
-                      activeColor: const Color(0xFF30cfd0),
+                      activeColor: theme.colorScheme.primary,
                       onChanged: (value) {
                         setState(() => moneda = value!);
                         _guardarConfiguracion('moneda', value);
@@ -521,6 +529,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
 
   void _mostrarSelectorIdioma() {
     final themeManager = Provider.of<ThemeManager>(context, listen: false);
+    final theme = Theme.of(context);
     showDialog(
       context: context,
       builder:
@@ -553,7 +562,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
                       ),
                       value: i,
                       groupValue: idioma,
-                      activeColor: const Color(0xFF30cfd0),
+                      activeColor: theme.colorScheme.primary,
                       onChanged: (value) {
                         setState(() => idioma = value!);
                         _guardarConfiguracion('idioma', value);
@@ -694,6 +703,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
       context: context,
       builder: (context) {
         final themeManager = Provider.of<ThemeManager>(context, listen: false);
+        final theme = Theme.of(context);
         return AlertDialog(
           backgroundColor:
               themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
@@ -721,7 +731,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF30cfd0),
+                backgroundColor: theme.colorScheme.primary,
               ),
               child: Text('Limpiar', style: GoogleFonts.lato()),
             ),

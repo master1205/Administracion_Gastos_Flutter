@@ -500,80 +500,9 @@ class GraficasScreenState extends State<GraficasScreen>
     );
   }
 
-  Widget _buildSectionHeader({
-    required String title,
-    required String total,
-    required IconData icon,
-    required List<Color> gradientColors,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(14.r),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: gradientColors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(14.r),
-        boxShadow: [
-          BoxShadow(
-            color: gradientColors.first.withOpacity(0.3),
-            blurRadius: 10.r,
-            offset: Offset(0, 5.h),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(12.r),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            child: Icon(icon, color: Colors.white, size: 24.sp),
-          ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 11.sp,
-                    color: Colors.white.withOpacity(0.9),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                TweenAnimationBuilder<double>(
-                  tween: Tween<double>(
-                    begin: 0,
-                    end: double.parse(total.replaceAll(RegExp(r'[^\d.]'), '')),
-                  ),
-                  duration: _animationDuration,
-                  builder: (context, value, _) {
-                    return Text(
-                      _currencyFormat.format(value),
-                      style: GoogleFonts.lato(
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildGastosPorCategoria(Map<String, double> data) {
     final themeManager = Provider.of<ThemeManager>(context);
+    final theme = Theme.of(context);
     _resetColors();
 
     final List<BarChartGroupData> barGroups = [];
@@ -597,13 +526,9 @@ class GraficasScreenState extends State<GraficasScreen>
             BarChartRodData(
               fromY: 0,
               toY: amount,
-              gradient: LinearGradient(
-                colors: [color, color.withOpacity(0.7)],
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-              ),
-              width: 18.w,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(6.r)),
+              color: color.withOpacity(0.9),
+              width: 24.w,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(8.r)),
             ),
           ],
         ),
@@ -636,31 +561,81 @@ class GraficasScreenState extends State<GraficasScreen>
         bottom: 14.r + MediaQuery.of(context).padding.bottom + 80.h,
       ),
       children: [
-        _buildSectionHeader(
-          title: 'Total de Gastos',
-          total: _currencyFormat.format(totalGastos),
-          icon: Icons.trending_down_rounded,
-          gradientColors: const [Color(0xFFfa709a), Color(0xFFfee140)],
+        // Header con total
+        Container(
+          padding: EdgeInsets.all(20.r),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(
+              color: theme.colorScheme.primary.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(10.r),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
+                    child: Icon(
+                      Icons.trending_down_rounded,
+                      color: theme.colorScheme.primary,
+                      size: 24.sp,
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Total de Gastos',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w500,
+                            color: theme.colorScheme.secondary.withOpacity(0.7),
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          _currencyFormat.format(totalGastos),
+                          style: GoogleFonts.poppins(
+                            fontSize: 24.sp,
+                            fontWeight: FontWeight.w700,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
         SizedBox(height: 16.h),
         AnimationUtils.slideFromBottom(
           Container(
             key: _chartKey,
-            padding: EdgeInsets.all(14.r),
+            padding: EdgeInsets.all(20.r),
             decoration: BoxDecoration(
-              color:
-                  themeManager.isDarkMode
-                      ? Colors.grey.shade800.withOpacity(0.5)
-                      : Colors.white,
-              borderRadius: BorderRadius.circular(14.r),
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(16.r),
+              border: Border.all(
+                color: theme.colorScheme.secondary.withOpacity(0.15),
+                width: 1,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color:
-                      themeManager.isDarkMode
-                          ? Colors.black.withOpacity(0.2)
-                          : Colors.grey.withOpacity(0.1),
+                  color: Colors.black.withOpacity(0.03),
                   blurRadius: 10.r,
-                  offset: Offset(0, 3.h),
+                  offset: Offset(0, 2.h),
                 ),
               ],
             ),
@@ -670,32 +645,31 @@ class GraficasScreenState extends State<GraficasScreen>
                 Row(
                   children: [
                     Container(
-                      padding: EdgeInsets.all(6.r),
+                      padding: EdgeInsets.all(8.r),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                        ),
-                        borderRadius: BorderRadius.circular(8.r),
+                        color: theme.colorScheme.primary.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(10.r),
                       ),
                       child: Icon(
                         Icons.bar_chart_rounded,
-                        color: Colors.white,
-                        size: 16.sp,
+                        color: theme.colorScheme.primary,
+                        size: 20.sp,
                       ),
                     ),
-                    SizedBox(width: 8.w),
+                    SizedBox(width: 10.w),
                     Text(
                       'Distribución por Categoría',
-                      style: GoogleFonts.lato(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.bold,
+                      style: GoogleFonts.poppins(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: 14.h),
+                SizedBox(height: 20.h),
                 SizedBox(
-                  height: 200.h,
+                  height: 220.h,
                   child: BarChart(
                     BarChartData(
                       minY: 0,
@@ -705,21 +679,35 @@ class GraficasScreenState extends State<GraficasScreen>
                       barTouchData: BarTouchData(
                         enabled: true,
                         touchTooltipData: BarTouchTooltipData(
-                          getTooltipColor: (group) => Colors.black87,
+                          getTooltipColor: (group) => theme.colorScheme.primary,
                           tooltipRoundedRadius: 8,
+                          tooltipPadding: EdgeInsets.symmetric(
+                            horizontal: 12.w,
+                            vertical: 8.h,
+                          ),
                           getTooltipItem: (group, groupIndex, rod, rodIndex) {
                             return BarTooltipItem(
                               _currencyFormat.format(rod.toY),
-                              TextStyle(
+                              GoogleFonts.poppins(
                                 color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12.sp,
                               ),
                             );
                           },
                         ),
                       ),
-                      gridData: FlGridData(show: false),
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        horizontalInterval: totalGastos / 5,
+                        getDrawingHorizontalLine: (value) {
+                          return FlLine(
+                            color: theme.colorScheme.secondary.withOpacity(0.1),
+                            strokeWidth: 1,
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
@@ -730,21 +718,19 @@ class GraficasScreenState extends State<GraficasScreen>
         SizedBox(height: 16.h),
         AnimationUtils.slideFromBottom(
           Container(
-            padding: EdgeInsets.all(14.r),
+            padding: EdgeInsets.all(20.r),
             decoration: BoxDecoration(
-              color:
-                  themeManager.isDarkMode
-                      ? Colors.grey.shade800.withOpacity(0.5)
-                      : Colors.white,
-              borderRadius: BorderRadius.circular(14.r),
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(16.r),
+              border: Border.all(
+                color: theme.colorScheme.secondary.withOpacity(0.15),
+                width: 1,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color:
-                      themeManager.isDarkMode
-                          ? Colors.black.withOpacity(0.2)
-                          : Colors.grey.withOpacity(0.1),
+                  color: Colors.black.withOpacity(0.03),
                   blurRadius: 10.r,
-                  offset: Offset(0, 3.h),
+                  offset: Offset(0, 2.h),
                 ),
               ],
             ),
@@ -754,30 +740,29 @@ class GraficasScreenState extends State<GraficasScreen>
                 Row(
                   children: [
                     Container(
-                      padding: EdgeInsets.all(6.r),
+                      padding: EdgeInsets.all(8.r),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                        ),
-                        borderRadius: BorderRadius.circular(8.r),
+                        color: theme.colorScheme.primary.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(10.r),
                       ),
                       child: Icon(
                         Icons.list_rounded,
-                        color: Colors.white,
-                        size: 16.sp,
+                        color: theme.colorScheme.primary,
+                        size: 20.sp,
                       ),
                     ),
-                    SizedBox(width: 8.w),
+                    SizedBox(width: 10.w),
                     Text(
                       'Desglose Detallado',
-                      style: GoogleFonts.lato(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.bold,
+                      style: GoogleFonts.poppins(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: 10.h),
+                SizedBox(height: 16.h),
                 ...legendItems.asMap().entries.map((entry) {
                   return AnimationUtils.staggeredAnimation(
                     index: entry.key,
@@ -796,6 +781,7 @@ class GraficasScreenState extends State<GraficasScreen>
 
   Widget _buildCuentasYSaldos(List<Account> data) {
     final themeManager = Provider.of<ThemeManager>(context);
+    final theme = Theme.of(context);
     _resetColors();
 
     final List<BarChartGroupData> barGroups = [];
@@ -821,13 +807,9 @@ class GraficasScreenState extends State<GraficasScreen>
             BarChartRodData(
               fromY: 0,
               toY: saldo,
-              gradient: LinearGradient(
-                colors: [color, color.withOpacity(0.7)],
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-              ),
-              width: 18.w,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(6.r)),
+              color: color.withOpacity(0.9),
+              width: 24.w,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(8.r)),
             ),
           ],
         ),
@@ -861,29 +843,78 @@ class GraficasScreenState extends State<GraficasScreen>
         bottom: 14.r + MediaQuery.of(context).padding.bottom + 80.h,
       ),
       children: [
-        _buildSectionHeader(
-          title: 'Balance Total',
-          total: _currencyFormat.format(totalSaldo),
-          icon: Icons.account_balance_wallet_rounded,
-          gradientColors: const [Color(0xFF4facfe), Color(0xFF00f2fe)],
+        Container(
+          padding: EdgeInsets.all(20.r),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(
+              color: theme.colorScheme.primary.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(10.r),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
+                    child: Icon(
+                      Icons.account_balance_wallet_rounded,
+                      color: theme.colorScheme.primary,
+                      size: 24.sp,
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Balance Total',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w500,
+                            color: theme.colorScheme.secondary.withOpacity(0.7),
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          _currencyFormat.format(totalSaldo),
+                          style: GoogleFonts.poppins(
+                            fontSize: 24.sp,
+                            fontWeight: FontWeight.w700,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
         SizedBox(height: 16.h),
         Container(
-          padding: EdgeInsets.all(14.r),
+          padding: EdgeInsets.all(20.r),
           decoration: BoxDecoration(
-            color:
-                themeManager.isDarkMode
-                    ? Colors.grey.shade800.withOpacity(0.5)
-                    : Colors.white,
-            borderRadius: BorderRadius.circular(14.r),
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(
+              color: theme.colorScheme.secondary.withOpacity(0.15),
+              width: 1,
+            ),
             boxShadow: [
               BoxShadow(
-                color:
-                    themeManager.isDarkMode
-                        ? Colors.black.withOpacity(0.2)
-                        : Colors.grey.withOpacity(0.1),
+                color: Colors.black.withOpacity(0.03),
                 blurRadius: 10.r,
-                offset: Offset(0, 3.h),
+                offset: Offset(0, 2.h),
               ),
             ],
           ),
@@ -893,32 +924,31 @@ class GraficasScreenState extends State<GraficasScreen>
               Row(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(6.r),
+                    padding: EdgeInsets.all(8.r),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF4facfe), Color(0xFF00f2fe)],
-                      ),
-                      borderRadius: BorderRadius.circular(8.r),
+                      color: theme.colorScheme.primary.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10.r),
                     ),
                     child: Icon(
                       Icons.pie_chart_rounded,
-                      color: Colors.white,
-                      size: 16.sp,
+                      color: theme.colorScheme.primary,
+                      size: 20.sp,
                     ),
                   ),
-                  SizedBox(width: 8.w),
+                  SizedBox(width: 10.w),
                   Text(
                     'Distribución por Cuenta',
-                    style: GoogleFonts.lato(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.bold,
+                    style: GoogleFonts.poppins(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
                 ],
               ),
-              SizedBox(height: 14.h),
+              SizedBox(height: 20.h),
               SizedBox(
-                height: 200.h,
+                height: 220.h,
                 child: BarChart(
                   BarChartData(
                     minY: 0,
@@ -928,21 +958,35 @@ class GraficasScreenState extends State<GraficasScreen>
                     barTouchData: BarTouchData(
                       enabled: true,
                       touchTooltipData: BarTouchTooltipData(
-                        getTooltipColor: (group) => Colors.black87,
+                        getTooltipColor: (group) => theme.colorScheme.primary,
                         tooltipRoundedRadius: 8,
+                        tooltipPadding: EdgeInsets.symmetric(
+                          horizontal: 12.w,
+                          vertical: 8.h,
+                        ),
                         getTooltipItem: (group, groupIndex, rod, rodIndex) {
                           return BarTooltipItem(
                             _currencyFormat.format(rod.toY),
-                            TextStyle(
+                            GoogleFonts.poppins(
                               color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11.sp,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12.sp,
                             ),
                           );
                         },
                       ),
                     ),
-                    gridData: FlGridData(show: false),
+                    gridData: FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                      horizontalInterval: totalSaldo / 5,
+                      getDrawingHorizontalLine: (value) {
+                        return FlLine(
+                          color: theme.colorScheme.secondary.withOpacity(0.1),
+                          strokeWidth: 1,
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -951,21 +995,19 @@ class GraficasScreenState extends State<GraficasScreen>
         ),
         SizedBox(height: 16.h),
         Container(
-          padding: EdgeInsets.all(14.r),
+          padding: EdgeInsets.all(20.r),
           decoration: BoxDecoration(
-            color:
-                themeManager.isDarkMode
-                    ? Colors.grey.shade800.withOpacity(0.5)
-                    : Colors.white,
-            borderRadius: BorderRadius.circular(14.r),
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(
+              color: theme.colorScheme.secondary.withOpacity(0.15),
+              width: 1,
+            ),
             boxShadow: [
               BoxShadow(
-                color:
-                    themeManager.isDarkMode
-                        ? Colors.black.withOpacity(0.2)
-                        : Colors.grey.withOpacity(0.1),
+                color: Colors.black.withOpacity(0.03),
                 blurRadius: 10.r,
-                offset: Offset(0, 3.h),
+                offset: Offset(0, 2.h),
               ),
             ],
           ),
@@ -975,30 +1017,29 @@ class GraficasScreenState extends State<GraficasScreen>
               Row(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(6.r),
+                    padding: EdgeInsets.all(8.r),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF4facfe), Color(0xFF00f2fe)],
-                      ),
-                      borderRadius: BorderRadius.circular(8.r),
+                      color: theme.colorScheme.primary.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10.r),
                     ),
                     child: Icon(
                       Icons.credit_card_rounded,
-                      color: Colors.white,
-                      size: 16.sp,
+                      color: theme.colorScheme.primary,
+                      size: 20.sp,
                     ),
                   ),
-                  SizedBox(width: 8.w),
+                  SizedBox(width: 10.w),
                   Text(
                     'Detalle de Cuentas',
-                    style: GoogleFonts.lato(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.bold,
+                    style: GoogleFonts.poppins(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
                 ],
               ),
-              SizedBox(height: 10.h),
+              SizedBox(height: 16.h),
               ...legendItems.asMap().entries.map((entry) {
                 return AnimationUtils.staggeredAnimation(
                   index: entry.key,
@@ -1104,6 +1145,7 @@ class GraficasScreenState extends State<GraficasScreen>
   @override
   Widget build(BuildContext context) {
     final themeManager = Provider.of<ThemeManager>(context);
+    final theme = Theme.of(context);
     final bgColor =
         themeManager.isDarkMode
             ? themeManager.themeData.scaffoldBackgroundColor
@@ -1115,33 +1157,30 @@ class GraficasScreenState extends State<GraficasScreen>
         preferredSize: Size.fromHeight(50.h),
         child: Container(
           decoration: BoxDecoration(
-            color:
-                themeManager.isDarkMode ? Colors.grey.shade900 : Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 6.r,
-                offset: Offset(0, 2.h),
+            color: theme.colorScheme.surface,
+            border: Border(
+              bottom: BorderSide(
+                color: theme.colorScheme.secondary.withOpacity(0.15),
+                width: 1,
               ),
-            ],
+            ),
           ),
           child: SafeArea(
             child: TabBar(
               controller: _tabController,
-              labelColor: const Color(0xFF667eea),
-              unselectedLabelColor:
-                  themeManager.isDarkMode
-                      ? Colors.grey.shade500
-                      : Colors.grey.shade600,
-              labelStyle: GoogleFonts.lato(
-                fontSize: 12.sp,
-                fontWeight: FontWeight.bold,
+              labelColor: theme.colorScheme.primary,
+              unselectedLabelColor: theme.colorScheme.secondary.withOpacity(
+                0.6,
               ),
-              unselectedLabelStyle: GoogleFonts.lato(
+              labelStyle: GoogleFonts.poppins(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w600,
+              ),
+              unselectedLabelStyle: GoogleFonts.poppins(
                 fontSize: 12.sp,
                 fontWeight: FontWeight.w500,
               ),
-              indicatorColor: const Color(0xFF667eea),
+              indicatorColor: theme.colorScheme.primary,
               indicatorWeight: 2.h,
               indicatorSize: TabBarIndicatorSize.label,
               tabs: [
@@ -1185,9 +1224,7 @@ class GraficasScreenState extends State<GraficasScreen>
                   children: [
                     CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        themeManager.isDarkMode
-                            ? Colors.white
-                            : const Color(0xFF667eea),
+                        theme.colorScheme.primary,
                       ),
                       strokeWidth: 3.w,
                     ),
@@ -1195,10 +1232,7 @@ class GraficasScreenState extends State<GraficasScreen>
                     Text(
                       'Cargando gráficas...',
                       style: TextStyle(
-                        color:
-                            themeManager.isDarkMode
-                                ? Colors.white70
-                                : Colors.grey.shade600,
+                        color: theme.colorScheme.secondary.withOpacity(0.7),
                         fontSize: 12.sp,
                       ),
                     ),

@@ -92,6 +92,7 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
   @override
   Widget build(BuildContext context) {
     final themeManager = Provider.of<ThemeManager>(context);
+    final theme = Theme.of(context);
     final isDark = themeManager.isDarkMode;
     final isEdit = widget.cuenta != null;
     final colorTipo = _colores[_tipoSeleccionado]!;
@@ -107,12 +108,12 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
       },
       child: Scaffold(
         resizeToAvoidBottomInset: true,
-        backgroundColor: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
+        backgroundColor: theme.colorScheme.background,
         appBar: AppBar(
-          backgroundColor: colorTipo,
+          backgroundColor: theme.colorScheme.surface,
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.close, color: Colors.white),
+            icon: Icon(Icons.close, color: theme.colorScheme.onSurface),
             onPressed: () async {
               final shouldPop = await _onWillPop();
               if (shouldPop && mounted) {
@@ -122,10 +123,10 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
           ),
           title: Text(
             isEdit ? 'Editar Cuenta' : 'Nueva Cuenta',
-            style: GoogleFonts.lato(
+            style: GoogleFonts.poppins(
               fontSize: 20.sp,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface,
             ),
           ),
         ),
@@ -134,12 +135,14 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
             // Header con ícono
             Container(
               width: double.infinity,
-              padding: EdgeInsets.all(24.r),
+              padding: EdgeInsets.symmetric(vertical: 24.h),
               decoration: BoxDecoration(
-                color: colorTipo,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(24.r),
-                  bottomRight: Radius.circular(24.r),
+                color: colorTipo.withOpacity(0.08),
+                border: Border(
+                  bottom: BorderSide(
+                    color: colorTipo.withOpacity(0.15),
+                    width: 1,
+                  ),
                 ),
               ),
               child: Column(
@@ -147,20 +150,21 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
                   Container(
                     padding: EdgeInsets.all(16.r),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: colorTipo.withOpacity(0.12),
                       shape: BoxShape.circle,
                     ),
                     child: Text(
                       _iconos[_tipoSeleccionado]!,
-                      style: TextStyle(fontSize: 48.sp),
+                      style: TextStyle(fontSize: 40.sp),
                     ),
                   ),
                   SizedBox(height: 12.h),
                   Text(
                     'Administra tus cuentas',
-                    style: GoogleFonts.lato(
-                      fontSize: 14.sp,
-                      color: Colors.white.withOpacity(0.9),
+                    style: GoogleFonts.poppins(
+                      fontSize: 13.sp,
+                      color: theme.colorScheme.secondary.withOpacity(0.7),
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
@@ -180,7 +184,7 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Tipo de cuenta
-                    _buildSectionTitle('Tipo de cuenta', isDark),
+                    _buildSectionTitle('Tipo de cuenta', theme),
                     SizedBox(height: 12.h),
                     IgnorePointer(
                       ignoring: isEdit,
@@ -194,7 +198,7 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
                                     padding: EdgeInsets.symmetric(
                                       horizontal: 4.w,
                                     ),
-                                    child: _buildTipoChip(tipo, isDark),
+                                    child: _buildTipoChip(tipo, theme),
                                   ),
                                 );
                               }).toList(),
@@ -204,7 +208,7 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
                     SizedBox(height: 20.h),
 
                     // Nombre
-                    _buildSectionTitle('Nombre de la cuenta', isDark),
+                    _buildSectionTitle('Nombre de la cuenta', theme),
                     SizedBox(height: 8.h),
                     TextField(
                       controller: _nombreController,
@@ -213,19 +217,17 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
                       decoration: _buildInputDecoration(
                         hintText: 'Ej: Cuenta Principal, Ahorros',
                         prefixIcon: Icons.account_balance_wallet,
-                        isDark: isDark,
+                        theme: theme,
                         color: colorTipo,
                       ),
-                      style: TextStyle(
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
+                      style: TextStyle(color: theme.colorScheme.onSurface),
                     ),
                     SizedBox(height: 16.h),
 
                     // Saldo inicial
                     _buildSectionTitle(
                       isEdit ? 'Saldo actual' : 'Saldo inicial',
-                      isDark,
+                      theme,
                     ),
                     SizedBox(height: 8.h),
                     GestureDetector(
@@ -256,37 +258,28 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
                         padding: EdgeInsets.only(
                           left: 8.w,
                           right: 16.w,
-                          top: 8.h,
-                          bottom: 8.h,
+                          top: 10.h,
+                          bottom: 10.h,
                         ),
                         decoration: BoxDecoration(
-                          color: isDark ? Colors.grey.shade800 : Colors.white,
+                          color: theme.colorScheme.surface,
                           borderRadius: BorderRadius.circular(12.r),
-                          border: Border.all(color: colorTipo.withOpacity(0.3)),
+                          border: Border.all(
+                            color: theme.colorScheme.secondary.withOpacity(0.2),
+                            width: 1,
+                          ),
                         ),
                         child: Row(
                           children: [
                             Container(
                               padding: EdgeInsets.all(8.r),
                               decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    colorTipo,
-                                    colorTipo.withOpacity(0.7),
-                                  ],
-                                ),
+                                color: colorTipo.withOpacity(0.12),
                                 borderRadius: BorderRadius.circular(10.r),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: colorTipo.withOpacity(0.3),
-                                    blurRadius: 4.r,
-                                    offset: Offset(0, 2.h),
-                                  ),
-                                ],
                               ),
                               child: Icon(
                                 Icons.attach_money,
-                                color: Colors.white,
+                                color: colorTipo,
                                 size: 20.sp,
                               ),
                             ),
@@ -313,10 +306,9 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
                                   fontWeight: FontWeight.w600,
                                   color:
                                       _saldoController.text.isNotEmpty
-                                          ? (isDark
-                                              ? Colors.white
-                                              : Colors.black87)
-                                          : Colors.grey.shade400,
+                                          ? theme.colorScheme.onSurface
+                                          : theme.colorScheme.secondary
+                                              .withOpacity(0.4),
                                 ),
                               ),
                             ),
@@ -327,7 +319,7 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
                     SizedBox(height: 16.h),
 
                     // Beneficiario (opcional)
-                    _buildSectionTitle('Beneficiario (opcional)', isDark),
+                    _buildSectionTitle('Beneficiario (opcional)', theme),
                     SizedBox(height: 8.h),
                     TextField(
                       controller: _beneficiarioController,
@@ -336,12 +328,10 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
                       decoration: _buildInputDecoration(
                         hintText: 'Nombre del titular',
                         prefixIcon: Icons.person_outline,
-                        isDark: isDark,
+                        theme: theme,
                         color: colorTipo,
                       ),
-                      style: TextStyle(
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
+                      style: TextStyle(color: theme.colorScheme.onSurface),
                     ),
                     SizedBox(height: 80.h),
                   ],
@@ -413,13 +403,13 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12.r),
               ),
-              elevation: 4,
+              elevation: 0,
             ),
             child: Text(
               isEdit ? 'Actualizar Cuenta' : 'Crear Cuenta',
-              style: GoogleFonts.lato(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.bold,
+              style: GoogleFonts.poppins(
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -429,18 +419,18 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title, bool isDark) {
+  Widget _buildSectionTitle(String title, ThemeData theme) {
     return Text(
       title,
-      style: GoogleFonts.lato(
+      style: GoogleFonts.poppins(
         fontSize: 13.sp,
         fontWeight: FontWeight.w600,
-        color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+        color: theme.colorScheme.secondary.withOpacity(0.7),
       ),
     );
   }
 
-  Widget _buildTipoChip(String tipo, bool isDark) {
+  Widget _buildTipoChip(String tipo, ThemeData theme) {
     final isSelected = _tipoSeleccionado == tipo;
     final color = _colores[tipo]!;
 
@@ -450,16 +440,14 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
         padding: EdgeInsets.symmetric(vertical: 12.h),
         decoration: BoxDecoration(
           color:
-              isSelected
-                  ? color.withOpacity(0.15)
-                  : (isDark ? Colors.grey.shade800 : Colors.white),
+              isSelected ? color.withOpacity(0.1) : theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(12.r),
           border: Border.all(
             color:
                 isSelected
-                    ? color
-                    : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
-            width: isSelected ? 2 : 1,
+                    ? color.withOpacity(0.3)
+                    : theme.colorScheme.secondary.withOpacity(0.2),
+            width: 1,
           ),
         ),
         child: Column(
@@ -468,15 +456,13 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
             SizedBox(height: 4.h),
             Text(
               tipo[0].toUpperCase() + tipo.substring(1),
-              style: GoogleFonts.lato(
+              style: GoogleFonts.poppins(
                 fontSize: 11.sp,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 color:
                     isSelected
                         ? color
-                        : (isDark
-                            ? Colors.grey.shade400
-                            : Colors.grey.shade600),
+                        : theme.colorScheme.secondary.withOpacity(0.7),
               ),
             ),
           ],
@@ -488,44 +474,43 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
   InputDecoration _buildInputDecoration({
     required String hintText,
     required IconData prefixIcon,
-    required bool isDark,
+    required ThemeData theme,
     required Color color,
   }) {
     return InputDecoration(
       hintText: hintText,
       hintStyle: GoogleFonts.openSans(
-        color: Colors.grey.shade400,
+        color: theme.colorScheme.secondary.withOpacity(0.5),
         fontSize: 12.sp,
       ),
       prefixIcon: Container(
         margin: EdgeInsets.all(10.r),
         padding: EdgeInsets.all(6.r),
         decoration: BoxDecoration(
-          gradient: LinearGradient(colors: [color, color.withOpacity(0.7)]),
+          color: color.withOpacity(0.12),
           borderRadius: BorderRadius.circular(10.r),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.3),
-              blurRadius: 4.r,
-              offset: Offset(0, 2.h),
-            ),
-          ],
         ),
-        child: Icon(prefixIcon, color: Colors.white, size: 20.sp),
+        child: Icon(prefixIcon, color: color, size: 20.sp),
       ),
       filled: true,
-      fillColor: isDark ? Colors.grey.shade800 : Colors.white,
+      fillColor: theme.colorScheme.surface,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide.none,
+        borderSide: BorderSide(
+          color: theme.colorScheme.secondary.withOpacity(0.2),
+          width: 1,
+        ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide.none,
+        borderSide: BorderSide(
+          color: theme.colorScheme.secondary.withOpacity(0.2),
+          width: 1,
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide(color: color, width: 2),
+        borderSide: BorderSide(color: color, width: 1.5),
       ),
     );
   }

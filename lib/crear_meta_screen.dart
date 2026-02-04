@@ -113,6 +113,7 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
   Widget build(BuildContext context) {
     final themeManager = Provider.of<ThemeManager>(context);
     final isDark = themeManager.isDarkMode;
+    final theme = Theme.of(context);
     final colorSeleccionado = Color(
       int.parse('FF$_colorSeleccionado', radix: 16),
     );
@@ -130,10 +131,10 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
         resizeToAvoidBottomInset: true,
         backgroundColor: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
         appBar: AppBar(
-          backgroundColor: colorSeleccionado,
+          backgroundColor: theme.colorScheme.surface,
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.close, color: Colors.white),
+            icon: Icon(Icons.close, color: theme.colorScheme.onSurface),
             onPressed: () async {
               final shouldPop = await _onWillPop();
               if (shouldPop && mounted) {
@@ -143,10 +144,10 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
           ),
           title: Text(
             widget.meta == null ? 'Nueva Meta' : 'Editar Meta',
-            style: GoogleFonts.lato(
+            style: GoogleFonts.poppins(
               fontSize: 20.sp,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface,
             ),
           ),
         ),
@@ -157,32 +158,35 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
               width: double.infinity,
               padding: EdgeInsets.all(24.r),
               decoration: BoxDecoration(
-                color: colorSeleccionado,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(24.r),
-                  bottomRight: Radius.circular(24.r),
+                color: colorSeleccionado.withOpacity(0.08),
+                border: Border(
+                  bottom: BorderSide(
+                    color: colorSeleccionado.withOpacity(0.2),
+                    width: 1,
+                  ),
                 ),
               ),
               child: Column(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(20.r),
+                    padding: EdgeInsets.all(16.r),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: colorSeleccionado.withOpacity(0.12),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       _getIconoActual(),
-                      color: Colors.white,
-                      size: 48.sp,
+                      color: colorSeleccionado,
+                      size: 40.sp,
                     ),
                   ),
                   SizedBox(height: 12.h),
                   Text(
                     'Define tu objetivo de ahorro',
-                    style: GoogleFonts.openSans(
-                      fontSize: 14.sp,
-                      color: Colors.white.withOpacity(0.9),
+                    style: GoogleFonts.poppins(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w500,
+                      color: theme.colorScheme.secondary.withOpacity(0.7),
                     ),
                   ),
                 ],
@@ -204,15 +208,17 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Nombre
-                      _buildSectionTitle('Nombre de la meta'),
+                      _buildSectionTitle('Nombre de la meta', theme),
                       SizedBox(height: 8.h),
                       TextFormField(
                         controller: _nombreController,
                         textCapitalization: TextCapitalization.words,
+                        style: TextStyle(color: theme.colorScheme.onSurface),
                         decoration: _buildInputDecoration(
                           hintText: 'Ej: Casa nueva, Auto, Vacaciones',
                           prefixIcon: Icons.label_outline,
                           color: colorSeleccionado,
+                          theme: theme,
                         ),
                         validator:
                             (v) =>
@@ -221,22 +227,24 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                       SizedBox(height: 16.h),
 
                       // Descripción
-                      _buildSectionTitle('Descripción (opcional)'),
+                      _buildSectionTitle('Descripción (opcional)', theme),
                       SizedBox(height: 8.h),
                       TextFormField(
                         controller: _descripcionController,
                         textCapitalization: TextCapitalization.words,
+                        style: TextStyle(color: theme.colorScheme.onSurface),
                         decoration: _buildInputDecoration(
                           hintText: 'Añade más detalles sobre tu meta',
                           prefixIcon: Icons.description_outlined,
                           color: colorSeleccionado,
+                          theme: theme,
                         ),
                         maxLines: 2,
                       ),
                       SizedBox(height: 16.h),
 
                       // Monto objetivo
-                      _buildSectionTitle('Monto objetivo'),
+                      _buildSectionTitle('Monto objetivo', theme),
                       SizedBox(height: 8.h),
                       GestureDetector(
                         onTap: () async {
@@ -273,10 +281,12 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                             bottom: 8.h,
                           ),
                           decoration: BoxDecoration(
-                            color: isDark ? Colors.grey.shade800 : Colors.white,
+                            color: theme.colorScheme.surface,
                             borderRadius: BorderRadius.circular(12.r),
                             border: Border.all(
-                              color: colorSeleccionado.withOpacity(0.3),
+                              color: theme.colorScheme.secondary.withOpacity(
+                                0.2,
+                              ),
                             ),
                           ),
                           child: Row(
@@ -284,24 +294,12 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                               Container(
                                 padding: EdgeInsets.all(8.r),
                                 decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      colorSeleccionado,
-                                      colorSeleccionado.withOpacity(0.7),
-                                    ],
-                                  ),
+                                  color: colorSeleccionado.withOpacity(0.12),
                                   borderRadius: BorderRadius.circular(10.r),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: colorSeleccionado.withOpacity(0.3),
-                                      blurRadius: 4.r,
-                                      offset: Offset(0, 2.h),
-                                    ),
-                                  ],
                                 ),
                                 child: Icon(
                                   Icons.attach_money,
-                                  color: Colors.white,
+                                  color: colorSeleccionado,
                                   size: 20.sp,
                                 ),
                               ),
@@ -328,10 +326,9 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                                     fontWeight: FontWeight.w600,
                                     color:
                                         _montoController.text.isNotEmpty
-                                            ? (isDark
-                                                ? Colors.white
-                                                : Colors.black87)
-                                            : Colors.grey.shade400,
+                                            ? theme.colorScheme.onSurface
+                                            : theme.colorScheme.secondary
+                                                .withOpacity(0.4),
                                   ),
                                 ),
                               ),
@@ -342,7 +339,7 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                       SizedBox(height: 16.h),
 
                       // Fecha objetivo
-                      _buildSectionTitle('Fecha objetivo'),
+                      _buildSectionTitle('Fecha objetivo', theme),
                       SizedBox(height: 8.h),
                       InkWell(
                         onTap: () async {
@@ -352,11 +349,11 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                             firstDate: DateTime.now(),
                             lastDate: DateTime.now().add(Duration(days: 3650)),
                             builder: (context, child) {
+                              final theme = Theme.of(context);
                               return Theme(
-                                data: Theme.of(context).copyWith(
-                                  colorScheme: ColorScheme.light(
-                                    primary: colorSeleccionado,
-                                  ),
+                                data: theme.copyWith(
+                                  dialogBackgroundColor:
+                                      theme.colorScheme.surface,
                                 ),
                                 child: child!,
                               );
@@ -369,13 +366,12 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                         child: Container(
                           padding: EdgeInsets.all(16.r),
                           decoration: BoxDecoration(
-                            color: isDark ? Colors.grey.shade800 : Colors.white,
+                            color: theme.colorScheme.surface,
                             borderRadius: BorderRadius.circular(12.r),
                             border: Border.all(
-                              color:
-                                  isDark
-                                      ? Colors.grey.shade700
-                                      : Colors.grey.shade300,
+                              color: theme.colorScheme.secondary.withOpacity(
+                                0.2,
+                              ),
                             ),
                           ),
                           child: Row(
@@ -394,11 +390,16 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                                 style: GoogleFonts.lato(
                                   fontSize: 14.sp,
                                   fontWeight: FontWeight.w600,
-                                  color: isDark ? Colors.white : Colors.black87,
+                                  color: theme.colorScheme.onSurface,
                                 ),
                               ),
                               Spacer(),
-                              Icon(Icons.arrow_drop_down, color: Colors.grey),
+                              Icon(
+                                Icons.arrow_drop_down,
+                                color: theme.colorScheme.secondary.withOpacity(
+                                  0.6,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -406,7 +407,7 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                       SizedBox(height: 20.h),
 
                       // Selector de ícono
-                      _buildSectionTitle('Ícono'),
+                      _buildSectionTitle('Ícono', theme),
                       SizedBox(height: 12.h),
                       Wrap(
                         spacing: 12.w,
@@ -427,18 +428,17 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                                     color:
                                         seleccionado
                                             ? colorSeleccionado.withOpacity(0.1)
-                                            : (isDark
-                                                ? Colors.grey.shade800
-                                                : Colors.white),
+                                            : theme.colorScheme.surface,
                                     borderRadius: BorderRadius.circular(12.r),
                                     border: Border.all(
                                       color:
                                           seleccionado
-                                              ? colorSeleccionado
-                                              : (isDark
-                                                  ? Colors.grey.shade700
-                                                  : Colors.grey.shade300),
-                                      width: seleccionado ? 2 : 1,
+                                              ? colorSeleccionado.withOpacity(
+                                                0.3,
+                                              )
+                                              : theme.colorScheme.secondary
+                                                  .withOpacity(0.2),
+                                      width: 1,
                                     ),
                                   ),
                                   child: Icon(
@@ -447,7 +447,8 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                                     color:
                                         seleccionado
                                             ? colorSeleccionado
-                                            : Colors.grey.shade600,
+                                            : theme.colorScheme.secondary
+                                                .withOpacity(0.6),
                                   ),
                                 ),
                               );
@@ -456,7 +457,7 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                       SizedBox(height: 20.h),
 
                       // Selector de color
-                      _buildSectionTitle('Color'),
+                      _buildSectionTitle('Color', theme),
                       SizedBox(height: 12.h),
                       Wrap(
                         spacing: 12.w,
@@ -484,22 +485,11 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                                     border: Border.all(
                                       color:
                                           seleccionado
-                                              ? Colors.black
-                                              : Colors.grey.shade300,
+                                              ? theme.colorScheme.onSurface
+                                              : theme.colorScheme.secondary
+                                                  .withOpacity(0.3),
                                       width: seleccionado ? 3 : 1,
                                     ),
-                                    boxShadow:
-                                        seleccionado
-                                            ? [
-                                              BoxShadow(
-                                                color: Color(
-                                                  colorInt,
-                                                ).withOpacity(0.4),
-                                                blurRadius: 8,
-                                                offset: Offset(0, 2),
-                                              ),
-                                            ]
-                                            : null,
                                   ),
                                   child:
                                       seleccionado
@@ -569,13 +559,13 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12.r),
               ),
-              elevation: 4,
+              elevation: 0,
             ),
             child: Text(
               'Guardar Meta',
-              style: GoogleFonts.lato(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.bold,
+              style: GoogleFonts.poppins(
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -585,15 +575,13 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    final themeManager = Provider.of<ThemeManager>(context, listen: false);
-    final isDark = themeManager.isDarkMode;
+  Widget _buildSectionTitle(String title, ThemeData theme) {
     return Text(
       title,
-      style: GoogleFonts.lato(
+      style: GoogleFonts.poppins(
         fontSize: 13.sp,
         fontWeight: FontWeight.w600,
-        color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+        color: theme.colorScheme.secondary.withOpacity(0.7),
       ),
     );
   }
@@ -602,44 +590,42 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
     required String hintText,
     required IconData prefixIcon,
     required Color color,
+    required ThemeData theme,
   }) {
-    final themeManager = Provider.of<ThemeManager>(context, listen: false);
-    final isDark = themeManager.isDarkMode;
     return InputDecoration(
       hintText: hintText,
       hintStyle: GoogleFonts.openSans(
-        color: Colors.grey.shade400,
+        color: theme.colorScheme.secondary.withOpacity(0.5),
         fontSize: 12.sp,
       ),
       prefixIcon: Container(
         margin: EdgeInsets.all(10.r),
         padding: EdgeInsets.all(6.r),
         decoration: BoxDecoration(
-          gradient: LinearGradient(colors: [color, color.withOpacity(0.7)]),
+          color: color.withOpacity(0.12),
           borderRadius: BorderRadius.circular(10.r),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.3),
-              blurRadius: 4.r,
-              offset: Offset(0, 2.h),
-            ),
-          ],
         ),
-        child: Icon(prefixIcon, color: Colors.white, size: 20.sp),
+        child: Icon(prefixIcon, color: color, size: 20.sp),
       ),
       filled: true,
-      fillColor: isDark ? Colors.grey.shade800 : Colors.white,
+      fillColor: theme.colorScheme.surface,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide.none,
+        borderSide: BorderSide(
+          color: theme.colorScheme.secondary.withOpacity(0.2),
+          width: 1,
+        ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide.none,
+        borderSide: BorderSide(
+          color: theme.colorScheme.secondary.withOpacity(0.2),
+          width: 1,
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide(color: color, width: 2),
+        borderSide: BorderSide(color: color, width: 1.5),
       ),
       contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
     );
