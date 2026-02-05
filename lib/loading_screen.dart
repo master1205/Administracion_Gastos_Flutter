@@ -170,14 +170,13 @@ class _LoadingScreenState extends State<LoadingScreen>
   }
 
   void _showBiometricErrorDialog() {
+    final theme = Theme.of(context);
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) {
-        final themeManager = Provider.of<ThemeManager>(context, listen: false);
         return Dialog(
-          backgroundColor:
-              themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+          backgroundColor: theme.colorScheme.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20.r),
           ),
@@ -189,7 +188,7 @@ class _LoadingScreenState extends State<LoadingScreen>
                 Container(
                   padding: EdgeInsets.all(16.r),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: Colors.red.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -204,8 +203,7 @@ class _LoadingScreenState extends State<LoadingScreen>
                   style: GoogleFonts.lato(
                     fontSize: 20.sp,
                     fontWeight: FontWeight.bold,
-                    color:
-                        themeManager.isDarkMode ? Colors.white : Colors.black,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
                 SizedBox(height: 8.h),
@@ -214,10 +212,7 @@ class _LoadingScreenState extends State<LoadingScreen>
                   textAlign: TextAlign.center,
                   style: GoogleFonts.lato(
                     fontSize: 14.sp,
-                    color:
-                        themeManager.isDarkMode
-                            ? Colors.grey.shade400
-                            : Colors.grey.shade600,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
                 SizedBox(height: 24.h),
@@ -346,12 +341,8 @@ class _LoadingScreenState extends State<LoadingScreen>
   }
 
   // UI Builders
-  Widget _buildBackground(bool isDarkMode) {
-    if (isDarkMode) {
-      return Container(color: Colors.grey.shade900);
-    }
-
-    return Container(color: const Color(0xFFF5F7FA));
+  Widget _buildBackground(ThemeData theme) {
+    return Container(color: theme.colorScheme.background);
   }
 
   Widget _buildLoadingContent(ThemeManager themeManager) {
@@ -483,12 +474,13 @@ class _LoadingScreenState extends State<LoadingScreen>
   @override
   Widget build(BuildContext context) {
     final themeManager = Provider.of<ThemeManager>(context);
+    final theme = Theme.of(context);
 
     return Scaffold(
       body: Stack(
         children: [
           // Background
-          _buildBackground(themeManager.isDarkMode),
+          _buildBackground(theme),
 
           // Content
           SafeArea(child: Center(child: _buildLoadingContent(themeManager))),

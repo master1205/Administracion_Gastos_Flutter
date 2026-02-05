@@ -480,14 +480,12 @@ class _AjustesScreenState extends State<AjustesScreen> {
 
   // Métodos auxiliares
   void _mostrarSelectorMoneda() {
-    final themeManager = Provider.of<ThemeManager>(context, listen: false);
     final theme = Theme.of(context);
     showDialog(
       context: context,
       builder:
           (context) => AlertDialog(
-            backgroundColor:
-                themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+            backgroundColor: theme.colorScheme.surface,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16.r),
             ),
@@ -495,7 +493,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
               'Seleccionar moneda',
               style: GoogleFonts.lato(
                 fontWeight: FontWeight.bold,
-                color: themeManager.isDarkMode ? Colors.white : Colors.black87,
+                color: theme.colorScheme.onSurface,
               ),
             ),
             content: Column(
@@ -506,10 +504,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
                       title: Text(
                         m,
                         style: GoogleFonts.openSans(
-                          color:
-                              themeManager.isDarkMode
-                                  ? Colors.white
-                                  : Colors.black87,
+                          color: theme.colorScheme.onSurface,
                         ),
                       ),
                       value: m,
@@ -528,14 +523,12 @@ class _AjustesScreenState extends State<AjustesScreen> {
   }
 
   void _mostrarSelectorIdioma() {
-    final themeManager = Provider.of<ThemeManager>(context, listen: false);
     final theme = Theme.of(context);
     showDialog(
       context: context,
       builder:
           (context) => AlertDialog(
-            backgroundColor:
-                themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+            backgroundColor: theme.colorScheme.surface,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16.r),
             ),
@@ -543,7 +536,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
               'Seleccionar idioma',
               style: GoogleFonts.lato(
                 fontWeight: FontWeight.bold,
-                color: themeManager.isDarkMode ? Colors.white : Colors.black87,
+                color: theme.colorScheme.onSurface,
               ),
             ),
             content: Column(
@@ -554,10 +547,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
                       title: Text(
                         i,
                         style: GoogleFonts.openSans(
-                          color:
-                              themeManager.isDarkMode
-                                  ? Colors.white
-                                  : Colors.black87,
+                          color: theme.colorScheme.onSurface,
                         ),
                       ),
                       value: i,
@@ -620,13 +610,12 @@ class _AjustesScreenState extends State<AjustesScreen> {
   }
 
   void _exportarDatos() {
+    final theme = Theme.of(context);
     showDialog(
       context: context,
       builder: (context) {
-        final themeManager = Provider.of<ThemeManager>(context, listen: false);
         return AlertDialog(
-          backgroundColor:
-              themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+          backgroundColor: theme.colorScheme.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16.r),
           ),
@@ -634,7 +623,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
             'Exportar datos',
             style: GoogleFonts.lato(
               fontWeight: FontWeight.bold,
-              color: themeManager.isDarkMode ? Colors.white : Colors.black87,
+              color: theme.colorScheme.onSurface,
             ),
           ),
           content: Column(
@@ -645,8 +634,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 title: Text(
                   'Excel',
                   style: GoogleFonts.openSans(
-                    color:
-                        themeManager.isDarkMode ? Colors.white : Colors.black87,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
                 onTap: () {
@@ -662,8 +650,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 title: Text(
                   'CSV',
                   style: GoogleFonts.openSans(
-                    color:
-                        themeManager.isDarkMode ? Colors.white : Colors.black87,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
                 onTap: () {
@@ -679,8 +666,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 title: Text(
                   'PDF',
                   style: GoogleFonts.openSans(
-                    color:
-                        themeManager.isDarkMode ? Colors.white : Colors.black87,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
                 onTap: () {
@@ -699,14 +685,12 @@ class _AjustesScreenState extends State<AjustesScreen> {
   }
 
   void _limpiarCache() async {
+    final theme = Theme.of(context);
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (context) {
-        final themeManager = Provider.of<ThemeManager>(context, listen: false);
-        final theme = Theme.of(context);
         return AlertDialog(
-          backgroundColor:
-              themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+          backgroundColor: theme.colorScheme.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16.r),
           ),
@@ -714,13 +698,13 @@ class _AjustesScreenState extends State<AjustesScreen> {
             '¿Limpiar caché?',
             style: GoogleFonts.lato(
               fontWeight: FontWeight.bold,
-              color: themeManager.isDarkMode ? Colors.white : Colors.black87,
+              color: theme.colorScheme.onSurface,
             ),
           ),
           content: Text(
             'Se eliminarán datos temporales para liberar espacio',
             style: GoogleFonts.openSans(
-              color: themeManager.isDarkMode ? Colors.white70 : Colors.black87,
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
           actions: [
@@ -746,13 +730,12 @@ class _AjustesScreenState extends State<AjustesScreen> {
   }
 
   void _mostrarTerminos() {
+    final theme = Theme.of(context);
     showDialog(
       context: context,
       builder: (context) {
-        final themeManager = Provider.of<ThemeManager>(context, listen: false);
         return AlertDialog(
-          backgroundColor:
-              themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+          backgroundColor: theme.colorScheme.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16.r),
           ),
@@ -760,15 +743,14 @@ class _AjustesScreenState extends State<AjustesScreen> {
             'Términos y condiciones',
             style: GoogleFonts.lato(
               fontWeight: FontWeight.bold,
-              color: themeManager.isDarkMode ? Colors.white : Colors.black87,
+              color: theme.colorScheme.onSurface,
             ),
           ),
           content: SingleChildScrollView(
             child: Text(
               'Aquí irían los términos y condiciones de la aplicación...',
               style: GoogleFonts.openSans(
-                color:
-                    themeManager.isDarkMode ? Colors.white70 : Colors.black87,
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
           ),
@@ -784,13 +766,12 @@ class _AjustesScreenState extends State<AjustesScreen> {
   }
 
   void _mostrarPrivacidad() {
+    final theme = Theme.of(context);
     showDialog(
       context: context,
       builder: (context) {
-        final themeManager = Provider.of<ThemeManager>(context, listen: false);
         return AlertDialog(
-          backgroundColor:
-              themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+          backgroundColor: theme.colorScheme.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16.r),
           ),
@@ -798,15 +779,14 @@ class _AjustesScreenState extends State<AjustesScreen> {
             'Política de privacidad',
             style: GoogleFonts.lato(
               fontWeight: FontWeight.bold,
-              color: themeManager.isDarkMode ? Colors.white : Colors.black87,
+              color: theme.colorScheme.onSurface,
             ),
           ),
           content: SingleChildScrollView(
             child: Text(
               'Aquí iría la política de privacidad de la aplicación...',
               style: GoogleFonts.openSans(
-                color:
-                    themeManager.isDarkMode ? Colors.white70 : Colors.black87,
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
           ),
@@ -829,10 +809,9 @@ class _AjustesScreenState extends State<AjustesScreen> {
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (context) {
-        final themeManager = Provider.of<ThemeManager>(context, listen: false);
+        final theme = Theme.of(context);
         return AlertDialog(
-          backgroundColor:
-              themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+          backgroundColor: theme.colorScheme.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16.r),
           ),
@@ -840,13 +819,13 @@ class _AjustesScreenState extends State<AjustesScreen> {
             '¿Cerrar sesión?',
             style: GoogleFonts.lato(
               fontWeight: FontWeight.bold,
-              color: themeManager.isDarkMode ? Colors.white : Colors.black87,
+              color: theme.colorScheme.onSurface,
             ),
           ),
           content: Text(
             'Se perderán los datos no sincronizados',
             style: GoogleFonts.openSans(
-              color: themeManager.isDarkMode ? Colors.white70 : Colors.black87,
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
           actions: [

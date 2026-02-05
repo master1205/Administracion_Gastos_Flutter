@@ -1075,14 +1075,10 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
 
   @override
   Widget build(BuildContext context) {
-    final themeManager = Provider.of<ThemeManager>(context);
-    final bgColor =
-        themeManager.isDarkMode
-            ? Theme.of(context).scaffoldBackgroundColor
-            : const Color(0xFFF5F7FA);
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: theme.colorScheme.background,
       body: Stack(
         children: [
           Column(
@@ -1137,16 +1133,14 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
             ),
           if (_isLoading)
             Container(
-              color: bgColor.withOpacity(0.8),
+              color: theme.colorScheme.background.withOpacity(0.8),
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        themeManager.isDarkMode
-                            ? Colors.white
-                            : const Color(0xFF667eea),
+                        theme.colorScheme.primary,
                       ),
                       strokeWidth: 2.5.w,
                     ),
@@ -1154,12 +1148,9 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
                     Text(
                       'Actualizando...',
                       style: GoogleFonts.lato(
-                        fontSize: 13.sp, // ✅ REDUCIDO de 14
+                        fontSize: 13.sp,
                         fontWeight: FontWeight.w600,
-                        color:
-                            themeManager.isDarkMode
-                                ? Colors.white
-                                : const Color(0xFF2D3436),
+                        color: theme.colorScheme.onBackground,
                       ),
                     ),
                   ],

@@ -383,7 +383,7 @@ class OnboardingScreenState extends State<OnboardingScreen>
                           ),
                         ),
                         filled: true,
-                        fillColor: Colors.grey.shade50,
+                        fillColor: Theme.of(context).colorScheme.surface,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12.r),
                           borderSide: BorderSide.none,

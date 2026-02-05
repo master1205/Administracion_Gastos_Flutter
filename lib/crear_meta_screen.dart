@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import 'componentes/heads_up_notification.dart';
 import 'models/Meta.dart';
-import 'theme_provider.dart';
 import 'widgets/discard_changes_dialog.dart';
 import 'widgets/select_amount.dart';
 
@@ -111,8 +109,6 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeManager = Provider.of<ThemeManager>(context);
-    final isDark = themeManager.isDarkMode;
     final theme = Theme.of(context);
     final colorSeleccionado = Color(
       int.parse('FF$_colorSeleccionado', radix: 16),
@@ -129,7 +125,7 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
       },
       child: Scaffold(
         resizeToAvoidBottomInset: true,
-        backgroundColor: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
+        backgroundColor: theme.colorScheme.background,
         appBar: AppBar(
           backgroundColor: theme.colorScheme.surface,
           elevation: 0,

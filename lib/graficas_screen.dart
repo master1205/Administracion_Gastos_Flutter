@@ -1144,15 +1144,10 @@ class GraficasScreenState extends State<GraficasScreen>
 
   @override
   Widget build(BuildContext context) {
-    final themeManager = Provider.of<ThemeManager>(context);
     final theme = Theme.of(context);
-    final bgColor =
-        themeManager.isDarkMode
-            ? themeManager.themeData.scaffoldBackgroundColor
-            : const Color(0xFFF5F7FA);
 
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: theme.colorScheme.background,
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(50.h),
         child: Container(
@@ -1246,9 +1241,7 @@ class GraficasScreenState extends State<GraficasScreen>
                     return Center(
                       child: CircularProgressIndicator(
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          themeManager.isDarkMode
-                              ? Colors.white
-                              : const Color(0xFF667eea),
+                          theme.colorScheme.primary,
                         ),
                         strokeWidth: 3.w,
                       ),

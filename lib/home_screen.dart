@@ -812,20 +812,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       width: 280.w,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       child: Container(
-        decoration: BoxDecoration(
-          gradient:
-              themeManager.isDarkMode
-                  ? LinearGradient(
-                    colors: [Colors.grey.shade900, Colors.black],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  )
-                  : const LinearGradient(
-                    colors: [Colors.white, Color(0xFFF5F7FA)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-        ),
+        color: theme.colorScheme.background,
         child: Column(
           children: [
             Container(
@@ -1100,6 +1087,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildExpandableFab() {
+    final theme = Theme.of(context);
     final themeManager = Provider.of<ThemeManager>(context, listen: false);
 
     return ExpandableFab(
@@ -1115,18 +1103,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       openButtonBuilder: RotateFloatingActionButtonBuilder(
         child: const Icon(Icons.add_rounded, color: Colors.white),
         shape: const CircleBorder(),
-        backgroundColor:
-            themeManager.isDarkMode
-                ? Colors.grey.shade800
-                : const Color(0xFF667eea),
+        backgroundColor: theme.colorScheme.primary,
       ),
       closeButtonBuilder: RotateFloatingActionButtonBuilder(
         child: const Icon(Icons.close_rounded, color: Colors.white),
         shape: const CircleBorder(),
-        backgroundColor:
-            themeManager.isDarkMode
-                ? Colors.grey.shade800
-                : const Color(0xFF667eea),
+        backgroundColor: theme.colorScheme.primary,
       ),
       children: [
         _buildFloatingActionButtonExtended(
@@ -1214,7 +1196,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         ],
       ),
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: theme.colorScheme.background,
       body: NotificationListener<UserScrollNotification>(
         onNotification: (notification) {
           final isScrollingDown =

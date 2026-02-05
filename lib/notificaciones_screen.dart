@@ -230,8 +230,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor:
-          themeManager.isDarkMode ? Colors.grey.shade900 : Colors.grey.shade50,
+      backgroundColor: theme.colorScheme.background,
       appBar: AppBar(
         title: Text(
           'Notificaciones',

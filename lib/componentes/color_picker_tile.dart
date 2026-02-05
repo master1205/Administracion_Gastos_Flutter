@@ -11,6 +11,7 @@ class ColorPickerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeManager = Provider.of<ThemeManager>(context);
+    final theme = Theme.of(context);
 
     return ListTile(
       contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
@@ -24,7 +25,7 @@ class ColorPickerTile extends StatelessWidget {
         style: GoogleFonts.lato(
           fontSize: 14.sp,
           fontWeight: FontWeight.w600,
-          color: themeManager.isDarkMode ? Colors.white : Colors.black87,
+          color: theme.colorScheme.onSurface,
         ),
       ),
       subtitle: Text(
@@ -62,6 +63,7 @@ class ColorPickerTile extends StatelessWidget {
 
   void _showColorPicker(BuildContext context, ThemeManager themeManager) {
     Color tempColor = themeManager.accentColor;
+    final theme = Theme.of(context);
 
     showDialog(
       context: context,
@@ -69,10 +71,7 @@ class ColorPickerTile extends StatelessWidget {
           (context) => StatefulBuilder(
             builder:
                 (context, setState) => AlertDialog(
-                  backgroundColor:
-                      themeManager.isDarkMode
-                          ? Colors.grey.shade800
-                          : Colors.white,
+                  backgroundColor: theme.colorScheme.surface,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16.r),
                   ),
@@ -81,10 +80,7 @@ class ColorPickerTile extends StatelessWidget {
                     style: GoogleFonts.lato(
                       fontWeight: FontWeight.bold,
                       fontSize: 18.sp,
-                      color:
-                          themeManager.isDarkMode
-                              ? Colors.white
-                              : Colors.black87,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
                   content: SingleChildScrollView(

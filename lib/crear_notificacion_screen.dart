@@ -83,19 +83,18 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
   }
 
   Future<void> _selectTime() async {
+    final theme = Theme.of(context);
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: _selectedTime,
       builder: (context, child) {
-        final themeManager = Provider.of<ThemeManager>(context, listen: false);
         return Theme(
           data: ThemeData.light().copyWith(
             colorScheme: ColorScheme.light(
               primary: Color(int.parse('0xFF$_selectedColor')),
               onPrimary: Colors.white,
-              surface:
-                  themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
-              onSurface: themeManager.isDarkMode ? Colors.white : Colors.black,
+              surface: theme.colorScheme.surface,
+              onSurface: theme.colorScheme.onSurface,
             ),
           ),
           child: child!,
@@ -136,8 +135,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
     final isEdit = widget.notificacion != null;
 
     return Scaffold(
-      backgroundColor:
-          themeManager.isDarkMode ? Colors.grey.shade900 : Colors.grey.shade50,
+      backgroundColor: theme.colorScheme.background,
       appBar: AppBar(
         title: Text(
           isEdit ? 'Editar Notificación' : 'Nueva Notificación',
@@ -335,8 +333,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
                   style: GoogleFonts.lato(
                     fontSize: 18.sp,
                     fontWeight: FontWeight.bold,
-                    color:
-                        themeManager.isDarkMode ? Colors.white : Colors.black87,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -358,10 +355,11 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
   }
 
   Widget _buildSelectorDias(ThemeManager themeManager) {
+    final theme = Theme.of(context);
     return Container(
       padding: EdgeInsets.all(16.r),
       decoration: BoxDecoration(
-        color: themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12.r),
         boxShadow: [
           BoxShadow(
@@ -379,7 +377,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
             style: GoogleFonts.lato(
               fontSize: 13.sp,
               fontWeight: FontWeight.bold,
-              color: themeManager.isDarkMode ? Colors.white : Colors.black87,
+              color: theme.colorScheme.onSurface,
             ),
           ),
           SizedBox(height: 12.h),
@@ -430,10 +428,11 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
   }
 
   Widget _buildSelectorIcono(ThemeManager themeManager) {
+    final theme = Theme.of(context);
     return Container(
       padding: EdgeInsets.all(16.r),
       decoration: BoxDecoration(
-        color: themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12.r),
         boxShadow: [
           BoxShadow(
@@ -451,7 +450,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
             style: GoogleFonts.lato(
               fontSize: 13.sp,
               fontWeight: FontWeight.bold,
-              color: themeManager.isDarkMode ? Colors.white : Colors.black87,
+              color: theme.colorScheme.onSurface,
             ),
           ),
           SizedBox(height: 12.h),
@@ -504,10 +503,11 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
   }
 
   Widget _buildSelectorColor(ThemeManager themeManager) {
+    final theme = Theme.of(context);
     return Container(
       padding: EdgeInsets.all(16.r),
       decoration: BoxDecoration(
-        color: themeManager.isDarkMode ? Colors.grey.shade800 : Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12.r),
         boxShadow: [
           BoxShadow(
@@ -525,7 +525,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
             style: GoogleFonts.lato(
               fontSize: 13.sp,
               fontWeight: FontWeight.bold,
-              color: themeManager.isDarkMode ? Colors.white : Colors.black87,
+              color: theme.colorScheme.onSurface,
             ),
           ),
           SizedBox(height: 12.h),

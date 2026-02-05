@@ -694,7 +694,7 @@ Future<double?> showSelectAmountBottomSheet(
       final theme = Theme.of(context);
       return Container(
         decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
+          color: theme.colorScheme.background,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
         ),
         padding: EdgeInsets.only(top: 16.h, bottom: bottomPadding + 16.h),

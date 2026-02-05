@@ -895,6 +895,7 @@ class _CrearMetaDialogState extends State<_CrearMetaDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final colorSeleccionado = Color(
       int.parse('FF$_colorSeleccionado', radix: 16),
     );
@@ -919,7 +920,7 @@ class _CrearMetaDialogState extends State<_CrearMetaDialog> {
         child: Container(
           height: MediaQuery.of(context).size.height * 0.9,
           decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
+            color: theme.colorScheme.background,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
           ),
           child: Column(
@@ -1377,7 +1378,7 @@ class _CrearMetaDialogState extends State<_CrearMetaDialog> {
               Container(
                 padding: EdgeInsets.all(20.r),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).scaffoldBackgroundColor,
+                  color: theme.colorScheme.background,
                   border: Border(
                     top: BorderSide(color: Colors.grey.shade200, width: 1),
                   ),

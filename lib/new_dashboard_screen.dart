@@ -1220,22 +1220,16 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
   }
 
   Widget _buildEmptyAccounts() {
-    final themeManager = Provider.of<ThemeManager>(context);
+    final theme = Theme.of(context);
 
     return Container(
       height: 180.h,
       margin: EdgeInsets.symmetric(vertical: 8.h),
       decoration: BoxDecoration(
-        color:
-            themeManager.isDarkMode
-                ? Colors.grey.shade800.withOpacity(0.3)
-                : Colors.grey.shade100,
+        color: theme.colorScheme.surface.withOpacity(0.5),
         borderRadius: BorderRadius.circular(18.r),
         border: Border.all(
-          color:
-              themeManager.isDarkMode
-                  ? Colors.grey.shade700
-                  : Colors.grey.shade300,
+          color: theme.colorScheme.onSurface.withOpacity(0.1),
           width: 2.w,
         ),
       ),

@@ -130,10 +130,9 @@ class ReportesScreenState extends State<ReportesScreen>
   Widget _buildYearCard({
     required String year,
     required List<Reporte> reportes,
-    required ThemeManager themeManager,
+    required ThemeData theme,
   }) {
     final isExpanded = _expandedYears[year] ?? false;
-    final theme = Theme.of(context);
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
@@ -212,10 +211,7 @@ class ReportesScreenState extends State<ReportesScreen>
           },
           children:
               reportes.map((reporte) {
-                return _buildReportItem(
-                  reporte: reporte,
-                  themeManager: themeManager,
-                );
+                return _buildReportItem(reporte: reporte, theme: theme);
               }).toList(),
         ),
       ),
@@ -224,9 +220,8 @@ class ReportesScreenState extends State<ReportesScreen>
 
   Widget _buildReportItem({
     required Reporte reporte,
-    required ThemeManager themeManager,
+    required ThemeData theme,
   }) {
-    final theme = Theme.of(context);
     return BounceTapButton(
       onTap: () => _openReport(reporte.file),
       child: Container(
@@ -321,8 +316,7 @@ class ReportesScreenState extends State<ReportesScreen>
     );
   }
 
-  Widget _buildLoadingIndicator(ThemeManager themeManager) {
-    final theme = Theme.of(context);
+  Widget _buildLoadingIndicator(ThemeData theme) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -392,25 +386,21 @@ class ReportesScreenState extends State<ReportesScreen>
 
   @override
   Widget build(BuildContext context) {
-    final themeManager = Provider.of<ThemeManager>(context);
-    final bgColor =
-        themeManager.isDarkMode
-            ? Theme.of(context).scaffoldBackgroundColor
-            : const Color(0xFFF5F7FA);
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: theme.colorScheme.background,
       body: Stack(
         children: [
           _isLoading
-              ? _buildLoadingIndicator(themeManager)
+              ? _buildLoadingIndicator(theme)
               : StreamBuilder<List<Reporte>>(
                 stream: _reportesStream,
                 builder: (context, snapshot) {
                   // Si está en waiting y no hay datos, mostrar loading
                   if (snapshot.connectionState == ConnectionState.waiting &&
                       !snapshot.hasData) {
-                    return _buildLoadingIndicator(themeManager);
+                    return _buildLoadingIndicator(theme);
                   }
 
                   if (snapshot.hasError) {
@@ -443,7 +433,7 @@ class ReportesScreenState extends State<ReportesScreen>
                       return _buildYearCard(
                         year: year,
                         reportes: reportesDelAno,
-                        themeManager: themeManager,
+                        theme: theme,
                       );
                     },
                   );

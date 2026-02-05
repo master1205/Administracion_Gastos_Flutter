@@ -474,7 +474,7 @@ class _CuentasScreenState extends State<CuentasScreen> {
   }
 
   Future<void> _mostrarDialogoCuentaAsociadaAMeta() async {
-    final themeManager = Provider.of<ThemeManager>(context, listen: false);
+    final theme = Theme.of(context);
 
     await showModalBottomSheet(
       context: context,
@@ -483,7 +483,7 @@ class _CuentasScreenState extends State<CuentasScreen> {
       builder:
           (context) => Container(
             decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
+              color: theme.colorScheme.background,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
             ),
             child: Column(
@@ -515,10 +515,7 @@ class _CuentasScreenState extends State<CuentasScreen> {
                           style: GoogleFonts.lato(
                             fontSize: 18.sp,
                             fontWeight: FontWeight.bold,
-                            color:
-                                themeManager.isDarkMode
-                                    ? Colors.white
-                                    : Colors.black87,
+                            color: theme.colorScheme.onSurface,
                           ),
                         ),
                       ),
