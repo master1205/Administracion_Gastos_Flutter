@@ -23,7 +23,6 @@ class GraficasScreen extends StatefulWidget {
 class GraficasScreenState extends State<GraficasScreen>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   static const String _tutorialKey = 'tutorial_graficas_shown';
-  static const Duration _animationDuration = Duration(milliseconds: 800);
 
   late TabController _tabController;
   late Future<List<dynamic>> _futureData;
@@ -558,7 +557,7 @@ class GraficasScreenState extends State<GraficasScreen>
         left: 14.r,
         right: 14.r,
         top: 14.r,
-        bottom: 14.r + MediaQuery.of(context).padding.bottom + 80.h,
+        bottom: 34.r + MediaQuery.of(context).padding.bottom,
       ),
       children: [
         // Header con total
@@ -840,7 +839,7 @@ class GraficasScreenState extends State<GraficasScreen>
         left: 14.r,
         right: 14.r,
         top: 14.r,
-        bottom: 14.r + MediaQuery.of(context).padding.bottom + 80.h,
+        bottom: 34.r + MediaQuery.of(context).padding.bottom,
       ),
       children: [
         Container(

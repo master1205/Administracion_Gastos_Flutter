@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
+
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:notificaciones/ajustes_screen.dart';
 import 'package:notificaciones/categorias_screen.dart';
@@ -32,7 +32,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   static const String _tutorialKey = 'tutorial_home_shown';
   static const String _userNameKey = 'username';
-  static final double _fabDistance = 60.h;
 
   int _selectedIndex = 0;
   bool _isScrollingDown = false;
@@ -47,7 +46,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final GlobalKey<TransaccionesScreenState> _transaccionesKey = GlobalKey();
   final GlobalKey<GraficasScreenState> _graficasKey = GlobalKey();
   final GlobalKey<ReportesScreenState> _reportesKey = GlobalKey();
-  final _expandableFabKey = GlobalKey<ExpandableFabState>(); // ✅ CORRECCIÓN
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey();
 
   final GlobalKey _navItemInicioKey = GlobalKey();
@@ -725,8 +723,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildDrawer() {
-    final themeManager = Provider.of<ThemeManager>(context);
-
     final menuItems = [
       _DrawerItem(
         icon: Icons.category_rounded,
@@ -1046,97 +1042,203 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return 'Buenas noches';
   }
 
-  // ✅ MÉTODO MEJORADO: Botones sin brillo
-  Widget _buildFloatingActionButtonExtended(
-    IconData icon,
-    String label,
-    Color baseColor,
-  ) {
-    final themeManager = Provider.of<ThemeManager>(context, listen: false);
-    final buttonColor =
-        themeManager.isDarkMode
-            ? Color.lerp(Colors.black, baseColor, 0.6)!
-            : baseColor;
+  void _showTransactionOptions() {
+    final theme = Theme.of(context);
 
-    return SizedBox(
-      width: 150.w,
-      height: 48.h,
-      child: FloatingActionButton.extended(
-        heroTag: label,
-        label: Text(
-          label,
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 13.5.sp,
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder:
+          (context) => Container(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(24.r),
+                topRight: Radius.circular(24.r),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(height: 12.h),
+                Container(
+                  width: 40.w,
+                  height: 4.h,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.secondary.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+                SizedBox(height: 20.h),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.add_circle_outline,
+                        color: theme.colorScheme.primary,
+                        size: 24.sp,
+                      ),
+                      SizedBox(width: 10.w),
+                      Text(
+                        'Nueva Transacción',
+                        style: TextStyle(
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 20.h),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
+                  child: Column(
+                    children: [
+                      _buildTransactionOption(
+                        icon: Icons.trending_down_rounded,
+                        title: 'Gastos',
+                        description: 'Registra un gasto o compra',
+                        color: Colors.red,
+                        theme: theme,
+                        onTap: () {
+                          Navigator.pop(context);
+                          _navigateToDynamicFormScreen('Gastos', Colors.red);
+                        },
+                      ),
+                      SizedBox(height: 12.h),
+                      _buildTransactionOption(
+                        icon: Icons.trending_up_rounded,
+                        title: 'Ingresos',
+                        description: 'Registra un ingreso o ganancia',
+                        color: Colors.green,
+                        theme: theme,
+                        onTap: () {
+                          Navigator.pop(context);
+                          _navigateToDynamicFormScreen(
+                            'Ingresos',
+                            Colors.green,
+                          );
+                        },
+                      ),
+                      SizedBox(height: 12.h),
+                      _buildTransactionOption(
+                        icon: Icons.swap_horiz_rounded,
+                        title: 'Traspasos',
+                        description: 'Transfiere entre cuentas',
+                        color: Colors.blue,
+                        theme: theme,
+                        onTap: () {
+                          Navigator.pop(context);
+                          _navigateToDynamicFormScreen(
+                            'Traspasos',
+                            Colors.blue,
+                          );
+                        },
+                      ),
+                      SizedBox(height: 12.h),
+                      _buildTransactionOption(
+                        icon: Icons.monetization_on_rounded,
+                        title: 'Pagos',
+                        description: 'Registra un pago realizado',
+                        color: Colors.orange,
+                        theme: theme,
+                        onTap: () {
+                          Navigator.pop(context);
+                          _navigateToDynamicFormScreen('Pagos', Colors.orange);
+                        },
+                      ),
+                      SizedBox(height: 12.h),
+                      _buildTransactionOption(
+                        icon: Icons.restore_rounded,
+                        title: 'Reembolsos',
+                        description: 'Registra un reembolso recibido',
+                        color: Colors.purple,
+                        theme: theme,
+                        onTap: () {
+                          Navigator.pop(context);
+                          _navigateToDynamicFormScreen(
+                            'Reembolsos',
+                            Colors.purple,
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 20.h + MediaQuery.of(context).padding.bottom),
+              ],
+            ),
           ),
-        ),
-        icon: Icon(icon, color: Colors.white, size: 17.sp),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24.r),
-        ),
-        onPressed: () {
-          _expandableFabKey.currentState?.toggle();
-          _navigateToDynamicFormScreen(label, buttonColor);
-        },
-        backgroundColor: buttonColor,
-        elevation: 4,
-        tooltip: label,
-      ),
     );
   }
 
-  Widget _buildExpandableFab() {
-    final theme = Theme.of(context);
-    final themeManager = Provider.of<ThemeManager>(context, listen: false);
-
-    return ExpandableFab(
-      key: _expandableFabKey,
-      distance: _fabDistance,
-      type: ExpandableFabType.up,
-      overlayStyle: ExpandableFabOverlayStyle(
-        color: Colors.black.withOpacity(0.75),
-        blur: 10,
+  Widget _buildTransactionOption({
+    required IconData icon,
+    required String title,
+    required String description,
+    required Color color,
+    required ThemeData theme,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16.r),
+        child: Container(
+          padding: EdgeInsets.all(16.r),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48.w,
+                height: 48.w,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Icon(icon, color: color, size: 24.sp),
+              ),
+              SizedBox(width: 16.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: theme.colorScheme.secondary.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: theme.colorScheme.secondary.withOpacity(0.5),
+                size: 16.sp,
+              ),
+            ],
+          ),
+        ),
       ),
-      childrenAnimation: ExpandableFabAnimation.none,
-      fanAngle: 70,
-      openButtonBuilder: RotateFloatingActionButtonBuilder(
-        child: const Icon(Icons.add_rounded, color: Colors.white),
-        shape: const CircleBorder(),
-        backgroundColor: theme.colorScheme.primary,
-      ),
-      closeButtonBuilder: RotateFloatingActionButtonBuilder(
-        child: const Icon(Icons.close_rounded, color: Colors.white),
-        shape: const CircleBorder(),
-        backgroundColor: theme.colorScheme.primary,
-      ),
-      children: [
-        _buildFloatingActionButtonExtended(
-          Icons.trending_down_rounded,
-          "Gastos",
-          Colors.red,
-        ),
-        _buildFloatingActionButtonExtended(
-          Icons.trending_up_rounded,
-          "Ingresos",
-          Colors.green,
-        ),
-        _buildFloatingActionButtonExtended(
-          Icons.swap_horiz_rounded,
-          "Traspasos",
-          Colors.blue,
-        ),
-        _buildFloatingActionButtonExtended(
-          Icons.monetization_on_rounded,
-          "Pagos",
-          Colors.orange,
-        ),
-        _buildFloatingActionButtonExtended(
-          Icons.restore_rounded,
-          "Reembolsos",
-          Colors.purple,
-        ),
-      ],
     );
   }
 
@@ -1146,6 +1248,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final theme = Theme.of(context);
 
     return Scaffold(
+      extendBody: true,
       key: _scaffoldKey,
       drawer: _buildDrawer(),
       appBar: AppBar(
@@ -1208,62 +1311,92 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         },
         child: Center(child: _widgetOptions[_selectedIndex]),
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: theme.colorScheme.secondary.withOpacity(0.1),
-              width: 1,
+      bottomNavigationBar: BottomAppBar(
+        color: theme.colorScheme.surface,
+        elevation: 0,
+        height: 60.h,
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 6.0,
+        clipBehavior: Clip.antiAlias,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildNavButton(
+              Icons.home_rounded,
+              Icons.home_outlined,
+              'Inicio',
+              0,
+              theme,
             ),
-          ),
-        ),
-        child: BottomNavigationBar(
-          backgroundColor: theme.colorScheme.surface,
-          elevation: 0,
-          items: [
-            _buildNavItem(Icons.home_rounded, Icons.home_outlined, 'Inicio', 0),
-            _buildNavItem(
+            _buildNavButton(
               Icons.swap_horiz_rounded,
               Icons.swap_horiz_outlined,
               'Transacciones',
               1,
+              theme,
             ),
-            _buildNavItem(
+            SizedBox(width: 56.w), // Espacio para el FAB en el centro
+            _buildNavButton(
               Icons.bar_chart_rounded,
               Icons.bar_chart_outlined,
               'Gráficas',
               2,
+              theme,
             ),
-            _buildNavItem(
+            _buildNavButton(
               Icons.description_rounded,
               Icons.description_outlined,
               'Reportes',
               3,
+              theme,
             ),
           ],
-          currentIndex: _selectedIndex,
-          selectedItemColor: theme.colorScheme.primary,
-          unselectedItemColor: theme.colorScheme.secondary.withOpacity(0.5),
-          type: BottomNavigationBarType.fixed,
-          showSelectedLabels: true,
-          showUnselectedLabels: true,
-          selectedFontSize: 11.sp,
-          unselectedFontSize: 10.sp,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
-          onTap: _onItemTapped,
         ),
       ),
-      floatingActionButton: _buildExpandableFab(),
-      floatingActionButtonLocation: ExpandableFab.location,
+      floatingActionButton: Container(
+        width: 50.w,
+        height: 50.w,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: theme.colorScheme.surface,
+          border: Border.all(
+            color: theme.colorScheme.secondary.withOpacity(0.2),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _showTransactionOptions,
+            customBorder: const CircleBorder(),
+            splashColor: theme.colorScheme.primary.withOpacity(0.2),
+            child: Center(
+              child: Icon(
+                Icons.add_rounded,
+                color: theme.colorScheme.primary,
+                size: 24.sp,
+              ),
+            ),
+          ),
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 
-  BottomNavigationBarItem _buildNavItem(
+  Widget _buildNavButton(
     IconData selectedIcon,
     IconData unselectedIcon,
     String label,
     int index,
+    ThemeData theme,
   ) {
     GlobalKey? key;
     switch (index) {
@@ -1281,13 +1414,49 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         break;
     }
 
-    return BottomNavigationBarItem(
-      key: key,
-      icon: Icon(
-        _selectedIndex == index ? selectedIcon : unselectedIcon,
-        size: 20.sp,
+    final isSelected = _selectedIndex == index;
+
+    return Expanded(
+      child: Material(
+        key: key,
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _onItemTapped(index),
+          splashColor: theme.colorScheme.primary.withOpacity(0.1),
+          highlightColor: Colors.transparent,
+          borderRadius: BorderRadius.circular(12.r),
+          child: Container(
+            height: 70.h,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isSelected ? selectedIcon : unselectedIcon,
+                  size: 22.sp,
+                  color:
+                      isSelected
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.secondary.withOpacity(0.5),
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10.sp,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    color:
+                        isSelected
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.secondary.withOpacity(0.5),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
-      label: label,
     );
   }
 }

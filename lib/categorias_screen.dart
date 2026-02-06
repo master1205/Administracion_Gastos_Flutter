@@ -104,7 +104,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
               left: 16.r,
               right: 16.r,
               top: 16.r,
-              bottom: 16.r + MediaQuery.of(context).padding.bottom + 80.h,
+              bottom: 70.h + MediaQuery.of(context).padding.bottom,
             ),
             itemCount: categoriasFiltradas.length,
             itemBuilder: (context, index) {
@@ -118,25 +118,36 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
         },
       ),
       floatingActionButton: AnimateFABDelayed(
-        fab: FloatingActionButton(
-          onPressed: () => _mostrarDialogoCategoria(context),
-          backgroundColor: theme.colorScheme.surface,
-          foregroundColor: theme.colorScheme.primary,
-          elevation: 0,
-          shape: const CircleBorder(),
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: theme.colorScheme.secondary.withOpacity(0.2),
-                width: 1,
-              ),
+        fab: Container(
+          width: 50.w,
+          height: 50.w,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: theme.colorScheme.surface,
+            border: Border.all(
+              color: theme.colorScheme.secondary.withOpacity(0.2),
+              width: 1.5,
             ),
-            child: Center(
-              child: Icon(
-                Icons.add_rounded,
-                color: theme.colorScheme.primary,
-                size: 26.sp,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => _mostrarDialogoCategoria(context),
+              customBorder: const CircleBorder(),
+              splashColor: theme.colorScheme.primary.withOpacity(0.2),
+              child: Center(
+                child: Icon(
+                  Icons.add_rounded,
+                  color: theme.colorScheme.primary,
+                  size: 24.sp,
+                ),
               ),
             ),
           ),

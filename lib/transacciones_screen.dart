@@ -1073,91 +1073,200 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
     );
   }
 
+  Widget _buildResumenTotales() {
+    final theme = Theme.of(context);
+
+    double gastos = 0.0;
+    double ingresos = 0.0;
+    double traspasos = 0.0;
+
+    for (var t in _transaccionesFiltradas) {
+      switch (t.tipoTransaccion) {
+        case 'Gastos':
+        case 'Pagos':
+          gastos += t.monto;
+          break;
+        case 'Ingresos':
+        case 'Reembolsos':
+          ingresos += t.monto;
+          break;
+        case 'Traspasos':
+          traspasos += t.monto;
+          break;
+      }
+    }
+
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16.w),
+      padding: EdgeInsets.all(12.r),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(
+          color: theme.colorScheme.onSurface.withOpacity(0.08),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          if (ingresos > 0)
+            _buildTotalChip(
+              'Ingresos',
+              ingresos,
+              Colors.green,
+              Icons.trending_up_rounded,
+            ),
+          if (gastos > 0)
+            _buildTotalChip(
+              'Gastos',
+              gastos,
+              Colors.red,
+              Icons.trending_down_rounded,
+            ),
+          if (traspasos > 0)
+            _buildTotalChip(
+              'Traspasos',
+              traspasos,
+              Colors.blue,
+              Icons.swap_horiz_rounded,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTotalChip(
+    String label,
+    double amount,
+    Color color,
+    IconData icon,
+  ) {
+    final theme = Theme.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 14.sp),
+            SizedBox(width: 4.w),
+            Text(
+              label,
+              style: GoogleFonts.lato(
+                fontSize: 10.sp,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 2.h),
+        Text(
+          _currencyFormat.format(amount),
+          style: GoogleFonts.lato(
+            fontSize: 13.sp,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Scaffold(
       backgroundColor: theme.colorScheme.background,
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              // Chip de filtro activo
-              if (_cuentaFiltroActual != null) _buildFiltroCuentaChip(),
-              // Lista de transacciones
-              Expanded(
-                child:
-                    _isLoading
-                        ? const TransactionListShimmer(itemCount: 8)
-                        : _transaccionesFiltradas.isEmpty
-                        ? _buildEmptyState()
-                        : _buildTransactionsList(_transaccionesFiltradas),
-              ),
-            ],
-          ),
-          // Indicador sutil de recarga (solo refresh manual)
-          if (_isManualRefresh)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 300),
-                builder: (context, value, child) {
-                  return Opacity(
-                    opacity: value,
-                    child: Container(
-                      height: 3.h,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            const Color(0xFF667eea).withOpacity(0.0),
-                            const Color(0xFF667eea),
-                            const Color(0xFF764ba2),
-                            const Color(0xFF764ba2).withOpacity(0.0),
-                          ],
-                        ),
-                      ),
-                      child: LinearProgressIndicator(
-                        backgroundColor: Colors.transparent,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.white.withOpacity(0.5),
-                        ),
-                      ),
-                    ),
-                  );
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Column(
+              children: [
+                // Chip de filtro activo
+                if (_cuentaFiltroActual != null) _buildFiltroCuentaChip(),
+                // Resumen de totales
+                if (_cuentaFiltroActual != null &&
+                    _transaccionesFiltradas.isNotEmpty) ...{
+                  _buildResumenTotales(),
+                  SizedBox(height: 8.h),
                 },
-              ),
+                // Lista de transacciones
+                Expanded(
+                  child:
+                      _isLoading
+                          ? const TransactionListShimmer(itemCount: 8)
+                          : _transaccionesFiltradas.isEmpty
+                          ? _buildEmptyState()
+                          : _buildTransactionsList(_transaccionesFiltradas),
+                ),
+              ],
             ),
-          if (_isLoading)
-            Container(
-              color: theme.colorScheme.background.withOpacity(0.8),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        theme.colorScheme.primary,
+            // Indicador sutil de recarga (solo refresh manual)
+            if (_isManualRefresh)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 300),
+                  builder: (context, value, child) {
+                    return Opacity(
+                      opacity: value,
+                      child: Container(
+                        height: 3.h,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color(0xFF667eea).withOpacity(0.0),
+                              const Color(0xFF667eea),
+                              const Color(0xFF764ba2),
+                              const Color(0xFF764ba2).withOpacity(0.0),
+                            ],
+                          ),
+                        ),
+                        child: LinearProgressIndicator(
+                          backgroundColor: Colors.transparent,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white.withOpacity(0.5),
+                          ),
+                        ),
                       ),
-                      strokeWidth: 2.5.w,
-                    ),
-                    SizedBox(height: 12.h),
-                    Text(
-                      'Actualizando...',
-                      style: GoogleFonts.lato(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onBackground,
-                      ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ),
-            ),
-        ],
+            if (_isLoading)
+              Container(
+                color: theme.colorScheme.background.withOpacity(0.8),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          theme.colorScheme.primary,
+                        ),
+                        strokeWidth: 2.5.w,
+                      ),
+                      SizedBox(height: 12.h),
+                      Text(
+                        'Actualizando...',
+                        style: GoogleFonts.lato(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onBackground,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -1180,7 +1289,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.only(
         top: 12.h,
-        bottom: 12.h + MediaQuery.of(context).padding.bottom + 80.h,
+        bottom: -25.h + MediaQuery.of(context).padding.bottom,
       ),
       itemCount: sortedTransactions.length + groupedTransactions.keys.length,
       itemBuilder: (context, index) {

@@ -3,8 +3,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:notificaciones/models/Reporte.dart';
-import 'package:notificaciones/theme_provider.dart';
-import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'componentes/heads_up_notification.dart';
@@ -423,7 +421,7 @@ class ReportesScreenState extends State<ReportesScreen>
                     padding: EdgeInsets.only(
                       top: 12.h,
                       bottom:
-                          12.h + MediaQuery.of(context).padding.bottom + 80.h,
+                          32.h + MediaQuery.of(context).padding.bottom,
                     ), // ✅ REDUCIDO de 14
                     itemCount: reportesPorAno.keys.length,
                     itemBuilder: (context, index) {

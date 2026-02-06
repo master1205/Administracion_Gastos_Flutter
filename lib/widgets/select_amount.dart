@@ -324,7 +324,6 @@ class _SelectAmountWidgetState extends State<SelectAmountWidget> {
   Widget build(BuildContext context) {
     _focusAttachment.reparent();
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     String amountConverted = amount.isEmpty ? "0" : amount;
     double calculatedAmount = calculateResult(amountConverted);
     String displayAmount = amount.isEmpty ? "0" : amount;
@@ -692,15 +691,16 @@ Future<double?> showSelectAmountBottomSheet(
               : MediaQuery.of(context).viewPadding.bottom;
 
       final theme = Theme.of(context);
-      return Container(
-        decoration: BoxDecoration(
-          color: theme.colorScheme.background,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-        ),
-        padding: EdgeInsets.only(top: 16.h, bottom: bottomPadding + 16.h),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+      return SafeArea(
+        child: Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.background,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+          ),
+          padding: EdgeInsets.only(top: 16.h, bottom: bottomPadding + 16.h),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             // Título
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
@@ -744,8 +744,9 @@ Future<double?> showSelectAmountBottomSheet(
             ),
           ],
         ),
-      );
-    },
+      ),
+    );
+  },
   );
 
   return selectedAmount;

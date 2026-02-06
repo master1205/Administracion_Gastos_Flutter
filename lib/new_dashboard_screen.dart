@@ -51,10 +51,6 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
   List<Account> _accounts = [];
   Map<String, dynamic>? _balanceData;
 
-  bool _isDarkMode() {
-    return Provider.of<ThemeManager>(context, listen: false).isDarkMode;
-  }
-
   List<Transaction> _transactions = [];
   List<Meta> _metas = [];
   bool _isLoading = false;
@@ -291,7 +287,6 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
   }
 
   TargetFocus _createBalanceTarget() {
-    final theme = Theme.of(context);
     return TargetFocus(
       identify: "BalanceCard",
       keyTarget: _balanceCardKey,
@@ -327,7 +322,6 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
   }
 
   TargetFocus _createAccountsTarget() {
-    final theme = Theme.of(context);
     return TargetFocus(
       identify: "AccountsCarousel",
       keyTarget: _accountsCarouselKey,
@@ -364,7 +358,6 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
   }
 
   TargetFocus _createViewAllTarget() {
-    final theme = Theme.of(context);
     return TargetFocus(
       identify: "VerTodoButton",
       keyTarget: _verTodoKey,
@@ -637,7 +630,6 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
 
   // UI Builders - Balance Card
   Widget _buildBalanceCard() {
-    final themeManager = Provider.of<ThemeManager>(context);
     final theme = Theme.of(context);
 
     final double saldoTotal = double.parse(
@@ -1724,9 +1716,8 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                     padding: EdgeInsets.only(
                       left: 14.r,
                       right: 14.r,
-                      top: 14.r,
-                      bottom:
-                          14.r + MediaQuery.of(context).padding.bottom + 80.h,
+                      top: 12.h,
+                      bottom: -25.h + MediaQuery.of(context).padding.bottom,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

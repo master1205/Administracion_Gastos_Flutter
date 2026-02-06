@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import 'api_service.dart';
 import 'componentes/heads_up_notification.dart';
 import 'models/Account.dart';
-import 'theme_provider.dart';
 import 'widgets/discard_changes_dialog.dart';
 import 'widgets/select_amount.dart';
 
@@ -91,9 +89,7 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeManager = Provider.of<ThemeManager>(context);
     final theme = Theme.of(context);
-    final isDark = themeManager.isDarkMode;
     final isEdit = widget.cuenta != null;
     final colorTipo = _colores[_tipoSeleccionado]!;
 
