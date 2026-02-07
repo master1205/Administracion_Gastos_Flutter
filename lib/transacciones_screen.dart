@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -1289,7 +1290,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.only(
         top: 12.h,
-        bottom: -25.h + MediaQuery.of(context).padding.bottom,
+        bottom: max(0.0, MediaQuery.of(context).padding.bottom - 25.h),
       ),
       itemCount: sortedTransactions.length + groupedTransactions.keys.length,
       itemBuilder: (context, index) {

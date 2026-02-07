@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -1717,7 +1718,10 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                       left: 14.r,
                       right: 14.r,
                       top: 12.h,
-                      bottom: -25.h + MediaQuery.of(context).padding.bottom,
+                      bottom: max(
+                        0.0,
+                        MediaQuery.of(context).padding.bottom - 25.h,
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
