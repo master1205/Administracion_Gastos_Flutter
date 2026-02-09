@@ -6,6 +6,7 @@ import 'componentes/heads_up_notification.dart';
 import 'models/Meta.dart';
 import 'widgets/discard_changes_dialog.dart';
 import 'widgets/select_amount.dart';
+import 'package:flex_color_picker/flex_color_picker.dart';
 
 class CrearMetaScreen extends StatefulWidget {
   final Meta? meta;
@@ -23,7 +24,7 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
   late TextEditingController _montoController;
   DateTime _fechaObjetivo = DateTime.now().add(Duration(days: 365));
   String _iconoSeleccionado = 'savings';
-  String _colorSeleccionado = '4CAF50';
+  Color _colorSeleccionado = const Color(0xFF4CAF50);
 
   // Variables para detectar cambios
   late String _initialNombre;
@@ -31,7 +32,7 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
   late String _initialMonto;
   late DateTime _initialFecha;
   late String _initialIcono;
-  late String _initialColor;
+  late Color _initialColor;
 
   final List<Map<String, dynamic>> _iconos = [
     {'icon': Icons.savings, 'name': 'savings', 'label': 'Ahorro'},
@@ -43,13 +44,13 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
     {'icon': Icons.card_giftcard, 'name': 'gift', 'label': 'Regalo'},
   ];
 
-  final List<Map<String, String>> _colores = [
-    {'color': '4CAF50', 'name': 'Verde'},
-    {'color': '2196F3', 'name': 'Azul'},
-    {'color': 'FF9800', 'name': 'Naranja'},
-    {'color': 'E91E63', 'name': 'Rosa'},
-    {'color': '9C27B0', 'name': 'Morado'},
-    {'color': 'F44336', 'name': 'Rojo'},
+  final List<Color> _colores = [
+    const Color(0xFF4CAF50), // Verde
+    const Color(0xFF2196F3), // Azul
+    const Color(0xFFFF9800), // Naranja
+    const Color(0xFFE91E63), // Rosa
+    const Color(0xFF9C27B0), // Morado
+    const Color(0xFFF44336), // Rojo
   ];
 
   @override
@@ -65,7 +66,9 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
 
     if (widget.meta != null) {
       _iconoSeleccionado = widget.meta!.icono;
-      _colorSeleccionado = widget.meta!.color;
+      _colorSeleccionado = Color(
+        int.parse('FF${widget.meta!.color}', radix: 16),
+      );
       try {
         _fechaObjetivo = DateTime.parse(widget.meta!.fechaObjetivo);
       } catch (e) {}
@@ -107,12 +110,203 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
     super.dispose();
   }
 
+  void _showColorPicker(BuildContext context, ThemeData theme) {
+    Color tempColor = _colorSeleccionado;
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => StatefulBuilder(
+            builder:
+                (context, setState) => AlertDialog(
+                  backgroundColor: theme.colorScheme.surface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16.r),
+                  ),
+                  title: Text(
+                    'Seleccionar color',
+                    style: GoogleFonts.lato(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18.sp,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Selector de color completo
+                        ColorPicker(
+                          color: tempColor,
+                          onColorChanged: (Color color) {
+                            setState(() {
+                              tempColor = color;
+                            });
+                          },
+                          width: 40.w,
+                          height: 40.h,
+                          borderRadius: 8.r,
+                          spacing: 5,
+                          runSpacing: 5,
+                          wheelDiameter: 200.w,
+                          heading: Text(
+                            'Selector de color',
+                            style: GoogleFonts.lato(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                          subheading: Text(
+                            'Toca para seleccionar',
+                            style: GoogleFonts.openSans(
+                              fontSize: 11.sp,
+                              color: theme.colorScheme.onSurface.withOpacity(
+                                0.6,
+                              ),
+                            ),
+                          ),
+                          pickersEnabled: const <ColorPickerType, bool>{
+                            ColorPickerType.both: false,
+                            ColorPickerType.primary: true,
+                            ColorPickerType.accent: true,
+                            ColorPickerType.bw: false,
+                            ColorPickerType.custom: false,
+                            ColorPickerType.wheel: true,
+                          },
+                          enableShadesSelection: true,
+                          showColorCode: true,
+                          colorCodeHasColor: true,
+                          showColorName: false,
+                          showMaterialName: false,
+                          enableOpacity: false,
+                          enableTonalPalette: true,
+                        ),
+                        SizedBox(height: 16.h),
+                        Divider(
+                          color: theme.colorScheme.onSurface.withOpacity(0.2),
+                        ),
+                        SizedBox(height: 8.h),
+                        // Colores rápidos
+                        Text(
+                          'Colores rápidos',
+                          style: GoogleFonts.lato(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        SizedBox(height: 12.h),
+                        SizedBox(
+                          width: double.maxFinite,
+                          child: Wrap(
+                            spacing: 8.w,
+                            runSpacing: 8.h,
+                            alignment: WrapAlignment.center,
+                            children:
+                                _colores.map((color) {
+                                  final isSelected = color == tempColor;
+                                  return InkWell(
+                                    onTap: () {
+                                      setState(() {
+                                        tempColor = color;
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    child: Container(
+                                      width: 44.w,
+                                      height: 44.h,
+                                      decoration: BoxDecoration(
+                                        color: color,
+                                        borderRadius: BorderRadius.circular(
+                                          12.r,
+                                        ),
+                                        border:
+                                            isSelected
+                                                ? Border.all(
+                                                  color: Colors.white,
+                                                  width: 3.w,
+                                                )
+                                                : null,
+                                        boxShadow:
+                                            isSelected
+                                                ? [
+                                                  BoxShadow(
+                                                    color: color.withOpacity(
+                                                      0.5,
+                                                    ),
+                                                    blurRadius: 8.r,
+                                                    offset: Offset(0, 2.h),
+                                                  ),
+                                                ]
+                                                : null,
+                                      ),
+                                      alignment: Alignment.center,
+                                      child:
+                                          isSelected
+                                              ? Icon(
+                                                Icons.check,
+                                                color: Colors.white,
+                                                size: 24.sp,
+                                              )
+                                              : null,
+                                    ),
+                                  );
+                                }).toList(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Cancelar',
+                        style: GoogleFonts.lato(
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14.sp,
+                        ),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        this.setState(() {
+                          _colorSeleccionado = tempColor;
+                        });
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: tempColor,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 20.w,
+                          vertical: 10.h,
+                        ),
+                      ),
+                      child: Text(
+                        'Aplicar',
+                        style: GoogleFonts.lato(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14.sp,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+          ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorSeleccionado = Color(
-      int.parse('FF$_colorSeleccionado', radix: 16),
-    );
+    final colorSeleccionado = _colorSeleccionado;
 
     return PopScope(
       canPop: false,
@@ -455,49 +649,60 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                       // Selector de color
                       _buildSectionTitle('Color', theme),
                       SizedBox(height: 12.h),
-                      Wrap(
-                        spacing: 12.w,
-                        runSpacing: 12.h,
-                        children:
-                            _colores.map((color) {
-                              final seleccionado =
-                                  _colorSeleccionado == color['color'];
-                              final colorInt = int.parse(
-                                'FF${color['color']}',
-                                radix: 16,
-                              );
-                              return GestureDetector(
-                                onTap:
-                                    () => setState(
-                                      () =>
-                                          _colorSeleccionado = color['color']!,
-                                    ),
-                                child: Container(
-                                  width: 50.w,
-                                  height: 50.h,
-                                  decoration: BoxDecoration(
-                                    color: Color(colorInt),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color:
-                                          seleccionado
-                                              ? theme.colorScheme.onSurface
-                                              : theme.colorScheme.secondary
-                                                  .withOpacity(0.3),
-                                      width: seleccionado ? 3 : 1,
-                                    ),
+                      InkWell(
+                        onTap: () => _showColorPicker(context, theme),
+                        borderRadius: BorderRadius.circular(12.r),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16.w,
+                            vertical: 12.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(
+                              color: theme.colorScheme.onSurface.withOpacity(
+                                0.1,
+                              ),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40.w,
+                                height: 40.h,
+                                decoration: BoxDecoration(
+                                  color: _colorSeleccionado,
+                                  borderRadius: BorderRadius.circular(8.r),
+                                  border: Border.all(
+                                    color: theme.colorScheme.onSurface
+                                        .withOpacity(0.2),
+                                    width: 2,
                                   ),
-                                  child:
-                                      seleccionado
-                                          ? Icon(
-                                            Icons.check,
-                                            color: Colors.white,
-                                            size: 24.sp,
-                                          )
-                                          : null,
                                 ),
-                              );
-                            }).toList(),
+                              ),
+                              SizedBox(width: 12.w),
+                              Expanded(
+                                child: Text(
+                                  'Toca para seleccionar color',
+                                  style: GoogleFonts.lato(
+                                    fontSize: 13.sp,
+                                    color: theme.colorScheme.onSurface
+                                        .withOpacity(0.7),
+                                  ),
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right,
+                                size: 20.sp,
+                                color: theme.colorScheme.onSurface.withOpacity(
+                                  0.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                       SizedBox(height: 80.h),
                     ],
@@ -539,7 +744,11 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                       DateTime.now().toIso8601String(),
                   fechaObjetivo: _fechaObjetivo.toIso8601String(),
                   icono: _iconoSeleccionado,
-                  color: _colorSeleccionado,
+                  color:
+                      _colorSeleccionado.value
+                          .toRadixString(16)
+                          .substring(2)
+                          .toUpperCase(),
                   completada: widget.meta?.completada ?? false,
                   cuentaId: widget.meta?.cuentaId,
                   cuentaNombre: widget.meta?.cuentaNombre,

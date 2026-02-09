@@ -12,6 +12,7 @@ import 'package:notificaciones/graficas_screen.dart';
 import 'package:notificaciones/metas_screen.dart';
 import 'package:notificaciones/new_dashboard_screen.dart';
 import 'package:notificaciones/notificaciones_screen.dart';
+import 'package:notificaciones/budgets_screen.dart';
 import 'package:notificaciones/reportes_screen.dart';
 import 'package:notificaciones/theme_provider.dart';
 import 'package:notificaciones/transacciones_screen.dart';
@@ -37,7 +38,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isScrollingDown = false;
   String _userName = '';
   int _cantidadMetas = 0;
+  int _cantidadPresupuestos = 0;
   StreamSubscription? _metasSubscription;
+  StreamSubscription? _presupuestosSubscription;
 
   late TutorialCoachMark _tutorialCoachMark;
   final List<TargetFocus> _targets = [];
@@ -64,6 +67,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _initializeWidgets();
     _checkUserName();
     _cargarCantidadMetas();
+    _cargarCantidadPresupuestos();
     _maybeShowTutorial();
   }
 
@@ -71,6 +75,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _metasSubscription?.cancel();
+    _presupuestosSubscription?.cancel();
     super.dispose();
   }
 
@@ -105,6 +110,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         });
       }
     });
+  }
+
+  void _cargarCantidadPresupuestos() {
+    final firestoreService = FirestoreService();
+    _presupuestosSubscription = firestoreService
+        .obtenerPresupuestosActivos()
+        .listen((presupuestos) {
+          if (mounted) {
+            setState(() {
+              _cantidadPresupuestos = presupuestos.length;
+            });
+          }
+        });
   }
 
   void _promptUserName() {
@@ -769,6 +787,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   (context) =>
                       const MetasScreen(headerColor: Color(0xFF4CAF50)),
             ),
+          );
+        },
+      ),
+      _DrawerItem(
+        icon: Icons.account_balance_wallet_rounded,
+        title: "Presupuestos",
+        subtitle: "Controla tus gastos",
+        color: const Color(0xFFFF9800),
+        badge:
+            _cantidadPresupuestos > 0 ? _cantidadPresupuestos.toString() : null,
+        onTap: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const BudgetScreen()),
           );
         },
       ),

@@ -297,6 +297,53 @@ function notificarCorteSemanalCompletado(totalSemanal, cantidadTransacciones) {
   return enviarNotificacionPush(titulo, mensaje, data);
 }
 
+/**
+ * Envía notificación push informando la renovación de presupuestos
+ * @param {Array} presupuestos - Lista de presupuestos renovados [{nombre, montoLimite, fechaInicio, fechaFin}]
+ * @param {string} tipo - 'semanal' o 'mensual'
+ */
+function notificarPresupuestosRenovados(presupuestos, tipo) {
+  try {
+    if (presupuestos.length === 1) {
+      // Notificación individual
+      const p = presupuestos[0];
+      const titulo = '📆 Presupuesto renovado';
+      const inicio = formatearFechaCorta(p.fechaInicio);
+      const fin = formatearFechaCorta(p.fechaFin);
+      const mensaje = '"' + p.nombre + '" se renovó. Nuevo periodo: ' + inicio + ' - ' + fin + '. Límite: $' + p.montoLimite.toFixed(2);
+
+      return enviarNotificacionPush(titulo, mensaje, {
+        screen: 'presupuestos',
+        tipo: 'renovacion_presupuesto',
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      // Notificación agrupada
+      const titulo = '📆 ' + presupuestos.length + ' presupuestos renovados';
+      const nombres = presupuestos.map(p => p.nombre).join(', ');
+      const mensaje = 'Se renovaron: ' + nombres + '. Periodo ' + tipo + ' actualizado.';
+
+      return enviarNotificacionPush(titulo, mensaje, {
+        screen: 'presupuestos',
+        tipo: 'renovacion_presupuesto',
+        cantidad: String(presupuestos.length),
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    Logger.error('notificarPresupuestosRenovados', error);
+    return { exito: false, error: error.message };
+  }
+}
+
+/**
+ * Formatea fecha a formato corto legible (ej: "8 Feb")
+ */
+function formatearFechaCorta(fecha) {
+  const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  return fecha.getDate() + ' ' + meses[fecha.getMonth()];
+}
+
 function configurarCredencialesFirebase() {
   const scriptProperties = PropertiesService.getScriptProperties();
   

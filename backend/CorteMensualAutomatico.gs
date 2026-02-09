@@ -44,13 +44,19 @@ function ejecutarCorteMensualAutomatico() {
     Logger.info('✅ Reporte generado: ' + resultadoReporte.archivo);
     
     // ✅ Guardar reporte en Firebase (colección 'reportes')
-    guardarReporteEnFirebase(inicioMesAnterior, finMesAnterior, resultadoReporte.archivo);
+    guardarReporteEnFirebase(inicioMesAnterior, finMesAnterior, resultadoReporte.archivo, resumen, transacciones);
     Logger.info('💾 Reporte guardado en Firebase colección reportes');
     
     // Eliminar transacciones de Firebase
     const eliminadas = eliminarTransaccionesDeFirebase(transacciones);
     Logger.info('🗑️ Transacciones eliminadas de Firebase: ' + eliminadas);
     
+    // Renovar fechas de presupuestos mensuales
+    const presupuestosRenovados = renovarPresupuestosMensuales();
+    if (presupuestosRenovados > 0) {
+      Logger.info('📆 Presupuestos mensuales renovados: ' + presupuestosRenovados);
+    }
+
     // Enviar notificación push a todos los dispositivos
     const notificacionResultado = notificarCorteMensualCompletado(
       resumen,
@@ -234,8 +240,9 @@ function eliminarTransaccionesDeFirebase(transacciones) {
 
 /**
  * Guarda el reporte mensual en Firebase (colección 'reportes')
+ * Incluye resumen financiero y desglose por categoría
  */
-function guardarReporteEnFirebase(inicioMes, finMes, urlReporte) {
+function guardarReporteEnFirebase(inicioMes, finMes, urlReporte, resumen, transacciones) {
   try {
     const scriptProperties = PropertiesService.getScriptProperties();
     const projectId = scriptProperties.getProperty('FIREBASE_PROJECT_ID');
@@ -246,19 +253,47 @@ function guardarReporteEnFirebase(inicioMes, finMes, urlReporte) {
     
     const mes = obtenerNombreMes(inicioMes.getMonth() + 1);
     const anio = inicioMes.getFullYear();
+
+    // Calcular desglose por categoría
+    const gastosPorCategoria = {};
+    const gastosPorCuenta = {};
+    transacciones.forEach(t => {
+      const monto = parseFloat(t.monto) || 0;
+      if (t.tipo === 'Gastos' || t.tipo === 'Pagos') {
+        // Por categoría
+        if (t.categoria) {
+          gastosPorCategoria[t.categoria] = (gastosPorCategoria[t.categoria] || 0) + monto;
+        }
+        // Por cuenta
+        const cuenta = t.cuentaNombre || t.cuenta || 'Sin cuenta';
+        if (cuenta) {
+          gastosPorCuenta[cuenta] = (gastosPorCuenta[cuenta] || 0) + monto;
+        }
+      }
+    });
     
-    // ✅ Usar formato simple - FirestoreApp hace la conversión automáticamente
     const reporteData = {
       nombre: 'Reporte_Mensual.pdf',
       año: anio,
       mes: mes,
       urlReporte: urlReporte,
       usuarioId: 'default_user',
-      fechaCreacion: new Date()
+      fechaCreacion: new Date(),
+      // Resumen financiero
+      totalIngresos: resumen.totalIngresos,
+      totalGastos: resumen.totalGastos,
+      saldoTotal: resumen.saldoTotal,
+      cantidadTransacciones: transacciones.length,
+      // Desgloses
+      gastosPorCategoria: gastosPorCategoria,
+      gastosPorCuenta: gastosPorCuenta
     };
     
     firestore.createDocument('reportes', reporteData);
-    Logger.info('✅ Reporte guardado en Firebase: ' + mes + ' ' + anio);
+    Logger.info('✅ Reporte guardado en Firebase: ' + mes + ' ' + anio +
+      ' (Ingresos: $' + resumen.totalIngresos.toFixed(2) +
+      ', Gastos: $' + resumen.totalGastos.toFixed(2) +
+      ', ' + transacciones.length + ' transacciones)');
     
   } catch (error) {
     Logger.error('guardarReporteEnFirebase', error);
@@ -274,6 +309,107 @@ function obtenerNombreMes(mes) {
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
   ];
   return meses[mes - 1];
+}
+
+/**
+ * Busca presupuestos mensuales recurrentes en Firebase y actualiza sus fechas al nuevo periodo
+ * Solo renueva los que tengan esRecurrente: true
+ * Guarda historial del periodo anterior antes de resetear
+ * Envía notificación push por cada presupuesto renovado
+ */
+function renovarPresupuestosMensuales() {
+  try {
+    const scriptProperties = PropertiesService.getScriptProperties();
+    const projectId = scriptProperties.getProperty('FIREBASE_PROJECT_ID');
+    const email = scriptProperties.getProperty('FIREBASE_CLIENT_EMAIL');
+    const key = scriptProperties.getProperty('FIREBASE_PRIVATE_KEY');
+
+    const firestore = FirestoreApp.getFirestore(email, key, projectId);
+
+    // Obtener todos los presupuestos
+    const allDocs = firestore.getDocuments('presupuestos');
+    let renovados = 0;
+    const presupuestosRenovados = [];
+
+    allDocs.forEach(doc => {
+      const data = doc.fields;
+
+      // Solo presupuestos mensuales de default_user
+      if (!data.usuarioId || data.usuarioId.stringValue !== 'default_user') return;
+      if (!data.periodo || data.periodo.stringValue !== 'mensual') return;
+
+      // Solo renovar presupuestos recurrentes
+      if (!data.esRecurrente || data.esRecurrente.booleanValue !== true) return;
+
+      const docId = doc.name.split('/').pop();
+      const nombre = data.nombre ? data.nombre.stringValue : 'Sin nombre';
+      const montoLimite = data.montoLimite ? (data.montoLimite.doubleValue || data.montoLimite.integerValue || 0) : 0;
+      const montoGastado = data.montoGastado ? (data.montoGastado.doubleValue || data.montoGastado.integerValue || 0) : 0;
+
+      // Extraer fechas del periodo anterior
+      let fechaInicioAnterior = null;
+      let fechaFinAnterior = null;
+      if (data.fechaInicio && data.fechaInicio.timestampValue) {
+        fechaInicioAnterior = new Date(data.fechaInicio.timestampValue);
+      }
+      if (data.fechaFin && data.fechaFin.timestampValue) {
+        fechaFinAnterior = new Date(data.fechaFin.timestampValue);
+      }
+
+      // ✅ Guardar historial del periodo anterior antes de resetear
+      const historialData = {
+        montoLimite: montoLimite,
+        montoGastado: montoGastado,
+        porcentaje: montoLimite > 0 ? Math.round((montoGastado / montoLimite) * 100) : 0,
+        fechaInicio: fechaInicioAnterior || new Date(),
+        fechaFin: fechaFinAnterior || new Date(),
+        periodo: 'mensual',
+        fechaCorte: new Date()
+      };
+
+      firestore.createDocument('presupuestos/' + docId + '/historial', historialData);
+      Logger.info('📋 Historial guardado para: ' + nombre + ' (' + historialData.porcentaje + '% usado)');
+
+      // Calcular nuevas fechas: 1er día del mes actual hasta último día
+      const ahora = new Date();
+      const nuevoInicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0, 0);
+
+      // Último día del mes actual
+      const nuevoFin = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59, 999);
+
+      // Actualizar el documento
+      const updateData = {
+        fechaInicio: nuevoInicio,
+        fechaFin: nuevoFin,
+        montoGastado: 0,
+        updatedAt: new Date()
+      };
+
+      firestore.updateDocument('presupuestos/' + docId, updateData);
+      renovados++;
+
+      presupuestosRenovados.push({
+        nombre: nombre,
+        montoLimite: montoLimite,
+        fechaInicio: nuevoInicio,
+        fechaFin: nuevoFin
+      });
+
+      Logger.info('📆 Presupuesto mensual renovado: ' + nombre +
+        ' → ' + formatearFecha(nuevoInicio) + ' al ' + formatearFecha(nuevoFin));
+    });
+
+    // ✅ Enviar notificación push si se renovaron presupuestos
+    if (presupuestosRenovados.length > 0) {
+      notificarPresupuestosRenovados(presupuestosRenovados, 'mensual');
+    }
+
+    return renovados;
+
+  } catch (error) {
+    Logger.error('renovarPresupuestosMensuales', error);
+    return 0;
+  }
 }
 
 /**

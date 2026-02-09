@@ -615,3 +615,328 @@ class _ShakeAnimationState extends State<ShakeAnimation> {
     );
   }
 }
+
+/// Widget simple de slide animation
+class SlideAnimation extends StatefulWidget {
+  final Widget child;
+  final Duration duration;
+  final Offset begin;
+  final Duration delay;
+
+  const SlideAnimation({
+    Key? key,
+    required this.child,
+    this.duration = const Duration(milliseconds: 400),
+    this.begin = const Offset(0, 20),
+    this.delay = Duration.zero,
+  }) : super(key: key);
+
+  @override
+  State<SlideAnimation> createState() => _SlideAnimationState();
+}
+
+class _SlideAnimationState extends State<SlideAnimation>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: widget.duration);
+    _animation = Tween<Offset>(
+      begin: widget.begin,
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+
+    Future.delayed(widget.delay, () {
+      if (mounted) {
+        _controller.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Transform.translate(offset: _animation.value, child: child);
+      },
+      child: widget.child,
+    );
+  }
+}
+
+/// Widget para elementos de lista animados con fade y slide
+class AnimatedListItem extends StatelessWidget {
+  final int index;
+  final Widget child;
+  final bool enableHero;
+  final Duration delay;
+
+  const AnimatedListItem({
+    Key? key,
+    required this.index,
+    required this.child,
+    this.enableHero = false,
+    this.delay = const Duration(milliseconds: 50),
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeIn(
+      duration: const Duration(milliseconds: 300),
+      child: SlideAnimation(
+        duration: const Duration(milliseconds: 400),
+        begin: const Offset(0, 20),
+        delay: delay * index,
+        child: child,
+      ),
+    );
+  }
+}
+
+/// Widget para mostrar estado vacío con animaciones
+class AnimatedEmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const AnimatedEmptyState({
+    Key? key,
+    required this.icon,
+    required this.title,
+    this.subtitle = '',
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ScaleIn(
+              child: Icon(icon, size: 80, color: Colors.grey.withOpacity(0.5)),
+            ),
+            const SizedBox(height: 24),
+            FadeIn(
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.titleLarge,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            if (subtitle.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              FadeIn(
+                child: Text(
+                  subtitle,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Wrapper para RefreshIndicator con animaciones
+class CustomRefreshIndicator extends StatelessWidget {
+  final Future<void> Function() onRefresh;
+  final Widget child;
+
+  const CustomRefreshIndicator({
+    Key? key,
+    required this.onRefresh,
+    required this.child,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(onRefresh: onRefresh, child: child);
+  }
+}
+
+/// Chip de filtro animado
+class AnimatedFilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final ValueChanged<bool> onSelected;
+
+  const AnimatedFilterChip({
+    Key? key,
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return FilterChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: onSelected,
+    );
+  }
+}
+
+/// Botón que escala al ser presionado
+class BounceTapButton extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  final double scale;
+
+  const BounceTapButton({
+    Key? key,
+    required this.child,
+    required this.onTap,
+    this.scale = 0.95,
+  }) : super(key: key);
+
+  @override
+  State<BounceTapButton> createState() => _BounceTapButtonState();
+}
+
+class _BounceTapButtonState extends State<BounceTapButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: widget.scale,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) {
+        _controller.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _controller.reverse(),
+      child: ScaleTransition(scale: _scaleAnimation, child: widget.child),
+    );
+  }
+}
+
+/// Container con animaciones morphing
+class MorphingContainer extends StatelessWidget {
+  final Widget? child;
+  final EdgeInsetsGeometry? margin;
+  final EdgeInsetsGeometry? padding;
+  final Color? color;
+  final BorderRadiusGeometry? borderRadius;
+  final Color? borderColor;
+  final double borderWidth;
+  final List<BoxShadow>? boxShadow;
+
+  const MorphingContainer({
+    Key? key,
+    this.child,
+    this.margin,
+    this.padding,
+    this.color,
+    this.borderRadius,
+    this.borderColor,
+    this.borderWidth = 2.0,
+    this.boxShadow,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      margin: margin,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: borderRadius,
+        border:
+            borderColor != null
+                ? Border.all(color: borderColor!, width: borderWidth)
+                : null,
+        boxShadow: boxShadow,
+      ),
+      child: child,
+    );
+  }
+}
+
+/// Widget para barra de progreso animada
+class AnimatedProgressIndicator extends StatelessWidget {
+  final double value;
+  final Color color;
+  final Color backgroundColor;
+  final double height;
+  final BorderRadiusGeometry? borderRadius;
+
+  const AnimatedProgressIndicator({
+    Key? key,
+    required this.value,
+    required this.color,
+    required this.backgroundColor,
+    this.height = 12.0,
+    this.borderRadius,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: value),
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOutCubic,
+      builder: (context, animatedValue, _) {
+        return Container(
+          width: double.infinity,
+          height: height,
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: borderRadius,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: FractionallySizedBox(
+            widthFactor: animatedValue,
+            alignment: Alignment.centerLeft,
+            child: Container(
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: borderRadius,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}

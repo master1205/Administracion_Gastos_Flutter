@@ -161,28 +161,42 @@ class ColorPickerTile extends StatelessWidget {
                                 _colors.map((color) {
                                   final isSelected =
                                       color.value == tempColor.value;
-                                  return GestureDetector(
+                                  return InkWell(
                                     onTap: () {
                                       setState(() {
                                         tempColor = color;
                                       });
                                     },
+                                    borderRadius: BorderRadius.circular(12.r),
                                     child: Container(
                                       width: 44.w,
                                       height: 44.h,
                                       decoration: BoxDecoration(
                                         color: color,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color:
-                                              isSelected
-                                                  ? (themeManager.isDarkMode
-                                                      ? Colors.white
-                                                      : Colors.black)
-                                                  : Colors.grey.shade300,
-                                          width: isSelected ? 3 : 1.5,
+                                        borderRadius: BorderRadius.circular(
+                                          12.r,
                                         ),
+                                        border:
+                                            isSelected
+                                                ? Border.all(
+                                                  color: Colors.white,
+                                                  width: 3.w,
+                                                )
+                                                : null,
+                                        boxShadow:
+                                            isSelected
+                                                ? [
+                                                  BoxShadow(
+                                                    color: color.withOpacity(
+                                                      0.5,
+                                                    ),
+                                                    blurRadius: 8.r,
+                                                    offset: Offset(0, 2.h),
+                                                  ),
+                                                ]
+                                                : null,
                                       ),
+                                      alignment: Alignment.center,
                                       child:
                                           isSelected
                                               ? Icon(

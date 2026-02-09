@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:notificaciones/models/Account.dart';
+import 'package:notificaciones/models/Budget.dart';
 import 'package:notificaciones/models/Meta.dart';
 import 'package:notificaciones/models/Transaccion.dart' as models;
 
@@ -513,6 +515,29 @@ class FirestoreService {
     await _db.collection('categorias').doc(categoriaId).delete();
   }
 
+  /// Obtiene un mapa de nombre de categoría → imagen (codePoint)
+  Future<Map<String, String>> obtenerImagenesCategorias({
+    String? usuarioId,
+  }) async {
+    final uid = usuarioId ?? defaultUserId;
+    final snapshot =
+        await _db
+            .collection('categorias')
+            .where('usuarioId', isEqualTo: uid)
+            .get();
+
+    final imagenesMap = <String, String>{};
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final nombre = data['categoria'] as String? ?? '';
+      final imagen = data['imagen'] as String? ?? 'category';
+      if (nombre.isNotEmpty) {
+        imagenesMap[nombre] = imagen;
+      }
+    }
+    return imagenesMap;
+  }
+
   /// Verifica si una categoría está en uso
   Future<bool> categoriaEnUso(String nombreCategoria) async {
     final transacciones =
@@ -523,5 +548,547 @@ class FirestoreService {
             .get();
 
     return transacciones.docs.isNotEmpty;
+  }
+
+  // ==================== PRESUPUESTOS ====================
+
+  /// Obtiene el inicio de la semana (Domingo)
+  static DateTime obtenerInicioSemana(DateTime fecha) {
+    final diaActual = fecha.weekday;
+    // En Dart: Lunes=1, Domingo=7
+    // Queremos: Domingo como día de inicio
+    final diasDesdeInicio = diaActual == 7 ? 0 : diaActual;
+    final domingo = fecha.subtract(Duration(days: diasDesdeInicio));
+    return DateTime(domingo.year, domingo.month, domingo.day, 0, 0, 0);
+  }
+
+  /// Obtiene el fin de la semana (Sábado)
+  static DateTime obtenerFinSemana(DateTime inicio) {
+    final sabado = inicio.add(const Duration(days: 6));
+    return DateTime(sabado.year, sabado.month, sabado.day, 23, 59, 59);
+  }
+
+  /// Obtiene el inicio del mes
+  static DateTime obtenerInicioMes(DateTime fecha) {
+    return DateTime(fecha.year, fecha.month, 1, 0, 0, 0);
+  }
+
+  /// Obtiene el fin del mes
+  static DateTime obtenerFinMes(DateTime fecha) {
+    final ultimoDia = DateTime(fecha.year, fecha.month + 1, 0);
+    return DateTime(ultimoDia.year, ultimoDia.month, ultimoDia.day, 23, 59, 59);
+  }
+
+  /// Crea un nuevo presupuesto
+  Future<String> crearPresupuesto({
+    required String nombre,
+    required double montoLimite,
+    required String periodo,
+    DateTime? fechaInicio,
+    List<String> categorias = const [],
+    bool esRecurrente = true,
+    bool alertaActiva = true,
+    double porcentajeAlerta = 80.0,
+    int? colorAsignado,
+    String? usuarioId,
+  }) async {
+    final uid = usuarioId ?? defaultUserId;
+    final ahora = fechaInicio ?? DateTime.now();
+
+    DateTime inicio;
+    DateTime fechaFin;
+    if (periodo == 'semanal') {
+      inicio = obtenerInicioSemana(ahora);
+      fechaFin = obtenerFinSemana(inicio);
+    } else {
+      // mensual
+      inicio = obtenerInicioMes(ahora);
+      fechaFin = obtenerFinMes(inicio);
+    }
+
+    final docRef = await _db.collection('presupuestos').add({
+      'nombre': nombre,
+      'montoLimite': montoLimite,
+      'montoGastado': 0.0,
+      'periodo': periodo,
+      'fechaInicio': Timestamp.fromDate(inicio),
+      'fechaFin': Timestamp.fromDate(fechaFin),
+      'categorias': categorias,
+      'esRecurrente': esRecurrente,
+      'alertaActiva': alertaActiva,
+      'porcentajeAlerta': porcentajeAlerta,
+      'colorAsignado': colorAsignado,
+      'usuarioId': uid,
+      'createdAt': FieldValue.serverTimestamp(),
+      'presupuestoOriginalId': null,
+    });
+
+    return docRef.id;
+  }
+
+  /// Obtiene presupuestos activos con gasto calculado en tiempo real
+  /// Se actualiza cuando cambian presupuestos O transacciones
+  Stream<List<Budget>> obtenerPresupuestosActivos({String? usuarioId}) {
+    final uid = usuarioId ?? defaultUserId;
+    final ahora = DateTime.now();
+
+    late StreamController<List<Budget>> controller;
+    StreamSubscription? presSub;
+    StreamSubscription? transSub;
+    bool isCalculating = false;
+
+    Future<void> recalcular() async {
+      if (isCalculating) return; // Evitar cálculos concurrentes
+      isCalculating = true;
+
+      try {
+        final presSnap =
+            await _db
+                .collection('presupuestos')
+                .where('usuarioId', isEqualTo: uid)
+                .orderBy('createdAt', descending: true)
+                .get();
+
+        final presupuestos = <Budget>[];
+
+        for (var doc in presSnap.docs) {
+          final presupuesto = Budget.fromFirestore(doc);
+
+          // Filtrar solo activos (fechaFin >= ahora)
+          if (presupuesto.fechaFin.isAfter(ahora) ||
+              presupuesto.fechaFin.isAtSameMomentAs(ahora)) {
+            // Calcular gasto real desde transacciones
+            final gasto = await _calcularGastoPresupuesto(presupuesto, uid);
+
+            presupuestos.add(presupuesto.copyWith(montoGastado: gasto));
+          }
+        }
+
+        // Ordenar por fecha de fin (los que vencen antes primero)
+        presupuestos.sort((a, b) => a.fechaFin.compareTo(b.fechaFin));
+
+        if (!controller.isClosed) {
+          controller.add(presupuestos);
+        }
+      } catch (e) {
+        if (!controller.isClosed) {
+          controller.addError(e);
+        }
+      } finally {
+        isCalculating = false;
+      }
+    }
+
+    controller = StreamController<List<Budget>>.broadcast(
+      onListen: () {
+        // Escuchar cambios en presupuestos
+        presSub = _db
+            .collection('presupuestos')
+            .where('usuarioId', isEqualTo: uid)
+            .snapshots()
+            .listen((_) => recalcular());
+
+        // Escuchar cambios en transacciones
+        transSub = _db
+            .collection('transacciones')
+            .where('usuarioId', isEqualTo: uid)
+            .snapshots()
+            .listen((_) => recalcular());
+
+        // Cálculo inicial
+        recalcular();
+      },
+      onCancel: () {
+        presSub?.cancel();
+        transSub?.cancel();
+      },
+    );
+
+    return controller.stream;
+  }
+
+  /// Obtiene todos los presupuestos (activos e históricos)
+  /// Se actualiza cuando cambian presupuestos O transacciones
+  Stream<List<Budget>> obtenerTodosPresupuestos({String? usuarioId}) {
+    final uid = usuarioId ?? defaultUserId;
+
+    late StreamController<List<Budget>> controller;
+    StreamSubscription? presSub;
+    StreamSubscription? transSub;
+    bool isCalculating = false;
+
+    Future<void> recalcular() async {
+      if (isCalculating) return; // Evitar cálculos concurrentes
+      isCalculating = true;
+
+      try {
+        final presSnap =
+            await _db
+                .collection('presupuestos')
+                .where('usuarioId', isEqualTo: uid)
+                .orderBy('createdAt', descending: true)
+                .get();
+
+        final presupuestos = <Budget>[];
+
+        for (var doc in presSnap.docs) {
+          final presupuesto = Budget.fromFirestore(doc);
+
+          // Calcular gasto real
+          final gasto = await _calcularGastoPresupuesto(presupuesto, uid);
+
+          presupuestos.add(presupuesto.copyWith(montoGastado: gasto));
+        }
+
+        if (!controller.isClosed) {
+          controller.add(presupuestos);
+        }
+      } catch (e) {
+        if (!controller.isClosed) {
+          controller.addError(e);
+        }
+      } finally {
+        isCalculating = false;
+      }
+    }
+
+    controller = StreamController<List<Budget>>.broadcast(
+      onListen: () {
+        // Escuchar cambios en presupuestos
+        presSub = _db
+            .collection('presupuestos')
+            .where('usuarioId', isEqualTo: uid)
+            .snapshots()
+            .listen((_) => recalcular());
+
+        // Escuchar cambios en transacciones
+        transSub = _db
+            .collection('transacciones')
+            .where('usuarioId', isEqualTo: uid)
+            .snapshots()
+            .listen((_) => recalcular());
+
+        // Cálculo inicial
+        recalcular();
+      },
+      onCancel: () {
+        presSub?.cancel();
+        transSub?.cancel();
+      },
+    );
+
+    return controller.stream;
+  }
+
+  /// Calcula el gasto total de un presupuesto desde las transacciones
+  Future<double> _calcularGastoPresupuesto(
+    Budget presupuesto,
+    String usuarioId,
+  ) async {
+    // Obtener todas las transacciones del usuario (sin filtros de fecha en query)
+    // para evitar índices compuestos
+    final snapshot =
+        await _db
+            .collection('transacciones')
+            .where('usuarioId', isEqualTo: usuarioId)
+            .get();
+
+    double total = 0.0;
+
+    for (var doc in snapshot.docs) {
+      final transaccion = models.Transaction.fromFirestore(doc);
+
+      // Filtrar por rango de fechas (lado cliente)
+      final fechaTransaccion =
+          transaccion.fechaTimestamp ?? DateTime.tryParse(transaccion.fecha);
+      if (fechaTransaccion == null) continue;
+
+      // Verificar si está en el rango del presupuesto (inclusive)
+      // Comparar solo fechas, sin horas
+      final fechaTrans = DateTime(
+        fechaTransaccion.year,
+        fechaTransaccion.month,
+        fechaTransaccion.day,
+      );
+      final fechaIni = DateTime(
+        presupuesto.fechaInicio.year,
+        presupuesto.fechaInicio.month,
+        presupuesto.fechaInicio.day,
+      );
+      final fechaFn = DateTime(
+        presupuesto.fechaFin.year,
+        presupuesto.fechaFin.month,
+        presupuesto.fechaFin.day,
+      );
+
+      final enRango =
+          !fechaTrans.isBefore(fechaIni) && !fechaTrans.isAfter(fechaFn);
+
+      if (!enRango) continue;
+
+      // Solo contar Gastos y Pagos (case-insensitive)
+      final tipo = transaccion.tipoTransaccion.toLowerCase();
+      if (tipo != 'gastos' &&
+          tipo != 'gasto' &&
+          tipo != 'pagos' &&
+          tipo != 'pago') {
+        continue;
+      }
+
+      // Si el presupuesto tiene categorías específicas, filtrar
+      if (presupuesto.categorias.isNotEmpty) {
+        if (!presupuesto.categorias.contains(transaccion.categoria)) {
+          continue;
+        }
+      }
+
+      total += transaccion.monto.abs();
+    }
+
+    return total;
+  }
+
+  /// Obtiene las transacciones que aplican a un presupuesto específico
+  Future<List<models.Transaction>> obtenerTransaccionesPresupuesto(
+    Budget presupuesto, {
+    String? usuarioId,
+  }) async {
+    final uid = usuarioId ?? defaultUserId;
+    final snapshot =
+        await _db
+            .collection('transacciones')
+            .where('usuarioId', isEqualTo: uid)
+            .get();
+
+    final transacciones = <models.Transaction>[];
+
+    for (var doc in snapshot.docs) {
+      final transaccion = models.Transaction.fromFirestore(doc);
+
+      final fechaTransaccion =
+          transaccion.fechaTimestamp ?? DateTime.tryParse(transaccion.fecha);
+      if (fechaTransaccion == null) continue;
+
+      final fechaTrans = DateTime(
+        fechaTransaccion.year,
+        fechaTransaccion.month,
+        fechaTransaccion.day,
+      );
+      final fechaIni = DateTime(
+        presupuesto.fechaInicio.year,
+        presupuesto.fechaInicio.month,
+        presupuesto.fechaInicio.day,
+      );
+      final fechaFn = DateTime(
+        presupuesto.fechaFin.year,
+        presupuesto.fechaFin.month,
+        presupuesto.fechaFin.day,
+      );
+
+      final enRango =
+          !fechaTrans.isBefore(fechaIni) && !fechaTrans.isAfter(fechaFn);
+      if (!enRango) continue;
+
+      final tipo = transaccion.tipoTransaccion.toLowerCase();
+      if (tipo != 'gastos' &&
+          tipo != 'gasto' &&
+          tipo != 'pagos' &&
+          tipo != 'pago') {
+        continue;
+      }
+
+      if (presupuesto.categorias.isNotEmpty) {
+        if (!presupuesto.categorias.contains(transaccion.categoria)) {
+          continue;
+        }
+      }
+
+      transacciones.add(transaccion);
+    }
+
+    // Ordenar por fecha descendente
+    transacciones.sort((a, b) {
+      final fechaA =
+          a.fechaTimestamp ?? DateTime.tryParse(a.fecha) ?? DateTime.now();
+      final fechaB =
+          b.fechaTimestamp ?? DateTime.tryParse(b.fecha) ?? DateTime.now();
+      return fechaB.compareTo(fechaA);
+    });
+
+    return transacciones;
+  }
+
+  /// Obtiene las transacciones agrupadas por categoría para un presupuesto
+  Future<Map<String, double>> obtenerGastoPorCategoriaPresupuesto(
+    Budget presupuesto, {
+    String? usuarioId,
+  }) async {
+    final transacciones = await obtenerTransaccionesPresupuesto(
+      presupuesto,
+      usuarioId: usuarioId,
+    );
+
+    final gastosPorCategoria = <String, double>{};
+    for (var t in transacciones) {
+      final cat = t.categoria.isNotEmpty ? t.categoria : 'Sin categoría';
+      gastosPorCategoria[cat] = (gastosPorCategoria[cat] ?? 0) + t.monto.abs();
+    }
+
+    return gastosPorCategoria;
+  }
+
+  /// Actualiza un presupuesto existente
+  Future<void> actualizarPresupuesto({
+    required String presupuestoId,
+    String? nombre,
+    double? montoLimite,
+    String? periodo,
+    List<String>? categorias,
+    bool? esRecurrente,
+    bool? alertaActiva,
+    double? porcentajeAlerta,
+    int? colorAsignado,
+  }) async {
+    final updateData = <String, dynamic>{
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+
+    if (nombre != null) updateData['nombre'] = nombre;
+    if (montoLimite != null) updateData['montoLimite'] = montoLimite;
+    if (periodo != null) updateData['periodo'] = periodo;
+    if (categorias != null) updateData['categorias'] = categorias;
+    if (esRecurrente != null) updateData['esRecurrente'] = esRecurrente;
+    if (alertaActiva != null) updateData['alertaActiva'] = alertaActiva;
+    if (porcentajeAlerta != null)
+      updateData['porcentajeAlerta'] = porcentajeAlerta;
+    if (colorAsignado != null) updateData['colorAsignado'] = colorAsignado;
+
+    await _db.collection('presupuestos').doc(presupuestoId).update(updateData);
+  }
+
+  /// Elimina un presupuesto
+  Future<void> eliminarPresupuesto(String presupuestoId) async {
+    await _db.collection('presupuestos').doc(presupuestoId).delete();
+  }
+
+  /// Obtiene el historial de periodos anteriores de un presupuesto
+  Future<List<Map<String, dynamic>>> obtenerHistorialPresupuesto(
+    String presupuestoId, {
+    int limite = 12,
+  }) async {
+    final snapshot =
+        await _db
+            .collection('presupuestos')
+            .doc(presupuestoId)
+            .collection('historial')
+            .orderBy('fechaCorte', descending: true)
+            .limit(limite)
+            .get();
+
+    return snapshot.docs.map((doc) => doc.data()).toList();
+  }
+
+  /// Renueva un presupuesto al siguiente período
+  Future<String> renovarPresupuesto(String presupuestoId) async {
+    final doc = await _db.collection('presupuestos').doc(presupuestoId).get();
+
+    if (!doc.exists) {
+      throw Exception('Presupuesto no encontrado');
+    }
+
+    final presupuestoActual = Budget.fromFirestore(doc);
+
+    // Crear presupuesto histórico (copia)
+    await _db.collection('presupuestos').add({
+      ...presupuestoActual.toFirestore(),
+      'presupuestoOriginalId': presupuestoId,
+      'esRecurrente': false, // Los históricos no se renuevan
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    // Calcular nuevo período
+    DateTime nuevoInicio;
+    DateTime nuevoFin;
+
+    if (presupuestoActual.periodo == 'semanal') {
+      nuevoInicio = presupuestoActual.fechaFin.add(const Duration(days: 1));
+      nuevoInicio = obtenerInicioSemana(nuevoInicio);
+      nuevoFin = obtenerFinSemana(nuevoInicio);
+    } else {
+      // mensual
+      final siguienteMes = DateTime(
+        presupuestoActual.fechaFin.year,
+        presupuestoActual.fechaFin.month + 1,
+        1,
+      );
+      nuevoInicio = obtenerInicioMes(siguienteMes);
+      nuevoFin = obtenerFinMes(siguienteMes);
+    }
+
+    // Actualizar presupuesto actual con nuevo período
+    await _db.collection('presupuestos').doc(presupuestoId).update({
+      'fechaInicio': Timestamp.fromDate(nuevoInicio),
+      'fechaFin': Timestamp.fromDate(nuevoFin),
+      'montoGastado': 0.0,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    return presupuestoId;
+  }
+
+  /// Verifica y renueva presupuestos vencidos automáticamente
+  Future<void> verificarYRenovarPresupuestos({String? usuarioId}) async {
+    final uid = usuarioId ?? defaultUserId;
+    final ahora = DateTime.now();
+
+    final vencidos =
+        await _db
+            .collection('presupuestos')
+            .where('usuarioId', isEqualTo: uid)
+            .where('esRecurrente', isEqualTo: true)
+            .where('fechaFin', isLessThan: Timestamp.fromDate(ahora))
+            .get();
+
+    for (var doc in vencidos.docs) {
+      await renovarPresupuesto(doc.id);
+    }
+  }
+
+  /// Obtiene presupuestos que aplican a una categoría específica
+  Future<List<Budget>> obtenerPresupuestosPorCategoria({
+    required String categoria,
+    String? usuarioId,
+  }) async {
+    final uid = usuarioId ?? defaultUserId;
+    final ahora = DateTime.now();
+
+    // Obtener todos los presupuestos del usuario (sin filtro de fecha en query)
+    final snapshot =
+        await _db
+            .collection('presupuestos')
+            .where('usuarioId', isEqualTo: uid)
+            .get();
+
+    final presupuestos = <Budget>[];
+
+    for (var doc in snapshot.docs) {
+      final presupuesto = Budget.fromFirestore(doc);
+
+      // Filtrar activos manualmente
+      final esActivo =
+          presupuesto.fechaFin.isAfter(ahora) ||
+          presupuesto.fechaFin.isAtSameMomentAs(ahora);
+
+      // Verificar si aplica: activo Y (todas las categorías O categoría específica)
+      if (esActivo &&
+          (presupuesto.aplicaTodasCategorias ||
+              presupuesto.categorias.contains(categoria))) {
+        // Calcular gasto actual
+        final gasto = await _calcularGastoPresupuesto(presupuesto, uid);
+        presupuestos.add(presupuesto.copyWith(montoGastado: gasto));
+      }
+    }
+
+    return presupuestos;
   }
 }

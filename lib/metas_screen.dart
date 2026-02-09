@@ -14,7 +14,10 @@ import 'services/firestore_service.dart';
 import 'widgets/select_amount.dart';
 import 'widgets/discard_changes_dialog.dart';
 import 'widgets/animations.dart';
+import 'widgets/animated_card.dart';
+import 'widgets/budget_widgets.dart';
 import 'crear_meta_screen.dart';
+import 'meta_detalle_screen.dart';
 import 'widgets/shimmer_loading.dart';
 import 'componentes/heads_up_notification.dart';
 
@@ -482,303 +485,293 @@ class _MetasScreenState extends State<MetasScreen> {
     final theme = Theme.of(context);
     final colorHex = int.parse('FF${meta.color}', radix: 16);
     final color = Color(colorHex);
+    final currencyFormat = NumberFormat.currency(
+      locale: 'es_MX',
+      symbol: '\$',
+      decimalDigits: 2,
+    );
 
-    return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: color.withOpacity(0.2), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10.r,
-            offset: Offset(0, 2.h),
+    return AnimatedCard(
+      color: color,
+      randomOffset: meta.nombre.length,
+      horizontalMargin: 0,
+      borderRadius: 16.r,
+      borderColor: color.withOpacity(0.2),
+      onTap: () async {
+        final meta = _metasNotifier.value[index];
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MetaDetalleScreen(meta: meta),
+          ),
+        );
+      },
+      headerContent: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(10.r),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.25),
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            child: Icon(
+              _getIconData(meta.icono),
+              size: 20.sp,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  meta.nombre,
+                  style: GoogleFonts.lato(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (meta.descripcion.isNotEmpty) ...[
+                  SizedBox(height: 2.h),
+                  Text(
+                    meta.descripcion,
+                    style: GoogleFonts.lato(
+                      fontSize: 12.sp,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
           ),
         ],
       ),
-      child: Column(
-        children: [
-          // Header sin gradiente
-          Container(
-            padding: EdgeInsets.all(16.r),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.08),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(15.r)),
+      bodyContent: Padding(
+        padding: EdgeInsets.all(16.r),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Barra de progreso
+            BudgetProgressBar(
+              progreso: meta.progreso,
+              color: color,
+              height: 12.h,
             ),
-            child: Column(
+
+            SizedBox(height: 12.h),
+
+            // Montos (mismo estilo que presupuestos)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: EdgeInsets.all(10.r),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      child: Icon(
-                        _getIconData(meta.icono),
-                        color: color,
-                        size: 24.sp,
+                    Text(
+                      'Ahorrado',
+                      style: GoogleFonts.lato(
+                        fontSize: 11.sp,
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
                       ),
                     ),
-                    SizedBox(width: 12.w),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    SizedBox(height: 2.h),
+                    Text(
+                      currencyFormat.format(meta.montoActual),
+                      style: GoogleFonts.lato(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 6.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onSurface.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Text(
+                    '${meta.progreso.toStringAsFixed(0)}%',
+                    style: GoogleFonts.lato(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Objetivo',
+                      style: GoogleFonts.lato(
+                        fontSize: 11.sp,
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      currencyFormat.format(meta.montoObjetivo),
+                      style: GoogleFonts.lato(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+            SizedBox(height: 16.h),
+            Divider(height: 1.h, thickness: 1),
+            SizedBox(height: 12.h),
+
+            // Chips de fecha
+            Row(
+              children: [
+                Expanded(
+                  child: _buildInfoChip(
+                    icon: Icons.calendar_today_rounded,
+                    label: 'Inicio: ${_formatDate(meta.fechaInicio)}',
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: _buildInfoChip(
+                    icon: Icons.flag_rounded,
+                    label: 'Meta: ${_formatDate(meta.fechaObjetivo)}',
+                  ),
+                ),
+              ],
+            ),
+
+            if (meta.diasRestantes > 0) ...[
+              SizedBox(height: 8.h),
+              _buildInfoChip(
+                icon: Icons.timer_rounded,
+                label: '${meta.diasRestantes} días restantes',
+                chipColor: Colors.orange.shade700,
+              ),
+            ],
+
+            // Botones de acción
+            SizedBox(height: 16.h),
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () => _editarMeta(index),
+                    borderRadius: BorderRadius.circular(12.r),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(vertical: 12.h),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12.r),
+                        border: Border.all(
+                          color: color.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
+                          Icon(Icons.edit_outlined, size: 20.sp, color: color),
+                          SizedBox(width: 8.w),
                           Text(
-                            meta.nombre,
-                            style: GoogleFonts.poppins(
-                              color: theme.colorScheme.onSurface,
-                              fontSize: 16.sp,
+                            'Editar',
+                            style: GoogleFonts.lato(
+                              fontSize: 14.sp,
                               fontWeight: FontWeight.w600,
+                              color: color,
                             ),
                           ),
-                          if (meta.descripcion.isNotEmpty)
-                            Text(
-                              meta.descripcion,
-                              style: GoogleFonts.poppins(
-                                color: theme.colorScheme.secondary.withOpacity(
-                                  0.7,
-                                ),
-                                fontSize: 12.sp,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-                SizedBox(height: 14.h),
-                // Barra de progreso
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6.r),
-                  child: LinearProgressIndicator(
-                    value: meta.progreso / 100,
-                    backgroundColor: color.withOpacity(0.15),
-                    valueColor: AlwaysStoppedAnimation(color),
-                    minHeight: 6.h,
                   ),
                 ),
-                SizedBox(height: 10.h),
-                // Montos
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '\$${NumberFormat('#,##0.00', 'es').format(meta.montoActual)} / \$${NumberFormat('#,##0.00', 'es').format(meta.montoObjetivo)}',
-                      style: GoogleFonts.poppins(
-                        color: theme.colorScheme.secondary.withOpacity(0.8),
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 8.w,
-                        vertical: 4.h,
-                      ),
+                SizedBox(width: 10.w),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => _eliminarMeta(index),
+                    borderRadius: BorderRadius.circular(12.r),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(vertical: 12.h),
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(6.r),
-                      ),
-                      child: Text(
-                        '${meta.progreso.toStringAsFixed(0)}%',
-                        style: GoogleFonts.poppins(
-                          color: color,
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.error.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12.r),
+                        border: Border.all(
+                          color: theme.colorScheme.error.withOpacity(0.3),
+                          width: 1,
                         ),
                       ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.delete_outline_rounded,
+                            size: 20.sp,
+                            color: theme.colorScheme.error,
+                          ),
+                          SizedBox(width: 8.w),
+                          Text(
+                            'Eliminar',
+                            style: GoogleFonts.lato(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.error,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
-          ),
-          // Información y botones
-          Padding(
-            padding: EdgeInsets.all(16.r),
-            child: Column(
-              children: [
-                // Chips de fecha inline
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 10.w,
-                          vertical: 8.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.secondary.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(8.r),
-                          border: Border.all(
-                            color: theme.colorScheme.secondary.withOpacity(
-                              0.15,
-                            ),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.calendar_today_outlined,
-                              size: 13.sp,
-                              color: theme.colorScheme.secondary.withOpacity(
-                                0.6,
-                              ),
-                            ),
-                            SizedBox(width: 6.w),
-                            Text(
-                              'Inicio',
-                              style: GoogleFonts.poppins(
-                                fontSize: 11.sp,
-                                color: theme.colorScheme.secondary.withOpacity(
-                                  0.5,
-                                ),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            SizedBox(width: 4.w),
-                            Text(
-                              _formatDate(meta.fechaInicio),
-                              style: GoogleFonts.poppins(
-                                fontSize: 12.sp,
-                                fontWeight: FontWeight.w600,
-                                color: theme.colorScheme.onSurface,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 10.w),
-                    Expanded(
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 10.w,
-                          vertical: 8.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.secondary.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(8.r),
-                          border: Border.all(
-                            color: theme.colorScheme.secondary.withOpacity(
-                              0.15,
-                            ),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.flag_outlined,
-                              size: 13.sp,
-                              color: theme.colorScheme.secondary.withOpacity(
-                                0.6,
-                              ),
-                            ),
-                            SizedBox(width: 6.w),
-                            Text(
-                              'Objetivo',
-                              style: GoogleFonts.poppins(
-                                fontSize: 11.sp,
-                                color: theme.colorScheme.secondary.withOpacity(
-                                  0.5,
-                                ),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            SizedBox(width: 4.w),
-                            Text(
-                              _formatDate(meta.fechaObjetivo),
-                              style: GoogleFonts.poppins(
-                                fontSize: 12.sp,
-                                fontWeight: FontWeight.w600,
-                                color: theme.colorScheme.onSurface,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (meta.diasRestantes > 0) ...[
-                  SizedBox(height: 12.h),
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 12.w,
-                      vertical: 8.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF59E0B).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8.r),
-                      border: Border.all(
-                        color: const Color(0xFFF59E0B).withOpacity(0.2),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.schedule_outlined,
-                          size: 14.sp,
-                          color: const Color(0xFFF59E0B),
-                        ),
-                        SizedBox(width: 6.w),
-                        Text(
-                          '${meta.diasRestantes} días restantes',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12.sp,
-                            color: const Color(0xFFF59E0B),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                SizedBox(height: 12.h),
-                // Botones minimalistas
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    InkWell(
-                      onTap: () => _editarMeta(index),
-                      borderRadius: BorderRadius.circular(10.r),
-                      child: Container(
-                        padding: EdgeInsets.all(8.r),
-                        child: Icon(
-                          Icons.edit_outlined,
-                          color: theme.colorScheme.secondary.withOpacity(0.6),
-                          size: 20.sp,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 4.w),
-                    InkWell(
-                      onTap: () => _eliminarMeta(index),
-                      borderRadius: BorderRadius.circular(10.r),
-                      child: Container(
-                        padding: EdgeInsets.all(8.r),
-                        child: Icon(
-                          Icons.delete_outline_rounded,
-                          color: const Color(0xFFEF4444).withOpacity(0.7),
-                          size: 20.sp,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoChip({
+    required IconData icon,
+    required String label,
+    Color? chipColor,
+  }) {
+    final theme = Theme.of(context);
+    final c = chipColor ?? theme.colorScheme.onSurface;
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: c.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14.sp, color: c.withOpacity(0.6)),
+          SizedBox(width: 6.w),
+          Flexible(
+            child: Text(
+              label,
+              style: GoogleFonts.lato(
+                fontSize: 11.sp,
+                color: c.withOpacity(0.7),
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -1333,39 +1326,41 @@ class _CrearMetaDialogState extends State<_CrearMetaDialog> {
                                   'FF${color['color']}',
                                   radix: 16,
                                 );
-                                return GestureDetector(
+                                return InkWell(
                                   onTap:
                                       () => setState(
                                         () =>
                                             _colorSeleccionado =
                                                 color['color']!,
                                       ),
+                                  borderRadius: BorderRadius.circular(12.r),
                                   child: Container(
                                     width: 50.w,
                                     height: 50.h,
                                     decoration: BoxDecoration(
                                       color: Color(colorInt),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color:
-                                            seleccionado
-                                                ? Colors.black
-                                                : Colors.grey.shade300,
-                                        width: seleccionado ? 3 : 1,
-                                      ),
+                                      borderRadius: BorderRadius.circular(12.r),
+                                      border:
+                                          seleccionado
+                                              ? Border.all(
+                                                color: Colors.white,
+                                                width: 3.w,
+                                              )
+                                              : null,
                                       boxShadow:
                                           seleccionado
                                               ? [
                                                 BoxShadow(
                                                   color: Color(
                                                     colorInt,
-                                                  ).withOpacity(0.4),
-                                                  blurRadius: 8,
-                                                  offset: Offset(0, 2),
+                                                  ).withOpacity(0.5),
+                                                  blurRadius: 8.r,
+                                                  offset: Offset(0, 2.h),
                                                 ),
                                               ]
                                               : null,
                                     ),
+                                    alignment: Alignment.center,
                                     child:
                                         seleccionado
                                             ? Icon(

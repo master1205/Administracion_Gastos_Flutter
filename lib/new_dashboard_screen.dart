@@ -9,6 +9,7 @@ import 'package:card_swiper/card_swiper.dart';
 import 'package:notificaciones/models/Account.dart';
 import 'package:notificaciones/models/Meta.dart';
 import 'package:notificaciones/models/Transaccion.dart';
+import 'package:notificaciones/models/Budget.dart';
 import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,7 +20,12 @@ import 'componentes/empty_states.dart';
 import 'componentes/heads_up_notification.dart';
 import 'metas_screen.dart';
 import 'transacciones_screen.dart';
+import 'budgets_screen.dart';
 import 'services/firestore_service.dart';
+import 'widgets/budget_widgets.dart';
+import 'presupuesto_detalle_screen.dart';
+import 'meta_detalle_screen.dart';
+import 'widgets/animated_card.dart';
 
 class NewDashboardScreen extends StatefulWidget {
   final void Function(int)? onTabChange;
@@ -54,9 +60,11 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
 
   List<Transaction> _transactions = [];
   List<Meta> _metas = [];
+  List<Budget> _presupuestos = [];
   bool _isLoading = false;
   bool _isManualRefresh = false;
   bool _metasExpanded = false;
+  bool _presupuestosExpanded = false;
   bool _hasInitialData = false;
 
   // Firebase streams
@@ -64,6 +72,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
   StreamSubscription<List<Account>>? _cuentasSubscription;
   StreamSubscription<List<Transaction>>? _transaccionesSubscription;
   StreamSubscription<List<Meta>>? _metasSubscription;
+  StreamSubscription<List<Budget>>? _presupuestosSubscription;
 
   // Tutorial
   late TutorialCoachMark _tutorialCoachMark;
@@ -90,6 +99,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
     _cuentasSubscription?.cancel();
     _transaccionesSubscription?.cancel();
     _metasSubscription?.cancel();
+    _presupuestosSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -179,6 +189,19 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
         setState(() => _metas = metas);
       }
     });
+
+    // Stream de presupuestos activos
+    _presupuestosSubscription?.cancel();
+    _presupuestosSubscription = _firestoreService
+        .obtenerPresupuestosActivos()
+        .listen((presupuestos) {
+          debugPrint(
+            '🔄 Stream de presupuestos recibió: ${presupuestos.length} presupuestos',
+          );
+          if (mounted) {
+            setState(() => _presupuestos = presupuestos);
+          }
+        });
   }
 
   void _calculateBalanceData() {
@@ -811,12 +834,34 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
       children: [
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 5.h),
-          child: Text(
-            'Mis Metas',
-            style: GoogleFonts.lato(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.bold,
-            ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Mis Metas',
+                style: GoogleFonts.lato(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MetasScreen(),
+                    ),
+                  );
+                },
+                child: Text(
+                  'Ver todos',
+                  style: GoogleFonts.lato(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
         _buildMetasContent(),
@@ -940,119 +985,70 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
     final colorHex = int.parse('FF${meta.color}', radix: 16);
     final color = Color(colorHex);
 
-    return GestureDetector(
+    return AnimatedCard(
+      color: color,
+      randomOffset: meta.nombre.length,
+      horizontalMargin: 2.w,
+      borderRadius: 16.r,
       onTap: () async {
         await Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const MetasScreen()),
+          MaterialPageRoute(
+            builder: (context) => MetaDetalleScreen(meta: meta),
+          ),
         );
       },
-      child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 2.w),
-        padding: EdgeInsets.all(20.r),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: color.withOpacity(0.3), width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+      headerContent: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(10.r),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.25),
+              borderRadius: BorderRadius.circular(12.r),
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+            child: Icon(
+              _getIconData(meta.icono),
+              size: 20.sp,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: EdgeInsets.all(12.r),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12.r),
+                Text(
+                  meta.nombre,
+                  style: GoogleFonts.lato(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
-                  child: Icon(
-                    _getIconData(meta.icono),
-                    color: color,
-                    size: 24.sp,
-                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(width: 12.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        meta.nombre,
-                        style: GoogleFonts.lato(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w700,
-                          color: theme.colorScheme.onSurface,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: 4.h),
-                      Text(
-                        'Meta de ahorro',
-                        style: GoogleFonts.lato(
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w500,
-                          color: theme.colorScheme.onSurface.withOpacity(0.5),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 10.w,
-                    vertical: 6.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: Text(
-                    '${meta.progreso.toStringAsFixed(0)}%',
-                    style: GoogleFonts.lato(
-                      color: color,
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w700,
-                    ),
+                SizedBox(height: 2.h),
+                Text(
+                  'Meta de ahorro',
+                  style: GoogleFonts.lato(
+                    fontSize: 12.sp,
+                    color: Colors.white.withOpacity(0.9),
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 16.h),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8.r),
-              child: Stack(
-                children: [
-                  Container(
-                    height: 8.h,
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                  ),
-                  FractionallySizedBox(
-                    widthFactor: (meta.progreso / 100).clamp(0.0, 1.0),
-                    child: Container(
-                      height: 8.h,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [color, color.withOpacity(0.8)],
-                        ),
-                        borderRadius: BorderRadius.circular(8.r),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+          ),
+        ],
+      ),
+      bodyContent: Padding(
+        padding: EdgeInsets.all(16.r),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            BudgetProgressBar(
+              progreso: meta.progreso,
+              color: color,
+              height: 12.h,
             ),
             SizedBox(height: 12.h),
             Row(
@@ -1064,9 +1060,8 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                     Text(
                       'Ahorrado',
                       style: GoogleFonts.lato(
-                        fontSize: 10.sp,
-                        color: theme.colorScheme.onSurface.withOpacity(0.5),
-                        fontWeight: FontWeight.w500,
+                        fontSize: 11.sp,
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
                       ),
                     ),
                     SizedBox(height: 2.h),
@@ -1075,10 +1070,29 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                       style: GoogleFonts.lato(
                         fontSize: 16.sp,
                         fontWeight: FontWeight.w700,
-                        color: color,
+                        color: theme.colorScheme.primary,
                       ),
                     ),
                   ],
+                ),
+                // Porcentaje
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 6.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onSurface.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Text(
+                    '${meta.progreso.toStringAsFixed(0)}%',
+                    style: GoogleFonts.lato(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
                 ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -1086,9 +1100,8 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                     Text(
                       'Objetivo',
                       style: GoogleFonts.lato(
-                        fontSize: 10.sp,
-                        color: theme.colorScheme.onSurface.withOpacity(0.5),
-                        fontWeight: FontWeight.w500,
+                        fontSize: 11.sp,
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
                       ),
                     ),
                     SizedBox(height: 2.h),
@@ -1195,6 +1208,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
             ), // ✅ REDUCIDO de 18
           ),
         ),
+        SizedBox(height: 30.h),
         SizedBox(
           key: _accountsCarouselKey,
           height: 180.h, // ✅ REDUCIDO de 200
@@ -1396,6 +1410,305 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
     );
   }
 
+  // UI Builders - Presupuestos (Expandible)
+  Widget _buildPresupuestosCard() {
+    if (_presupuestos.isEmpty) return const SizedBox.shrink();
+
+    // Ordenar presupuestos por prioridad
+    final presupuestosOrdenados = List<Budget>.from(_presupuestos);
+    presupuestosOrdenados.sort((a, b) {
+      if (a.excedido && !b.excedido) return -1;
+      if (!a.excedido && b.excedido) return 1;
+      if (a.enAlerta && !b.enAlerta) return -1;
+      if (!a.enAlerta && b.enAlerta) return 1;
+      return b.progreso.compareTo(a.progreso);
+    });
+
+    final presupuestoPrincipal = presupuestosOrdenados.first;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 5.h),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Presupuestos',
+                style: GoogleFonts.lato(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const BudgetScreen(),
+                    ),
+                  );
+                },
+                child: Text(
+                  'Ver todos',
+                  style: GoogleFonts.lato(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Presupuesto principal con botón de expandir
+        _buildDashboardBudgetCard(presupuestoPrincipal, isFirst: true),
+        // Presupuestos adicionales (expandibles)
+        if (presupuestosOrdenados.length > 1)
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child:
+                _presupuestosExpanded
+                    ? Column(
+                      children:
+                          presupuestosOrdenados
+                              .skip(1)
+                              .map(
+                                (p) => Padding(
+                                  padding: EdgeInsets.only(top: 8.h),
+                                  child: _buildDashboardBudgetCard(p),
+                                ),
+                              )
+                              .toList(),
+                    )
+                    : const SizedBox.shrink(),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildDashboardBudgetCard(Budget presupuesto, {bool isFirst = false}) {
+    final theme = Theme.of(context);
+    final color = Color(presupuesto.colorEstado);
+
+    // Badge de estado
+    Widget? statusBadge;
+    if (presupuesto.excedido || presupuesto.enAlerta) {
+      statusBadge = Container(
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.25),
+          borderRadius: BorderRadius.circular(10.r),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              presupuesto.excedido
+                  ? Icons.warning_rounded
+                  : Icons.notifications_active_rounded,
+              size: 13.sp,
+              color: Colors.white,
+            ),
+            SizedBox(width: 4.w),
+            Text(
+              presupuesto.excedido ? 'Excedido' : 'Alerta',
+              style: GoogleFonts.lato(
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return AnimatedCard(
+      color: color,
+      randomOffset: presupuesto.nombre.length,
+      horizontalMargin: 2.w,
+      borderRadius: 16.r,
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => PresupuestoDetalleScreen(presupuesto: presupuesto),
+          ),
+        );
+      },
+      headerContent: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(10.r),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.25),
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            child: Icon(
+              presupuesto.periodo == 'semanal'
+                  ? Icons.calendar_view_week_rounded
+                  : Icons.calendar_month_rounded,
+              size: 20.sp,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  presupuesto.nombre,
+                  style: GoogleFonts.lato(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  presupuesto.periodo == 'semanal' ? 'Semanal' : 'Mensual',
+                  style: GoogleFonts.lato(
+                    fontSize: 12.sp,
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (statusBadge != null) statusBadge,
+        ],
+      ),
+      bodyContent: Padding(
+        padding: EdgeInsets.all(16.r),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            BudgetProgressBar(
+              progreso: presupuesto.progreso,
+              color: color,
+              height: 12.h,
+            ),
+            SizedBox(height: 12.h),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Gastado',
+                      style: GoogleFonts.lato(
+                        fontSize: 11.sp,
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      _currencyFormat.format(presupuesto.montoGastado),
+                      style: GoogleFonts.lato(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w700,
+                        color: color,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 6.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onSurface.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Text(
+                    '${presupuesto.progreso.toStringAsFixed(0)}%',
+                    style: GoogleFonts.lato(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Límite',
+                      style: GoogleFonts.lato(
+                        fontSize: 11.sp,
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      _currencyFormat.format(presupuesto.montoLimite),
+                      style: GoogleFonts.lato(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            if (isFirst && _presupuestos.length > 1) ...[
+              SizedBox(height: 12.h),
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _presupuestosExpanded = !_presupuestosExpanded;
+                  });
+                },
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 8.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _presupuestosExpanded
+                            ? 'Ver menos'
+                            : 'Ver ${_presupuestos.length - 1} presupuesto${_presupuestos.length > 2 ? 's' : ''} más',
+                        style: GoogleFonts.lato(
+                          color: theme.colorScheme.primary,
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(width: 4.w),
+                      Icon(
+                        _presupuestosExpanded
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        color: theme.colorScheme.primary,
+                        size: 18.sp,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   // UI Builders - Transactions List
   Widget _buildTransactionsList() {
     final theme = Theme.of(context);
@@ -1442,78 +1755,25 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
 
   Widget _buildTransactionsHeader(ThemeData theme) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 4.w),
+      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 5.h),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(8.r),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10.r),
-                ),
-                child: Icon(
-                  Icons.receipt_long_rounded,
-                  color: theme.colorScheme.primary,
-                  size: 20.sp,
-                ),
-              ),
-              SizedBox(width: 12.w),
-              Text(
-                'Transacciones Recientes',
-                style: GoogleFonts.lato(
-                  fontSize: 17.sp,
-                  fontWeight: FontWeight.w700,
-                  color: theme.colorScheme.onBackground,
-                ),
-              ),
-            ],
+          Text(
+            'Transacciones Recientes',
+            style: GoogleFonts.lato(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          BounceTapButton(
-            onTap: () => widget.onTabChange?.call(1),
-            child: Container(
-              decoration: BoxDecoration(
-                color: theme.colorScheme.secondary.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(10.r),
-                border: Border.all(
-                  color: theme.colorScheme.secondary.withOpacity(0.2),
-                  width: 1,
-                ),
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  key: _verTodoKey,
-                  onTap: () => widget.onTabChange?.call(1),
-                  borderRadius: BorderRadius.circular(10.r),
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 10.w,
-                      vertical: 6.h,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Ver todo',
-                          style: GoogleFonts.lato(
-                            color: theme.colorScheme.secondary,
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        SizedBox(width: 4.w),
-                        Icon(
-                          Icons.chevron_right,
-                          color: theme.colorScheme.secondary,
-                          size: 16.sp,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+          TextButton(
+            key: _verTodoKey,
+            onPressed: () => widget.onTabChange?.call(1),
+            child: Text(
+              'Ver todos',
+              style: GoogleFonts.lato(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -1729,6 +1989,8 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                         _buildBalanceCard(),
                         SizedBox(height: 18.h),
                         _buildAccountsCarousel(),
+                        SizedBox(height: 18.h),
+                        _buildPresupuestosCard(),
                         SizedBox(height: 18.h),
                         _buildMetasCard(),
                         SizedBox(height: 18.h),

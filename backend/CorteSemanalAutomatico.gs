@@ -43,6 +43,12 @@ function ejecutarCorteSemanalAutomatico() {
     crearTransaccionResumenSemanal(totalSemanal);
     Logger.info('✅ Transacción resumen "Corte Semanal" creada en Firebase');
     
+    // Renovar fechas de presupuestos semanales
+    const presupuestosRenovados = renovarPresupuestosSemanales();
+    if (presupuestosRenovados > 0) {
+      Logger.info('📆 Presupuestos semanales renovados: ' + presupuestosRenovados);
+    }
+
     // Enviar notificación push a todos los dispositivos
     const notificacionResultado = notificarCorteSemanalCompletado(totalSemanal, transacciones.length);
     
@@ -195,6 +201,109 @@ function crearTransaccionResumenSemanal(totalSemanal) {
   } catch (error) {
     Logger.error('crearTransaccionResumenSemanal', error);
     throw error;
+  }
+}
+
+/**
+ * Busca presupuestos semanales recurrentes en Firebase y actualiza sus fechas al nuevo periodo
+ * Solo renueva los que tengan esRecurrente: true
+ * Guarda historial del periodo anterior antes de resetear
+ * Envía notificación push por cada presupuesto renovado
+ */
+function renovarPresupuestosSemanales() {
+  try {
+    const scriptProperties = PropertiesService.getScriptProperties();
+    const projectId = scriptProperties.getProperty('FIREBASE_PROJECT_ID');
+    const email = scriptProperties.getProperty('FIREBASE_CLIENT_EMAIL');
+    const key = scriptProperties.getProperty('FIREBASE_PRIVATE_KEY');
+
+    const firestore = FirestoreApp.getFirestore(email, key, projectId);
+
+    // Obtener todos los presupuestos
+    const allDocs = firestore.getDocuments('presupuestos');
+    let renovados = 0;
+    const presupuestosRenovados = [];
+
+    allDocs.forEach(doc => {
+      const data = doc.fields;
+
+      // Solo presupuestos semanales de default_user
+      if (!data.usuarioId || data.usuarioId.stringValue !== 'default_user') return;
+      if (!data.periodo || data.periodo.stringValue !== 'semanal') return;
+
+      // Solo renovar presupuestos recurrentes
+      if (!data.esRecurrente || data.esRecurrente.booleanValue !== true) return;
+
+      const docId = doc.name.split('/').pop();
+      const nombre = data.nombre ? data.nombre.stringValue : 'Sin nombre';
+      const montoLimite = data.montoLimite ? (data.montoLimite.doubleValue || data.montoLimite.integerValue || 0) : 0;
+      const montoGastado = data.montoGastado ? (data.montoGastado.doubleValue || data.montoGastado.integerValue || 0) : 0;
+
+      // Extraer fechas del periodo anterior
+      let fechaInicioAnterior = null;
+      let fechaFinAnterior = null;
+      if (data.fechaInicio && data.fechaInicio.timestampValue) {
+        fechaInicioAnterior = new Date(data.fechaInicio.timestampValue);
+      }
+      if (data.fechaFin && data.fechaFin.timestampValue) {
+        fechaFinAnterior = new Date(data.fechaFin.timestampValue);
+      }
+
+      // ✅ Guardar historial del periodo anterior antes de resetear
+      const historialData = {
+        montoLimite: montoLimite,
+        montoGastado: montoGastado,
+        porcentaje: montoLimite > 0 ? Math.round((montoGastado / montoLimite) * 100) : 0,
+        fechaInicio: fechaInicioAnterior || new Date(),
+        fechaFin: fechaFinAnterior || new Date(),
+        periodo: 'semanal',
+        fechaCorte: new Date()
+      };
+
+      firestore.createDocument('presupuestos/' + docId + '/historial', historialData);
+      Logger.info('📋 Historial guardado para: ' + nombre + ' (' + historialData.porcentaje + '% usado)');
+
+      // Calcular nuevas fechas: desde hoy (domingo) hasta el sábado
+      const ahora = new Date();
+      const nuevoInicio = new Date(ahora);
+      nuevoInicio.setHours(0, 0, 0, 0);
+
+      const nuevoFin = new Date(nuevoInicio);
+      nuevoFin.setDate(nuevoInicio.getDate() + 6);
+      nuevoFin.setHours(23, 59, 59, 999);
+
+      // Actualizar el documento
+      const updateData = {
+        fechaInicio: nuevoInicio,
+        fechaFin: nuevoFin,
+        montoGastado: 0,
+        updatedAt: new Date()
+      };
+
+      firestore.updateDocument('presupuestos/' + docId, updateData);
+      renovados++;
+
+      presupuestosRenovados.push({
+        nombre: nombre,
+        montoLimite: montoLimite,
+        fechaInicio: nuevoInicio,
+        fechaFin: nuevoFin
+      });
+
+      Logger.info('📆 Presupuesto semanal renovado: ' + nombre +
+        ' → ' + formatearFecha(nuevoInicio) + ' al ' + formatearFecha(nuevoFin));
+    });
+
+    // ✅ Enviar notificación push si se renovaron presupuestos
+    if (presupuestosRenovados.length > 0) {
+      notificarPresupuestosRenovados(presupuestosRenovados, 'semanal');
+    }
+
+    return renovados;
+
+  } catch (error) {
+    Logger.error('renovarPresupuestosSemanales', error);
+    return 0;
   }
 }
 
