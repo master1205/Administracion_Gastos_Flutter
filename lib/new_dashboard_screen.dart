@@ -29,6 +29,7 @@ import 'meta_detalle_screen.dart';
 import 'apartados_screen.dart';
 import 'apartado_detalle_screen.dart';
 import 'widgets/animated_card.dart';
+import 'widgets/expand_toggle_button.dart';
 
 class NewDashboardScreen extends StatefulWidget {
   final void Function(int)? onTabChange;
@@ -849,77 +850,21 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
   Widget _buildMetasCard() {
     if (_metas.isEmpty) return _buildEmptyMetasState();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 5.h),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Mis Metas',
-                style: GoogleFonts.lato(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const MetasScreen(),
-                    ),
-                  );
-                },
-                child: Text(
-                  'Ver todos',
-                  style: GoogleFonts.lato(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        _buildMetasContent(),
-      ],
-    );
-  }
-
-  Widget _buildMetasContent() {
-    final metaPrincipal = _metas.reduce(
-      (a, b) => a.progreso > b.progreso ? a : b,
-    );
-
-    return Column(
-      children: [
-        // Meta principal con botón de expandir
-        _buildMetaCard(metaPrincipal, isFirst: true),
-        // Metas adicionales (expandibles)
-        if (_metas.length > 1)
-          AnimatedSize(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            child:
-                _metasExpanded
-                    ? Column(
-                      children:
-                          _metas
-                              .where((meta) => meta.id != metaPrincipal.id)
-                              .map(
-                                (meta) => Padding(
-                                  padding: EdgeInsets.only(top: 8.h),
-                                  child: _buildMetaCard(meta),
-                                ),
-                              )
-                              .toList(),
-                    )
-                    : const SizedBox.shrink(),
-          ),
-      ],
+    return ExpandableSection<Meta>(
+      title: 'Mis Metas',
+      items: _metas,
+      isExpanded: _metasExpanded,
+      itemLabel: 'meta',
+      onToggle: () => setState(() => _metasExpanded = !_metasExpanded),
+      onViewAll: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const MetasScreen()),
+        );
+      },
+      selectPrincipal:
+          (metas) => metas.reduce((a, b) => a.progreso > b.progreso ? a : b),
+      itemBuilder: (meta, isFirst) => _buildMetaCard(meta, isFirst: isFirst),
     );
   }
 
@@ -1285,45 +1230,12 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
             ),
             if (isFirst && _metas.length > 1) ...[
               SizedBox(height: 12.h),
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _metasExpanded = !_metasExpanded;
-                  });
-                },
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 8.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _metasExpanded
-                            ? 'Ver menos'
-                            : 'Ver ${_metas.length - 1} meta${_metas.length > 2 ? 's' : ''} más',
-                        style: GoogleFonts.lato(
-                          color: theme.colorScheme.primary,
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(width: 4.w),
-                      Icon(
-                        _metasExpanded
-                            ? Icons.keyboard_arrow_up_rounded
-                            : Icons.keyboard_arrow_down_rounded,
-                        color: theme.colorScheme.primary,
-                        size: 18.sp,
-                      ),
-                    ],
-                  ),
-                ),
+              ExpandToggleButton(
+                isExpanded: _metasExpanded,
+                itemCount: _metas.length - 1,
+                itemLabel: 'meta',
+                onToggle:
+                    () => setState(() => _metasExpanded = !_metasExpanded),
               ),
             ],
           ],
@@ -1665,67 +1577,22 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
       return b.progreso.compareTo(a.progreso);
     });
 
-    final presupuestoPrincipal = presupuestosOrdenados.first;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 5.h),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Presupuestos',
-                style: GoogleFonts.lato(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const BudgetScreen(),
-                    ),
-                  );
-                },
-                child: Text(
-                  'Ver todos',
-                  style: GoogleFonts.lato(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Presupuesto principal con botón de expandir
-        _buildDashboardBudgetCard(presupuestoPrincipal, isFirst: true),
-        // Presupuestos adicionales (expandibles)
-        if (presupuestosOrdenados.length > 1)
-          AnimatedSize(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            child:
-                _presupuestosExpanded
-                    ? Column(
-                      children:
-                          presupuestosOrdenados
-                              .skip(1)
-                              .map(
-                                (p) => Padding(
-                                  padding: EdgeInsets.only(top: 8.h),
-                                  child: _buildDashboardBudgetCard(p),
-                                ),
-                              )
-                              .toList(),
-                    )
-                    : const SizedBox.shrink(),
-          ),
-      ],
+    return ExpandableSection<Budget>(
+      title: 'Presupuestos',
+      items: presupuestosOrdenados,
+      isExpanded: _presupuestosExpanded,
+      itemLabel: 'presupuesto',
+      onToggle:
+          () => setState(() => _presupuestosExpanded = !_presupuestosExpanded),
+      onViewAll: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const BudgetScreen()),
+        );
+      },
+      itemBuilder:
+          (presupuesto, isFirst) =>
+              _buildDashboardBudgetCard(presupuesto, isFirst: isFirst),
     );
   }
 
@@ -1963,45 +1830,14 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
             ),
             if (isFirst && _presupuestos.length > 1) ...[
               SizedBox(height: 12.h),
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _presupuestosExpanded = !_presupuestosExpanded;
-                  });
-                },
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 8.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _presupuestosExpanded
-                            ? 'Ver menos'
-                            : 'Ver ${_presupuestos.length - 1} presupuesto${_presupuestos.length > 2 ? 's' : ''} más',
-                        style: GoogleFonts.lato(
-                          color: theme.colorScheme.primary,
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(width: 4.w),
-                      Icon(
-                        _presupuestosExpanded
-                            ? Icons.keyboard_arrow_up_rounded
-                            : Icons.keyboard_arrow_down_rounded,
-                        color: theme.colorScheme.primary,
-                        size: 18.sp,
-                      ),
-                    ],
-                  ),
-                ),
+              ExpandToggleButton(
+                isExpanded: _presupuestosExpanded,
+                itemCount: _presupuestos.length - 1,
+                itemLabel: 'presupuesto',
+                onToggle:
+                    () => setState(
+                      () => _presupuestosExpanded = !_presupuestosExpanded,
+                    ),
               ),
             ],
           ],
@@ -2049,65 +1885,21 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
     final apartadosOrdenados = List<Apartado>.from(_apartados);
     apartadosOrdenados.sort((a, b) => b.progreso.compareTo(a.progreso));
 
-    final apartadoPrincipal = apartadosOrdenados.first;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 5.h),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Apartados',
-                style: GoogleFonts.lato(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ApartadosScreen(),
-                    ),
-                  );
-                },
-                child: Text(
-                  'Ver todos',
-                  style: GoogleFonts.lato(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        _buildDashboardApartadoCard(apartadoPrincipal, isFirst: true),
-        if (apartadosOrdenados.length > 1)
-          AnimatedSize(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            child:
-                _apartadosExpanded
-                    ? Column(
-                      children:
-                          apartadosOrdenados
-                              .skip(1)
-                              .map(
-                                (a) => Padding(
-                                  padding: EdgeInsets.only(top: 8.h),
-                                  child: _buildDashboardApartadoCard(a),
-                                ),
-                              )
-                              .toList(),
-                    )
-                    : const SizedBox.shrink(),
-          ),
-      ],
+    return ExpandableSection<Apartado>(
+      title: 'Apartados',
+      items: apartadosOrdenados,
+      isExpanded: _apartadosExpanded,
+      itemLabel: 'apartado',
+      onToggle: () => setState(() => _apartadosExpanded = !_apartadosExpanded),
+      onViewAll: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ApartadosScreen()),
+        );
+      },
+      itemBuilder:
+          (apartado, isFirst) =>
+              _buildDashboardApartadoCard(apartado, isFirst: isFirst),
     );
   }
 
@@ -2414,45 +2206,14 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
             ),
             if (isFirst && _apartados.length > 1) ...[
               SizedBox(height: 12.h),
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _apartadosExpanded = !_apartadosExpanded;
-                  });
-                },
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 8.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _apartadosExpanded
-                            ? 'Ver menos'
-                            : 'Ver ${_apartados.length - 1} apartado${_apartados.length > 2 ? 's' : ''} más',
-                        style: GoogleFonts.lato(
-                          color: theme.colorScheme.primary,
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(width: 4.w),
-                      Icon(
-                        _apartadosExpanded
-                            ? Icons.keyboard_arrow_up_rounded
-                            : Icons.keyboard_arrow_down_rounded,
-                        color: theme.colorScheme.primary,
-                        size: 18.sp,
-                      ),
-                    ],
-                  ),
-                ),
+              ExpandToggleButton(
+                isExpanded: _apartadosExpanded,
+                itemCount: _apartados.length - 1,
+                itemLabel: 'apartado',
+                onToggle:
+                    () => setState(
+                      () => _apartadosExpanded = !_apartadosExpanded,
+                    ),
               ),
             ],
           ],
