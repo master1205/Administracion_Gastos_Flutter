@@ -175,6 +175,11 @@ class _CuentasScreenState extends State<CuentasScreen> {
       0,
       (sum, cuenta) => sum + cuenta.saldo,
     );
+    final retenidoTotal = cuentas.fold<double>(
+      0,
+      (sum, cuenta) => sum + cuenta.saldoRetenido,
+    );
+    final disponibleTotal = saldoTotal - retenidoTotal;
 
     return Container(
       margin: EdgeInsets.only(bottom: 8.h),
@@ -264,6 +269,74 @@ class _CuentasScreenState extends State<CuentasScreen> {
               height: 1.1,
             ),
           ),
+          if (retenidoTotal > 0) ...[
+            SizedBox(height: 12.h),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 12.w,
+                      vertical: 8.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF9800).withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.lock_outline_rounded,
+                          size: 14.sp,
+                          color: const Color(0xFFFF9800),
+                        ),
+                        SizedBox(width: 6.w),
+                        Text(
+                          'Apartado: ${_currencyFormat.format(retenidoTotal)}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFFF9800),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 12.w,
+                      vertical: 8.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline_rounded,
+                          size: 14.sp,
+                          color: const Color(0xFF10B981),
+                        ),
+                        SizedBox(width: 6.w),
+                        Text(
+                          'Disponible: ${_currencyFormat.format(disponibleTotal)}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF10B981),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           SizedBox(height: 14.h),
           Container(
             padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
@@ -298,8 +371,11 @@ class _CuentasScreenState extends State<CuentasScreen> {
 
   Widget _buildCuentaCard(Account cuenta, ThemeManager themeManager) {
     final theme = Theme.of(context);
+    final saldoDisponible = cuenta.saldoDisponible;
     final saldoColor =
-        cuenta.saldo >= 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444);
+        saldoDisponible >= 0
+            ? const Color(0xFF10B981)
+            : const Color(0xFFEF4444);
 
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
@@ -435,11 +511,44 @@ class _CuentasScreenState extends State<CuentasScreen> {
                       style: GoogleFonts.poppins(
                         fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
-                        color: saldoColor,
+                        color:
+                            cuenta.saldo >= 0
+                                ? theme.colorScheme.onSurface
+                                : const Color(0xFFEF4444),
                         letterSpacing: -0.5,
                       ),
                     ),
-                    SizedBox(height: 8.h),
+                    if (cuenta.saldoRetenido > 0) ...[
+                      SizedBox(height: 2.h),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.lock_outline_rounded,
+                            size: 11.sp,
+                            color: const Color(0xFFFF9800),
+                          ),
+                          SizedBox(width: 3.w),
+                          Text(
+                            _currencyFormat.format(cuenta.saldoRetenido),
+                            style: GoogleFonts.poppins(
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFFFF9800),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        'Disp: ${_currencyFormat.format(saldoDisponible)}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w600,
+                          color: saldoColor,
+                        ),
+                      ),
+                    ],
+                    SizedBox(height: 4.h),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [

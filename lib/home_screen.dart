@@ -13,6 +13,7 @@ import 'package:notificaciones/metas_screen.dart';
 import 'package:notificaciones/new_dashboard_screen.dart';
 import 'package:notificaciones/notificaciones_screen.dart';
 import 'package:notificaciones/budgets_screen.dart';
+import 'package:notificaciones/apartados_screen.dart';
 import 'package:notificaciones/reportes_screen.dart';
 import 'package:notificaciones/theme_provider.dart';
 import 'package:notificaciones/transacciones_screen.dart';
@@ -39,8 +40,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String _userName = '';
   int _cantidadMetas = 0;
   int _cantidadPresupuestos = 0;
+  int _cantidadApartados = 0;
   StreamSubscription? _metasSubscription;
   StreamSubscription? _presupuestosSubscription;
+  StreamSubscription? _apartadosSubscription;
 
   late TutorialCoachMark _tutorialCoachMark;
   final List<TargetFocus> _targets = [];
@@ -68,6 +71,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _checkUserName();
     _cargarCantidadMetas();
     _cargarCantidadPresupuestos();
+    _cargarCantidadApartados();
     _maybeShowTutorial();
   }
 
@@ -76,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _metasSubscription?.cancel();
     _presupuestosSubscription?.cancel();
+    _apartadosSubscription?.cancel();
     super.dispose();
   }
 
@@ -123,6 +128,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             });
           }
         });
+  }
+
+  void _cargarCantidadApartados() {
+    final firestoreService = FirestoreService();
+    _apartadosSubscription = firestoreService.obtenerApartadosActivos().listen((
+      apartados,
+    ) {
+      if (mounted) {
+        setState(() {
+          _cantidadApartados = apartados.length;
+        });
+      }
+    });
   }
 
   void _promptUserName() {
@@ -802,6 +820,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const BudgetScreen()),
+          );
+        },
+      ),
+      _DrawerItem(
+        icon: Icons.event_note_rounded,
+        title: "Apartados",
+        subtitle: "Reserva para gastos planeados",
+        color: const Color(0xFF2196F3),
+        badge: _cantidadApartados > 0 ? _cantidadApartados.toString() : null,
+        onTap: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ApartadosScreen()),
           );
         },
       ),

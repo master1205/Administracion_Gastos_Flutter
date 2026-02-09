@@ -10,6 +10,7 @@ import 'package:notificaciones/models/Account.dart';
 import 'package:notificaciones/models/Meta.dart';
 import 'package:notificaciones/models/Transaccion.dart';
 import 'package:notificaciones/models/Budget.dart';
+import 'package:notificaciones/models/Apartado.dart';
 import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,6 +26,8 @@ import 'services/firestore_service.dart';
 import 'widgets/budget_widgets.dart';
 import 'presupuesto_detalle_screen.dart';
 import 'meta_detalle_screen.dart';
+import 'apartados_screen.dart';
+import 'apartado_detalle_screen.dart';
 import 'widgets/animated_card.dart';
 
 class NewDashboardScreen extends StatefulWidget {
@@ -61,10 +64,12 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
   List<Transaction> _transactions = [];
   List<Meta> _metas = [];
   List<Budget> _presupuestos = [];
+  List<Apartado> _apartados = [];
   bool _isLoading = false;
   bool _isManualRefresh = false;
   bool _metasExpanded = false;
   bool _presupuestosExpanded = false;
+  bool _apartadosExpanded = false;
   bool _hasInitialData = false;
 
   // Firebase streams
@@ -73,6 +78,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
   StreamSubscription<List<Transaction>>? _transaccionesSubscription;
   StreamSubscription<List<Meta>>? _metasSubscription;
   StreamSubscription<List<Budget>>? _presupuestosSubscription;
+  StreamSubscription<List<Apartado>>? _apartadosSubscription;
 
   // Tutorial
   late TutorialCoachMark _tutorialCoachMark;
@@ -100,6 +106,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
     _transaccionesSubscription?.cancel();
     _metasSubscription?.cancel();
     _presupuestosSubscription?.cancel();
+    _apartadosSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -202,6 +209,19 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
             setState(() => _presupuestos = presupuestos);
           }
         });
+
+    // Stream de apartados activos
+    _apartadosSubscription?.cancel();
+    _apartadosSubscription = _firestoreService.obtenerApartadosActivos().listen(
+      (apartados) {
+        debugPrint(
+          '🔄 Stream de apartados recibió: ${apartados.length} apartados',
+        );
+        if (mounted) {
+          setState(() => _apartados = apartados);
+        }
+      },
+    );
   }
 
   void _calculateBalanceData() {
@@ -1321,8 +1341,8 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(16.r),
           border: Border.all(
-            color: theme.colorScheme.primary.withOpacity(0.2),
-            width: 1.5,
+            color: theme.colorScheme.primary.withOpacity(0.15),
+            width: 1,
           ),
           boxShadow: [
             BoxShadow(
@@ -1332,63 +1352,51 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
             ),
           ],
         ),
-        padding: EdgeInsets.all(20.r),
+        padding: EdgeInsets.all(16.r),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               children: [
                 Container(
-                  padding: EdgeInsets.all(10.r),
+                  padding: EdgeInsets.all(8.r),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12.r),
+                    borderRadius: BorderRadius.circular(10.r),
                   ),
                   child: Icon(
                     Icons.credit_card_rounded,
                     color: theme.colorScheme.primary,
-                    size: 24.sp,
+                    size: 20.sp,
                   ),
                 ),
-                SizedBox(width: 12.w),
+                SizedBox(width: 10.w),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Cuenta',
-                        style: GoogleFonts.lato(
-                          fontSize: 11.sp,
-                          color: theme.colorScheme.onSurface.withOpacity(0.5),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      SizedBox(height: 2.h),
-                      Text(
-                        account.nombre,
-                        style: GoogleFonts.lato(
-                          fontSize: 15.sp,
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.onSurface,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                  child: Text(
+                    account.nombre,
+                    style: GoogleFonts.lato(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 16.h),
+            SizedBox(height: 12.h),
+            // Saldo principal
             Text(
-              'Saldo disponible',
+              account.saldoRetenido > 0 ? 'Saldo total' : 'Saldo disponible',
               style: GoogleFonts.lato(
-                fontSize: 11.sp,
+                fontSize: 10.sp,
                 color: theme.colorScheme.onSurface.withOpacity(0.5),
                 fontWeight: FontWeight.w500,
               ),
             ),
-            SizedBox(height: 4.h),
+            SizedBox(height: 2.h),
             TweenAnimationBuilder<double>(
               tween: Tween<double>(begin: 0, end: account.saldo),
               duration: _animationDuration,
@@ -1396,14 +1404,92 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                 return Text(
                   _currencyFormat.format(animatedValue),
                   style: GoogleFonts.lato(
-                    fontSize: 28.sp,
+                    fontSize: 24.sp,
                     fontWeight: FontWeight.w800,
-                    color: theme.colorScheme.primary,
+                    color:
+                        account.saldo >= 0
+                            ? theme.colorScheme.primary
+                            : const Color(0xFFEF4444),
                     letterSpacing: -0.5,
                   ),
                 );
               },
             ),
+            if (account.saldoRetenido > 0) ...[
+              SizedBox(height: 8.h),
+              Divider(
+                height: 1,
+                thickness: 1,
+                color: theme.colorScheme.onSurface.withOpacity(0.08),
+              ),
+              SizedBox(height: 19.h),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 7.w,
+                        height: 7.w,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      SizedBox(width: 5.w),
+                      Text(
+                        'Disponible ',
+                        style: GoogleFonts.lato(
+                          fontSize: 12.sp,
+                          color: theme.colorScheme.onSurface.withOpacity(0.5),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        _currencyFormat.format(account.saldoDisponible),
+                        style: GoogleFonts.lato(
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(width: 20.w),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 7.w,
+                        height: 7.w,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFF9800),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      SizedBox(width: 5.w),
+                      Text(
+                        'Apartado ',
+                        style: GoogleFonts.lato(
+                          fontSize: 12.sp,
+                          color: theme.colorScheme.onSurface.withOpacity(0.5),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        _currencyFormat.format(account.saldoRetenido),
+                        style: GoogleFonts.lato(
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFFFF9800),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -1709,6 +1795,321 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
     );
   }
 
+  // UI Builders - Apartados Card
+  Widget _buildApartadosCard() {
+    if (_apartados.isEmpty) return const SizedBox.shrink();
+
+    // Ordenar: mayor progreso primero
+    final apartadosOrdenados = List<Apartado>.from(_apartados);
+    apartadosOrdenados.sort((a, b) => b.progreso.compareTo(a.progreso));
+
+    final apartadoPrincipal = apartadosOrdenados.first;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 5.h),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Apartados',
+                style: GoogleFonts.lato(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ApartadosScreen(),
+                    ),
+                  );
+                },
+                child: Text(
+                  'Ver todos',
+                  style: GoogleFonts.lato(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        _buildDashboardApartadoCard(apartadoPrincipal, isFirst: true),
+        if (apartadosOrdenados.length > 1)
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child:
+                _apartadosExpanded
+                    ? Column(
+                      children:
+                          apartadosOrdenados
+                              .skip(1)
+                              .map(
+                                (a) => Padding(
+                                  padding: EdgeInsets.only(top: 8.h),
+                                  child: _buildDashboardApartadoCard(a),
+                                ),
+                              )
+                              .toList(),
+                    )
+                    : const SizedBox.shrink(),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildDashboardApartadoCard(
+    Apartado apartado, {
+    bool isFirst = false,
+  }) {
+    final theme = Theme.of(context);
+    final colorHex = int.parse('FF${apartado.color}', radix: 16);
+    final color = Color(colorHex);
+
+    // Badge de estado
+    Widget? statusBadge;
+    if (apartado.estado == 'completado') {
+      statusBadge = Container(
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.25),
+          borderRadius: BorderRadius.circular(10.r),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.check_circle_rounded, size: 13.sp, color: Colors.white),
+            SizedBox(width: 4.w),
+            Text(
+              'Listo',
+              style: GoogleFonts.lato(
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (apartado.estaVencido) {
+      statusBadge = Container(
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.25),
+          borderRadius: BorderRadius.circular(10.r),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.warning_rounded, size: 13.sp, color: Colors.white),
+            SizedBox(width: 4.w),
+            Text(
+              'Vencido',
+              style: GoogleFonts.lato(
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final codePoint = int.tryParse(apartado.icono);
+    final IconData iconData =
+        codePoint != null
+            ? IconData(codePoint, fontFamily: 'MaterialIcons')
+            : Icons.account_balance_wallet;
+
+    return AnimatedCard(
+      color: color,
+      randomOffset: apartado.nombre.length,
+      horizontalMargin: 2.w,
+      borderRadius: 16.r,
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ApartadoDetalleScreen(apartado: apartado),
+          ),
+        );
+      },
+      headerContent: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(10.r),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.25),
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            child: Icon(iconData, size: 20.sp, color: Colors.white),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  apartado.nombre,
+                  style: GoogleFonts.lato(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (apartado.descripcion.isNotEmpty) ...[
+                  SizedBox(height: 2.h),
+                  Text(
+                    apartado.descripcion,
+                    style: GoogleFonts.lato(
+                      fontSize: 12.sp,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (statusBadge != null) statusBadge,
+        ],
+      ),
+      bodyContent: Padding(
+        padding: EdgeInsets.all(16.r),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            BudgetProgressBar(
+              progreso: apartado.progreso,
+              color: color,
+              height: 12.h,
+            ),
+            SizedBox(height: 12.h),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Apartado',
+                      style: GoogleFonts.lato(
+                        fontSize: 11.sp,
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      _currencyFormat.format(apartado.montoApartado),
+                      style: GoogleFonts.lato(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w700,
+                        color: color,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 6.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onSurface.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Text(
+                    '${apartado.progreso.toStringAsFixed(0)}%',
+                    style: GoogleFonts.lato(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Total',
+                      style: GoogleFonts.lato(
+                        fontSize: 11.sp,
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      _currencyFormat.format(apartado.montoTotal),
+                      style: GoogleFonts.lato(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            if (isFirst && _apartados.length > 1) ...[
+              SizedBox(height: 12.h),
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _apartadosExpanded = !_apartadosExpanded;
+                  });
+                },
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 8.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _apartadosExpanded
+                            ? 'Ver menos'
+                            : 'Ver ${_apartados.length - 1} apartado${_apartados.length > 2 ? 's' : ''} más',
+                        style: GoogleFonts.lato(
+                          color: theme.colorScheme.primary,
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(width: 4.w),
+                      Icon(
+                        _apartadosExpanded
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        color: theme.colorScheme.primary,
+                        size: 18.sp,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   // UI Builders - Transactions List
   Widget _buildTransactionsList() {
     final theme = Theme.of(context);
@@ -1993,6 +2394,8 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                         _buildPresupuestosCard(),
                         SizedBox(height: 18.h),
                         _buildMetasCard(),
+                        SizedBox(height: 18.h),
+                        _buildApartadosCard(),
                         SizedBox(height: 18.h),
                         _buildTransactionsList(),
                       ],

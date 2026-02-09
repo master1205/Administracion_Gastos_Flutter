@@ -121,6 +121,13 @@ class _SelectAmountWidgetState extends State<SelectAmountWidget> {
       },
     );
     _focusNode.requestFocus();
+
+    // Notificar el monto inicial para que el padre lo conozca
+    if (amount.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _notifyAmountChange();
+      });
+    }
   }
 
   @override
@@ -701,52 +708,55 @@ Future<double?> showSelectAmountBottomSheet(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-            // Título
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: GoogleFonts.poppins(
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.w600,
+              // Título
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: GoogleFonts.poppins(
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(
+                        Icons.close,
                         color: theme.colorScheme.onSurface,
                       ),
                     ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close, color: theme.colorScheme.onSurface),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Divider(
-              height: 1,
-              color: theme.colorScheme.secondary.withOpacity(0.2),
-            ),
+              Divider(
+                height: 1,
+                color: theme.colorScheme.secondary.withOpacity(0.2),
+              ),
 
-            // Widget de selección de monto
-            SelectAmountWidget(
-              amountPassed: initialAmount.toString(),
-              allowZero: allowZero,
-              currencySymbol: currencySymbol,
-              setSelectedAmount: (amount, _) {
-                selectedAmount = amount;
-              },
-              next: () {
-                Navigator.pop(context);
-              },
-              nextLabel: 'Confirmar',
-              padding: EdgeInsets.all(16.r),
-            ),
-          ],
+              // Widget de selección de monto
+              SelectAmountWidget(
+                amountPassed: initialAmount.toString(),
+                allowZero: allowZero,
+                currencySymbol: currencySymbol,
+                setSelectedAmount: (amount, _) {
+                  selectedAmount = amount;
+                },
+                next: () {
+                  Navigator.pop(context);
+                },
+                nextLabel: 'Confirmar',
+                padding: EdgeInsets.all(16.r),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
-  },
+      );
+    },
   );
 
   return selectedAmount;

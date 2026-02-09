@@ -397,7 +397,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
               0.0;
 
           // En modo edición, considerar el monto anterior que ya fue restado
-          double saldoDisponible = selectedAccount!.saldo;
+          double saldoDisponible = selectedAccount!.saldoDisponible;
           if (widget.transaction != null &&
               widget.transaction!.cuentaNombre == selectedAccount!.nombre) {
             // Si es edición y es la misma cuenta, sumar el monto anterior
@@ -426,7 +426,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
             double.tryParse(_amountController.text.replaceAll(',', '')) ?? 0.0;
 
         // En modo edición, considerar el monto anterior que ya fue restado
-        double saldoDisponible = selectedAccountFrom!.saldo;
+        double saldoDisponible = selectedAccountFrom!.saldoDisponible;
         if (widget.transaction != null &&
             widget.transaction!.cuentaOrigenNombre ==
                 selectedAccountFrom!.nombre) {

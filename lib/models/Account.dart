@@ -5,6 +5,7 @@ class Account {
   final int? idCuenta; // Legacy ID para compatibilidad con Sheets
   final String nombre;
   final double saldo;
+  final double saldoRetenido; // Dinero apartado/retenido
   final String?
   tipo; // efectivo, tarjeta_debito, tarjeta_credito, banco, ahorro
   final String? imagen;
@@ -15,11 +16,15 @@ class Account {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  /// Saldo real disponible (saldo - retenido)
+  double get saldoDisponible => saldo - saldoRetenido;
+
   Account({
     required this.id,
     this.idCuenta,
     required this.nombre,
     required this.saldo,
+    this.saldoRetenido = 0,
     this.tipo,
     this.imagen,
     this.beneficiario,
@@ -40,6 +45,7 @@ class Account {
               : null,
       nombre: json['nombre'] ?? '',
       saldo: (json['saldo'] as num?)?.toDouble() ?? 0.0,
+      saldoRetenido: (json['saldoRetenido'] as num?)?.toDouble() ?? 0.0,
       tipo: json['tipo'],
       imagen: json['imagen'],
       beneficiario: json['beneficiario'],
@@ -64,6 +70,7 @@ class Account {
       idCuenta: data['idCuenta'] as int?,
       nombre: data['nombre'] ?? '',
       saldo: (data['saldo'] as num?)?.toDouble() ?? 0.0,
+      saldoRetenido: (data['saldoRetenido'] as num?)?.toDouble() ?? 0.0,
       tipo: data['tipo'],
       imagen: data['imagen'],
       beneficiario: data['beneficiario'],
@@ -80,6 +87,7 @@ class Account {
     final map = {
       'nombre': nombre,
       'saldo': saldo,
+      'saldoRetenido': saldoRetenido,
       'tipo': tipo ?? 'efectivo',
       'imagen': imagen,
       'beneficiario': beneficiario,
@@ -105,6 +113,7 @@ class Account {
     int? idCuenta,
     String? nombre,
     double? saldo,
+    double? saldoRetenido,
     String? tipo,
     String? imagen,
     String? beneficiario,
@@ -119,6 +128,7 @@ class Account {
       idCuenta: idCuenta ?? this.idCuenta,
       nombre: nombre ?? this.nombre,
       saldo: saldo ?? this.saldo,
+      saldoRetenido: saldoRetenido ?? this.saldoRetenido,
       tipo: tipo ?? this.tipo,
       imagen: imagen ?? this.imagen,
       beneficiario: beneficiario ?? this.beneficiario,
@@ -137,6 +147,7 @@ class Account {
       'idCuenta': idCuenta,
       'nombre': nombre,
       'saldo': saldo,
+      'saldoRetenido': saldoRetenido,
       'tipo': tipo,
       'imagen': imagen,
       'beneficiario': beneficiario,

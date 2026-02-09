@@ -4,6 +4,7 @@ import 'package:notificaciones/models/Account.dart';
 import 'package:notificaciones/models/Budget.dart';
 import 'package:notificaciones/models/Meta.dart';
 import 'package:notificaciones/models/Transaccion.dart' as models;
+import 'package:notificaciones/models/Apartado.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -233,6 +234,24 @@ class FirestoreService {
   Future<void> actualizarSaldoCuenta(String cuentaId, double nuevoSaldo) async {
     await _db.collection('cuentas').doc(cuentaId).update({
       'saldo': nuevoSaldo,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Incrementa o decrementa el saldo retenido de una cuenta
+  Future<void> _actualizarSaldoRetenido(String cuentaId, double delta) async {
+    final cuentaDoc = await _db.collection('cuentas').doc(cuentaId).get();
+    if (!cuentaDoc.exists) return;
+
+    final saldoRetenidoActual =
+        (cuentaDoc.data()!['saldoRetenido'] as num?)?.toDouble() ?? 0.0;
+    final nuevoRetenido = (saldoRetenidoActual + delta).clamp(
+      0.0,
+      double.infinity,
+    );
+
+    await _db.collection('cuentas').doc(cuentaId).update({
+      'saldoRetenido': nuevoRetenido,
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }
@@ -1090,5 +1109,257 @@ class FirestoreService {
     }
 
     return presupuestos;
+  }
+
+  // ==================== APARTADOS ====================
+
+  /// Obtiene todos los apartados del usuario
+  Stream<List<Apartado>> obtenerApartados({String? usuarioId}) {
+    final uid = usuarioId ?? defaultUserId;
+
+    return _db
+        .collection('apartados')
+        .where('usuarioId', isEqualTo: uid)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Apartado.fromFirestore(doc)).toList(),
+        );
+  }
+
+  /// Obtiene apartados activos del usuario
+  Stream<List<Apartado>> obtenerApartadosActivos({String? usuarioId}) {
+    final uid = usuarioId ?? defaultUserId;
+
+    return _db
+        .collection('apartados')
+        .where('usuarioId', isEqualTo: uid)
+        .where('estado', whereIn: ['activo', 'completado'])
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Apartado.fromFirestore(doc)).toList(),
+        );
+  }
+
+  /// Crea un nuevo apartado
+  Future<String> crearApartado(Apartado apartado) async {
+    final data = apartado.toFirestore(isNew: true);
+    final docRef = await _db.collection('apartados').add(data);
+    return docRef.id;
+  }
+
+  /// Actualiza un apartado
+  Future<void> actualizarApartado(Apartado apartado) async {
+    await _db
+        .collection('apartados')
+        .doc(apartado.id)
+        .set(apartado.toFirestore(isNew: false), SetOptions(merge: true));
+  }
+
+  /// Elimina un apartado y sus abonos
+  Future<void> eliminarApartado(String apartadoId) async {
+    // Obtener apartado para liberar saldo retenido
+    final apartadoDoc = await _db.collection('apartados').doc(apartadoId).get();
+    if (apartadoDoc.exists) {
+      final apartado = Apartado.fromFirestore(apartadoDoc);
+      if (apartado.cuentaId != null &&
+          apartado.montoApartado > 0 &&
+          apartado.estado != 'pagado') {
+        await _actualizarSaldoRetenido(
+          apartado.cuentaId!,
+          -apartado.montoApartado,
+        );
+      }
+    }
+
+    // Eliminar abonos subcollection
+    final abonosSnap =
+        await _db
+            .collection('apartados')
+            .doc(apartadoId)
+            .collection('abonos')
+            .get();
+    for (var doc in abonosSnap.docs) {
+      await doc.reference.delete();
+    }
+    // Eliminar apartado
+    await _db.collection('apartados').doc(apartadoId).delete();
+  }
+
+  /// Registra un abono en un apartado
+  Future<void> registrarAbono({
+    required String apartadoId,
+    required double monto,
+    required int numeroAbono,
+    String? nota,
+  }) async {
+    final abonoData = {
+      'monto': monto,
+      'numeroAbono': numeroAbono,
+      'fechaAbono': FieldValue.serverTimestamp(),
+      'nota': nota,
+    };
+
+    // Guardar abono en subcollección
+    await _db
+        .collection('apartados')
+        .doc(apartadoId)
+        .collection('abonos')
+        .add(abonoData);
+
+    // Obtener apartado actual
+    final doc = await _db.collection('apartados').doc(apartadoId).get();
+    if (!doc.exists) return;
+
+    final apartado = Apartado.fromFirestore(doc);
+    final nuevoMontoApartado = apartado.montoApartado + monto;
+    final nuevosPagosRealizados = apartado.pagosRealizados + 1;
+    final estaCompleto = nuevoMontoApartado >= apartado.montoTotal;
+
+    // Calcular próximo pago
+    DateTime? proximoPago;
+    if (!estaCompleto) {
+      proximoPago = _calcularProximoPago(DateTime.now(), apartado.frecuencia);
+    }
+
+    await _db.collection('apartados').doc(apartadoId).update({
+      'montoApartado': nuevoMontoApartado,
+      'pagosRealizados': nuevosPagosRealizados,
+      'estado': estaCompleto ? 'completado' : 'activo',
+      'fechaProximoPago':
+          proximoPago != null ? Timestamp.fromDate(proximoPago) : null,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    // Retener el monto del abono en la cuenta asociada
+    if (apartado.cuentaId != null) {
+      await _actualizarSaldoRetenido(apartado.cuentaId!, monto);
+    }
+  }
+
+  /// Obtiene los abonos de un apartado
+  Stream<List<Abono>> obtenerAbonos(String apartadoId) {
+    return _db
+        .collection('apartados')
+        .doc(apartadoId)
+        .collection('abonos')
+        .orderBy('fechaAbono', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Abono.fromFirestore(doc)).toList(),
+        );
+  }
+
+  /// Marca un apartado como pagado y registra la transacción
+  Future<void> marcarApartadoComoPagado({
+    required Apartado apartado,
+    required Account cuenta,
+  }) async {
+    // 1. Registrar la transacción de pago
+    final transaccion = models.Transaction(
+      idTransaccion: '',
+      categoria: apartado.categoria,
+      descripcion: apartado.nombre,
+      monto: apartado.montoTotal,
+      fecha: DateTime.now().toString().substring(0, 10),
+      fechaTimestamp: DateTime.now(),
+      tipoTransaccion: 'Pagos',
+      cuentaId: cuenta.id,
+      cuentaNombre: cuenta.nombre,
+      usuarioId: apartado.usuarioId,
+    );
+
+    await registrarTransaccion(transaccion: transaccion, cuenta: cuenta);
+
+    // 2. Liberar el saldo retenido de la cuenta
+    if (apartado.cuentaId != null) {
+      await _actualizarSaldoRetenido(
+        apartado.cuentaId!,
+        -apartado.montoApartado, // Liberar todo lo retenido
+      );
+    }
+
+    // 3. Actualizar estado del apartado
+    await _db.collection('apartados').doc(apartado.id).update({
+      'estado': 'pagado',
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    // 3. Si es recurrente, crear un nuevo apartado con las mismas propiedades
+    if (apartado.esRecurrente) {
+      final now = DateTime.now();
+      DateTime proximoPago;
+      switch (apartado.frecuencia) {
+        case 'semanal':
+          proximoPago = now.add(const Duration(days: 7));
+          break;
+        case 'quincenal':
+          proximoPago = now.add(const Duration(days: 15));
+          break;
+        case 'mensual':
+          proximoPago = DateTime(now.year, now.month + 1, now.day);
+          break;
+        default:
+          proximoPago = now.add(const Duration(days: 7));
+      }
+
+      // Calcular nueva fecha límite según la frecuencia y número de pagos
+      DateTime nuevaFechaLimite;
+      switch (apartado.frecuencia) {
+        case 'semanal':
+          nuevaFechaLimite = now.add(Duration(days: 7 * apartado.numeroPagos));
+          break;
+        case 'quincenal':
+          nuevaFechaLimite = now.add(Duration(days: 15 * apartado.numeroPagos));
+          break;
+        case 'mensual':
+          nuevaFechaLimite = DateTime(
+            now.year,
+            now.month + apartado.numeroPagos,
+            now.day,
+          );
+          break;
+        default:
+          nuevaFechaLimite = now.add(Duration(days: 7 * apartado.numeroPagos));
+      }
+
+      final nuevoApartado = Apartado(
+        id: '',
+        nombre: apartado.nombre,
+        descripcion: apartado.descripcion,
+        icono: apartado.icono,
+        color: apartado.color,
+        montoTotal: apartado.montoTotal,
+        montoApartado: 0,
+        numeroPagos: apartado.numeroPagos,
+        pagosRealizados: 0,
+        fechaLimite: nuevaFechaLimite,
+        fechaProximoPago: proximoPago,
+        frecuencia: apartado.frecuencia,
+        estado: 'activo',
+        categoria: apartado.categoria,
+        cuentaId: apartado.cuentaId,
+        cuentaNombre: apartado.cuentaNombre,
+        esRecurrente: true,
+        usuarioId: apartado.usuarioId,
+      );
+
+      await crearApartado(nuevoApartado);
+    }
+  }
+
+  DateTime _calcularProximoPago(DateTime desde, String frecuencia) {
+    switch (frecuencia) {
+      case 'semanal':
+        return desde.add(const Duration(days: 7));
+      case 'quincenal':
+        return desde.add(const Duration(days: 15));
+      case 'mensual':
+        return DateTime(desde.year, desde.month + 1, desde.day);
+      default:
+        return desde.add(const Duration(days: 7));
+    }
   }
 }
