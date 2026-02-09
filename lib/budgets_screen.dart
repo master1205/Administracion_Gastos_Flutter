@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:notificaciones/models/Budget.dart';
 import 'package:notificaciones/services/firestore_service.dart';
 import 'package:notificaciones/widgets/animations.dart';
 import 'package:notificaciones/widgets/budget_widgets.dart';
 import 'package:notificaciones/crear_presupuesto_screen.dart';
-import 'package:notificaciones/componentes/heads_up_notification.dart';
-import 'package:notificaciones/widgets/confirmation_dialog.dart';
 import 'package:notificaciones/presupuesto_detalle_screen.dart';
 
 class BudgetScreen extends StatefulWidget {
@@ -40,6 +39,12 @@ class _BudgetScreenState extends State<BudgetScreen>
     super.dispose();
   }
 
+  static final _currencyFormat = NumberFormat.currency(
+    locale: 'es_MX',
+    symbol: '\$',
+    decimalDigits: 2,
+  );
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -47,37 +52,55 @@ class _BudgetScreenState extends State<BudgetScreen>
     return Scaffold(
       backgroundColor: theme.colorScheme.background,
       appBar: AppBar(
+        backgroundColor: theme.colorScheme.surface,
+        elevation: 0,
         title: Text(
           'Presupuestos',
           style: GoogleFonts.poppins(
             fontSize: 20.sp,
             fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onSurface,
           ),
         ),
-        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list_rounded),
             onPressed: _mostrarFiltros,
             tooltip: 'Filtros',
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () {
-              _firestoreService.verificarYRenovarPresupuestos();
-              setState(() {});
-            },
-            tooltip: 'Renovar presupuestos',
-          ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: theme.colorScheme.primary,
-          labelStyle: GoogleFonts.lato(
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w600,
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(48.h),
+          child: StreamBuilder<List<Budget>>(
+            stream: _firestoreService.obtenerTodosPresupuestos(),
+            builder: (context, snapshot) {
+              final all = snapshot.data ?? [];
+              final countActivos = all.where((b) => b.estaActivo).length;
+              final countTodos = all.length;
+
+              return TabBar(
+                controller: _tabController,
+                labelStyle: GoogleFonts.poppins(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w600,
+                ),
+                unselectedLabelStyle: GoogleFonts.poppins(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w500,
+                ),
+                labelColor: theme.colorScheme.primary,
+                unselectedLabelColor: theme.colorScheme.onSurface.withOpacity(
+                  0.5,
+                ),
+                indicatorColor: theme.colorScheme.primary,
+                indicatorSize: TabBarIndicatorSize.label,
+                tabs: [
+                  _buildTab('Activos', countActivos, theme),
+                  _buildTab('Todos', countTodos, theme),
+                ],
+              );
+            },
           ),
-          tabs: const [Tab(text: 'Activos'), Tab(text: 'Todos')],
         ),
       ),
       body: TabBarView(
@@ -119,6 +142,116 @@ class _BudgetScreenState extends State<BudgetScreen>
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTab(String label, int count, ThemeData theme) {
+    return Tab(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label),
+          if (count > 0) ...[
+            SizedBox(width: 6.w),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 1.h),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: Text(
+                '$count',
+                style: GoogleFonts.lato(
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryHeader(List<Budget> presupuestos) {
+    final theme = Theme.of(context);
+    final totalGastado = presupuestos.fold<double>(
+      0,
+      (sum, b) => sum + b.montoGastado,
+    );
+    final totalLimite = presupuestos.fold<double>(
+      0,
+      (sum, b) => sum + b.montoLimite,
+    );
+    final progreso = totalLimite > 0 ? (totalGastado / totalLimite * 100) : 0.0;
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 12.h, top: 4.h),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.1)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${presupuestos.length} presupuesto${presupuestos.length != 1 ? 's' : ''}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  '${_currencyFormat.format(totalGastado)} de ${_currencyFormat.format(totalLimite)}',
+                  style: GoogleFonts.lato(
+                    fontSize: 11.sp,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: 44.w,
+            height: 44.w,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(
+                  value: (progreso / 100).clamp(0.0, 1.0),
+                  strokeWidth: 4.w,
+                  backgroundColor: theme.colorScheme.primary.withOpacity(0.12),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    progreso > 100
+                        ? Colors.red
+                        : progreso >= 80
+                        ? Colors.orange
+                        : theme.colorScheme.primary,
+                  ),
+                ),
+                Text(
+                  '${progreso.toStringAsFixed(0)}%',
+                  style: GoogleFonts.lato(
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w800,
+                    color:
+                        progreso > 100 ? Colors.red : theme.colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -197,18 +330,22 @@ class _BudgetScreenState extends State<BudgetScreen>
             setState(() {});
           },
           child: ListView.builder(
-            padding: EdgeInsets.fromLTRB(0, 16.h, 0, 100.h),
-            itemCount: presupuestos.length,
+            padding: EdgeInsets.fromLTRB(16.r, 8.h, 16.r, 100.h),
+            itemCount: presupuestos.length + 1, // +1 for summary
             itemBuilder: (context, index) {
-              final presupuesto = presupuestos[index];
-              return AnimatedListItem(
-                index: index,
-                enableHero: false,
+              if (index == 0) {
+                return FadeIn(
+                  duration: const Duration(milliseconds: 200),
+                  child: _buildSummaryHeader(presupuestos),
+                );
+              }
+              final presupuesto = presupuestos[index - 1];
+              return FadeIn(
+                duration: Duration(milliseconds: 250 + (index * 40)),
                 child: BudgetCardWidget(
                   budget: presupuesto,
+                  isCompact: true,
                   onTap: () => _verDetallePresupuesto(presupuesto),
-                  onEdit: () => _editarPresupuesto(presupuesto),
-                  onDelete: () => _confirmarEliminarPresupuesto(presupuesto),
                 ),
               );
             },
@@ -265,18 +402,22 @@ class _BudgetScreenState extends State<BudgetScreen>
             setState(() {});
           },
           child: ListView.builder(
-            padding: EdgeInsets.fromLTRB(0, 16.h, 0, 100.h),
-            itemCount: presupuestos.length,
+            padding: EdgeInsets.fromLTRB(16.r, 8.h, 16.r, 100.h),
+            itemCount: presupuestos.length + 1, // +1 for summary
             itemBuilder: (context, index) {
-              final presupuesto = presupuestos[index];
-              return AnimatedListItem(
-                index: index,
-                enableHero: false,
+              if (index == 0) {
+                return FadeIn(
+                  duration: const Duration(milliseconds: 200),
+                  child: _buildSummaryHeader(presupuestos),
+                );
+              }
+              final presupuesto = presupuestos[index - 1];
+              return FadeIn(
+                duration: Duration(milliseconds: 250 + (index * 40)),
                 child: BudgetCardWidget(
                   budget: presupuesto,
+                  isCompact: true,
                   onTap: () => _verDetallePresupuesto(presupuesto),
-                  onEdit: () => _editarPresupuesto(presupuesto),
-                  onDelete: () => _confirmarEliminarPresupuesto(presupuesto),
                 ),
               );
             },
@@ -442,43 +583,5 @@ class _BudgetScreenState extends State<BudgetScreen>
             (context) => PresupuestoDetalleScreen(presupuesto: presupuesto),
       ),
     );
-  }
-
-  void _editarPresupuesto(Budget presupuesto) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CrearPresupuestoScreen(presupuesto: presupuesto),
-      ),
-    );
-  }
-
-  void _confirmarEliminarPresupuesto(Budget presupuesto) async {
-    final confirmar = await showConfirmationDialog(
-      context: context,
-      title: '¿Eliminar presupuesto?',
-      message:
-          'Se eliminará "${presupuesto.nombre}". Las transacciones no se verán afectadas.',
-      confirmText: 'Eliminar',
-      confirmColor: Theme.of(context).colorScheme.error,
-      icon: Icons.delete_rounded,
-    );
-
-    if (confirmar == true && mounted) {
-      try {
-        await _firestoreService.eliminarPresupuesto(presupuesto.id);
-        if (mounted) {
-          showSuccessNotification(context, message: 'Presupuesto eliminado');
-        }
-      } catch (e) {
-        if (mounted) {
-          showErrorNotification(
-            context,
-            message: 'Error al eliminar',
-            subtitle: '$e',
-          );
-        }
-      }
-    }
   }
 }

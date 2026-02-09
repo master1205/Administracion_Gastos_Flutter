@@ -165,49 +165,6 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
           SliverToBoxAdapter(child: SizedBox(height: 100.h)),
         ],
       ),
-      floatingActionButton: Container(
-        width: 50.w,
-        height: 50.w,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: theme.colorScheme.surface,
-          border: Border.all(
-            color: theme.colorScheme.secondary.withOpacity(0.2),
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder:
-                      (context) => CrearPresupuestoScreen(presupuesto: _budget),
-                ),
-              );
-              _cargarDatos();
-            },
-            customBorder: const CircleBorder(),
-            splashColor: theme.colorScheme.primary.withOpacity(0.2),
-            child: Center(
-              child: Icon(
-                Icons.edit_rounded,
-                color: theme.colorScheme.primary,
-                size: 24.sp,
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -239,6 +196,26 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
+        IconButton(
+          icon: Container(
+            padding: EdgeInsets.all(6.r),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            child: const Icon(Icons.edit_outlined, color: Colors.white),
+          ),
+          onPressed: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (context) => CrearPresupuestoScreen(presupuesto: _budget),
+              ),
+            );
+            _cargarDatos();
+          },
+        ),
         IconButton(
           icon: Container(
             padding: EdgeInsets.all(6.r),

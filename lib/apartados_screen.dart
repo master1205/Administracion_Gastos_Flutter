@@ -9,7 +9,6 @@ import 'widgets/animations.dart';
 import 'widgets/animated_card.dart';
 import 'widgets/budget_widgets.dart';
 import 'widgets/shimmer_loading.dart';
-import 'widgets/confirmation_dialog.dart';
 import 'crear_apartado_screen.dart';
 import 'apartado_detalle_screen.dart';
 import 'componentes/heads_up_notification.dart';
@@ -89,64 +88,6 @@ class _ApartadosScreenState extends State<ApartadosScreen>
     }
   }
 
-  void _editarApartado(Apartado apartado) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CrearApartadoScreen(apartado: apartado),
-      ),
-    );
-    if (result == true && mounted) {
-      showSuccessNotification(
-        context,
-        message: 'Apartado actualizado',
-        subtitle: apartado.nombre,
-      );
-    }
-  }
-
-  void _eliminarApartado(Apartado apartado) async {
-    final confirmed = await showConfirmationDialog(
-      context: context,
-      title: '¿Eliminar apartado?',
-      message: 'Se eliminará "${apartado.nombre}" y todos sus abonos.',
-      confirmText: 'Eliminar',
-      confirmColor: Colors.red,
-      icon: Icons.delete_rounded,
-    );
-
-    if (confirmed == true) {
-      try {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => const Center(child: CircularProgressIndicator()),
-        );
-
-        await _firestoreService.eliminarApartado(apartado.id);
-
-        if (mounted) Navigator.pop(context);
-
-        if (mounted) {
-          showSuccessNotification(
-            context,
-            message: 'Apartado eliminado',
-            subtitle: apartado.nombre,
-          );
-        }
-      } catch (e) {
-        if (mounted) Navigator.pop(context);
-        if (mounted) {
-          showErrorNotification(
-            context,
-            message: 'Error al eliminar',
-            subtitle: e.toString(),
-          );
-        }
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -172,25 +113,44 @@ class _ApartadosScreenState extends State<ApartadosScreen>
             color: theme.colorScheme.onSurface,
           ),
         ),
-        bottom: TabBar(
-          controller: _tabController,
-          labelStyle: GoogleFonts.poppins(
-            fontSize: 13.sp,
-            fontWeight: FontWeight.w600,
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(48.h),
+          child: ValueListenableBuilder<List<Apartado>>(
+            valueListenable: _apartadosNotifier,
+            builder: (context, apartados, _) {
+              final countAbonando =
+                  apartados
+                      .where((a) => a.estado == 'activo' || a.estaVencido)
+                      .length;
+              final countListos =
+                  apartados.where((a) => a.estado == 'completado').length;
+              final countPagados =
+                  apartados.where((a) => a.estado == 'pagado').length;
+
+              return TabBar(
+                controller: _tabController,
+                labelStyle: GoogleFonts.poppins(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w600,
+                ),
+                unselectedLabelStyle: GoogleFonts.poppins(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w500,
+                ),
+                labelColor: theme.colorScheme.primary,
+                unselectedLabelColor: theme.colorScheme.onSurface.withOpacity(
+                  0.5,
+                ),
+                indicatorColor: theme.colorScheme.primary,
+                indicatorSize: TabBarIndicatorSize.label,
+                tabs: [
+                  _buildTab('Abonando', countAbonando, theme),
+                  _buildTab('Listos', countListos, theme),
+                  _buildTab('Pagados', countPagados, theme),
+                ],
+              );
+            },
           ),
-          unselectedLabelStyle: GoogleFonts.poppins(
-            fontSize: 13.sp,
-            fontWeight: FontWeight.w500,
-          ),
-          labelColor: theme.colorScheme.primary,
-          unselectedLabelColor: theme.colorScheme.onSurface.withOpacity(0.5),
-          indicatorColor: theme.colorScheme.primary,
-          indicatorSize: TabBarIndicatorSize.label,
-          tabs: const [
-            Tab(text: 'Abonando'),
-            Tab(text: 'Listos'),
-            Tab(text: 'Pagados'),
-          ],
         ),
       ),
       body: Stack(
@@ -308,6 +268,35 @@ class _ApartadosScreenState extends State<ApartadosScreen>
     );
   }
 
+  Widget _buildTab(String label, int count, ThemeData theme) {
+    return Tab(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label),
+          if (count > 0) ...[
+            SizedBox(width: 6.w),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 1.h),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: Text(
+                '$count',
+                style: GoogleFonts.lato(
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildTabContent(
     List<Apartado> apartados,
     String emptyTitle,
@@ -351,20 +340,106 @@ class _ApartadosScreenState extends State<ApartadosScreen>
       );
     }
 
+    // Calcular resumen
+    final totalApartado = apartados.fold<double>(
+      0,
+      (sum, a) => sum + a.montoApartado,
+    );
+    final totalMeta = apartados.fold<double>(0, (sum, a) => sum + a.montoTotal);
+
     return ListView.builder(
       padding: EdgeInsets.only(
         left: 16.r,
         right: 16.r,
-        top: 16.r,
+        top: 8.r,
         bottom: 70.h + MediaQuery.of(context).padding.bottom,
       ),
-      itemCount: apartados.length,
+      itemCount: apartados.length + 1, // +1 for summary
       itemBuilder: (context, index) {
+        if (index == 0) {
+          return FadeIn(
+            duration: const Duration(milliseconds: 200),
+            child: _buildSummaryHeader(
+              apartados.length,
+              totalApartado,
+              totalMeta,
+            ),
+          );
+        }
+        final apartado = apartados[index - 1];
         return FadeIn(
-          duration: Duration(milliseconds: 300 + (index * 50)),
-          child: _buildApartadoCard(apartados[index]),
+          duration: Duration(milliseconds: 250 + (index * 40)),
+          child: _buildApartadoCard(apartado),
         );
       },
+    );
+  }
+
+  Widget _buildSummaryHeader(int count, double apartado, double total) {
+    final theme = Theme.of(context);
+    final progreso = total > 0 ? (apartado / total * 100) : 0.0;
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 12.h, top: 4.h),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.1)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$count apartado${count != 1 ? 's' : ''}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  '${_currencyFormat.format(apartado)} de ${_currencyFormat.format(total)}',
+                  style: GoogleFonts.lato(
+                    fontSize: 11.sp,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: 44.w,
+            height: 44.w,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(
+                  value: progreso / 100,
+                  strokeWidth: 4.w,
+                  backgroundColor: theme.colorScheme.primary.withOpacity(0.12),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    theme.colorScheme.primary,
+                  ),
+                ),
+                Text(
+                  '${progreso.toStringAsFixed(0)}%',
+                  style: GoogleFonts.lato(
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w800,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -372,27 +447,41 @@ class _ApartadosScreenState extends State<ApartadosScreen>
     final theme = Theme.of(context);
     final colorHex = int.parse('FF${apartado.color}', radix: 16);
     final color = Color(colorHex);
+    final isPagado = apartado.estado == 'pagado';
+    final cardColor = isPagado ? Colors.grey : color;
 
-    // Color de estado
+    // Estado badge
     String estadoLabel = '';
     IconData? estadoIcon;
+    Color estadoBgColor = Colors.white.withOpacity(0.25);
     if (apartado.estado == 'completado') {
-      estadoLabel = 'Listo para pagar';
+      estadoLabel = 'Listo';
       estadoIcon = Icons.check_circle_rounded;
-    } else if (apartado.estado == 'pagado') {
+    } else if (isPagado) {
       estadoLabel = 'Pagado';
       estadoIcon = Icons.done_all_rounded;
     } else if (apartado.estaVencido) {
       estadoLabel = 'Vencido';
       estadoIcon = Icons.warning_rounded;
+      estadoBgColor = Colors.red.withOpacity(0.3);
     }
 
+    // Urgencia: próximos 7 días
+    final diasRestantes =
+        apartado.fechaLimite.difference(DateTime.now()).inDays;
+    final esUrgente =
+        !isPagado &&
+        apartado.estado == 'activo' &&
+        diasRestantes >= 0 &&
+        diasRestantes <= 7;
+
     return AnimatedCard(
-      color: apartado.estado == 'pagado' ? Colors.grey : color,
+      color: cardColor,
       randomOffset: apartado.nombre.length,
       horizontalMargin: 0,
       borderRadius: 16.r,
-      borderColor: color.withOpacity(0.2),
+      borderColor:
+          esUrgente ? Colors.red.withOpacity(0.5) : color.withOpacity(0.2),
       onTap: () async {
         await Navigator.push(
           context,
@@ -404,18 +493,18 @@ class _ApartadosScreenState extends State<ApartadosScreen>
       headerContent: Row(
         children: [
           Container(
-            padding: EdgeInsets.all(10.r),
+            padding: EdgeInsets.all(8.r),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.25),
-              borderRadius: BorderRadius.circular(12.r),
+              borderRadius: BorderRadius.circular(10.r),
             ),
             child: Icon(
               _getIconData(apartado.icono),
-              size: 20.sp,
+              size: 18.sp,
               color: Colors.white,
             ),
           ),
-          SizedBox(width: 12.w),
+          SizedBox(width: 10.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -426,7 +515,7 @@ class _ApartadosScreenState extends State<ApartadosScreen>
                       child: Text(
                         apartado.nombre,
                         style: GoogleFonts.lato(
-                          fontSize: 16.sp,
+                          fontSize: 15.sp,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -435,22 +524,23 @@ class _ApartadosScreenState extends State<ApartadosScreen>
                       ),
                     ),
                     if (apartado.esRecurrente) ...[
-                      SizedBox(width: 6.w),
+                      SizedBox(width: 5.w),
                       Icon(
                         Icons.repeat_rounded,
-                        size: 14.sp,
+                        size: 13.sp,
                         color: Colors.white.withOpacity(0.8),
                       ),
                     ],
                   ],
                 ),
-                if (apartado.descripcion.isNotEmpty) ...[
-                  SizedBox(height: 2.h),
+                if (apartado.cuentaNombre != null &&
+                    apartado.cuentaNombre!.isNotEmpty) ...[
+                  SizedBox(height: 1.h),
                   Text(
-                    apartado.descripcion,
+                    apartado.cuentaNombre!,
                     style: GoogleFonts.lato(
-                      fontSize: 12.sp,
-                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 11.sp,
+                      color: Colors.white.withOpacity(0.75),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -461,23 +551,50 @@ class _ApartadosScreenState extends State<ApartadosScreen>
           ),
           if (estadoLabel.isNotEmpty)
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.25),
-                borderRadius: BorderRadius.circular(10.r),
+                color: estadoBgColor,
+                borderRadius: BorderRadius.circular(8.r),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (estadoIcon != null) ...[
-                    Icon(estadoIcon, size: 13.sp, color: Colors.white),
-                    SizedBox(width: 4.w),
+                    Icon(estadoIcon, size: 12.sp, color: Colors.white),
+                    SizedBox(width: 3.w),
                   ],
                   Text(
                     estadoLabel,
                     style: GoogleFonts.lato(
-                      fontSize: 11.sp,
+                      fontSize: 10.sp,
                       fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (esUrgente)
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.schedule_rounded,
+                    size: 12.sp,
+                    color: Colors.white,
+                  ),
+                  SizedBox(width: 3.w),
+                  Text(
+                    '$diasRestantes d',
+                    style: GoogleFonts.lato(
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
                   ),
@@ -487,233 +604,143 @@ class _ApartadosScreenState extends State<ApartadosScreen>
         ],
       ),
       bodyContent: Padding(
-        padding: EdgeInsets.all(16.r),
+        padding: EdgeInsets.fromLTRB(16.r, 12.r, 16.r, 14.r),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            BudgetProgressBar(
-              progreso: apartado.progreso,
-              color: apartado.estado == 'pagado' ? Colors.grey : color,
-              height: 12.h,
-            ),
-            SizedBox(height: 12.h),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Apartado',
-                      style: GoogleFonts.lato(
-                        fontSize: 11.sp,
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
-                      ),
-                    ),
-                    SizedBox(height: 2.h),
-                    Text(
-                      _currencyFormat.format(apartado.montoApartado),
-                      style: GoogleFonts.lato(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 6.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.onSurface.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: Text(
-                    '${apartado.progreso.toStringAsFixed(0)}%',
-                    style: GoogleFonts.lato(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      'Total',
-                      style: GoogleFonts.lato(
-                        fontSize: 11.sp,
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
-                      ),
-                    ),
-                    SizedBox(height: 2.h),
-                    Text(
-                      _currencyFormat.format(apartado.montoTotal),
-                      style: GoogleFonts.lato(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface.withOpacity(0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            SizedBox(height: 16.h),
-            Divider(height: 1.h, thickness: 1),
-            SizedBox(height: 12.h),
-            // Info chips
+            // Progress bar with percentage
             Row(
               children: [
                 Expanded(
-                  child: _buildInfoChip(
-                    icon: Icons.payments_rounded,
-                    label:
-                        '${apartado.pagosRealizados}/${apartado.numeroPagos} abonos',
+                  child: BudgetProgressBar(
+                    progreso: apartado.progreso,
+                    color: cardColor,
+                    height: 10.h,
                   ),
                 ),
-                SizedBox(width: 8.w),
-                Expanded(
-                  child: _buildInfoChip(
-                    icon: Icons.calendar_today_rounded,
-                    label: DateFormat(
-                      'dd MMM yyyy',
-                      'es',
-                    ).format(apartado.fechaLimite),
+                SizedBox(width: 10.w),
+                Text(
+                  '${apartado.progreso.toStringAsFixed(0)}%',
+                  style: GoogleFonts.lato(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w800,
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
                   ),
                 ),
               ],
             ),
-            if (apartado.estado == 'activo' && apartado.pagosRestantes > 0) ...[
-              SizedBox(height: 8.h),
-              _buildInfoChip(
-                icon: Icons.attach_money_rounded,
-                label:
-                    'Próximo abono: ${_currencyFormat.format(apartado.montoPorPago)}',
-                chipColor: theme.colorScheme.primary,
-              ),
-            ],
-            // Botones de acción
-            SizedBox(height: 16.h),
+            SizedBox(height: 12.h),
+            // Montos + info
             Row(
               children: [
-                if (apartado.estado == 'activo') ...[
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _editarApartado(apartado),
-                      borderRadius: BorderRadius.circular(12.r),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(vertical: 12.h),
-                        decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12.r),
-                          border: Border.all(
-                            color: color.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.edit_outlined,
-                              size: 20.sp,
-                              color: color,
-                            ),
-                            SizedBox(width: 8.w),
-                            Text(
-                              'Editar',
-                              style: GoogleFonts.lato(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w600,
-                                color: color,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 10.w),
-                ],
+                // Apartado
                 Expanded(
-                  child: InkWell(
-                    onTap: () => _eliminarApartado(apartado),
-                    borderRadius: BorderRadius.circular(12.r),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(vertical: 12.h),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.error.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(
-                          color: theme.colorScheme.error.withOpacity(0.3),
-                          width: 1,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Apartado',
+                        style: GoogleFonts.lato(
+                          fontSize: 10.sp,
+                          color: theme.colorScheme.onSurface.withOpacity(0.5),
                         ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      SizedBox(height: 1.h),
+                      Text(
+                        _currencyFormat.format(apartado.montoApartado),
+                        style: GoogleFonts.lato(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w800,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Total
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Total',
+                        style: GoogleFonts.lato(
+                          fontSize: 10.sp,
+                          color: theme.colorScheme.onSurface.withOpacity(0.5),
+                        ),
+                      ),
+                      SizedBox(height: 1.h),
+                      Text(
+                        _currencyFormat.format(apartado.montoTotal),
+                        style: GoogleFonts.lato(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Info derecha
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            Icons.delete_outline_rounded,
-                            size: 20.sp,
-                            color: theme.colorScheme.error,
+                            Icons.payments_rounded,
+                            size: 11.sp,
+                            color: theme.colorScheme.onSurface.withOpacity(
+                              0.45,
+                            ),
                           ),
-                          SizedBox(width: 8.w),
+                          SizedBox(width: 3.w),
                           Text(
-                            'Eliminar',
+                            '${apartado.pagosRealizados}/${apartado.numeroPagos}',
                             style: GoogleFonts.lato(
-                              fontSize: 14.sp,
+                              fontSize: 11.sp,
                               fontWeight: FontWeight.w600,
-                              color: theme.colorScheme.error,
+                              color: theme.colorScheme.onSurface.withOpacity(
+                                0.55,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ),
+                      SizedBox(height: 2.h),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.calendar_today_rounded,
+                            size: 10.sp,
+                            color: theme.colorScheme.onSurface.withOpacity(0.4),
+                          ),
+                          SizedBox(width: 3.w),
+                          Text(
+                            DateFormat(
+                              'dd MMM',
+                              'es',
+                            ).format(apartado.fechaLimite),
+                            style: GoogleFonts.lato(
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.w500,
+                              color: theme.colorScheme.onSurface.withOpacity(
+                                0.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildInfoChip({
-    required IconData icon,
-    required String label,
-    Color? chipColor,
-  }) {
-    final theme = Theme.of(context);
-    final c = chipColor ?? theme.colorScheme.onSurface.withOpacity(0.6);
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
-      decoration: BoxDecoration(
-        color: c.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(8.r),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14.sp, color: c),
-          SizedBox(width: 6.w),
-          Flexible(
-            child: Text(
-              label,
-              style: GoogleFonts.lato(
-                fontSize: 11.sp,
-                fontWeight: FontWeight.w500,
-                color: c,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
       ),
     );
   }

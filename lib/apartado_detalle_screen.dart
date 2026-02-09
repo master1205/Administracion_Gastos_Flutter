@@ -15,6 +15,7 @@ import 'widgets/animations.dart';
 import 'widgets/select_amount.dart';
 import 'widgets/confirmation_dialog.dart';
 import 'componentes/heads_up_notification.dart';
+import 'crear_apartado_screen.dart';
 
 class ApartadoDetalleScreen extends StatefulWidget {
   final Apartado apartado;
@@ -307,6 +308,22 @@ class _ApartadoDetalleScreenState extends State<ApartadoDetalleScreen> {
     }
   }
 
+  void _editarApartado() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CrearApartadoScreen(apartado: _apartado),
+      ),
+    );
+    if (result == true && mounted) {
+      showSuccessNotification(
+        context,
+        message: 'Apartado actualizado',
+        subtitle: _apartado.nombre,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -414,7 +431,7 @@ class _ApartadoDetalleScreenState extends State<ApartadoDetalleScreen> {
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
-        if (_apartado.estado == 'activo')
+        if (_apartado.estado == 'activo' || _apartado.estado == 'completado')
           IconButton(
             icon: Container(
               padding: EdgeInsets.all(6.r),
@@ -422,13 +439,24 @@ class _ApartadoDetalleScreenState extends State<ApartadoDetalleScreen> {
                 color: Colors.black.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(10.r),
               ),
-              child: const Icon(
-                Icons.delete_outline_rounded,
-                color: Colors.white,
-              ),
+              child: const Icon(Icons.edit_outlined, color: Colors.white),
             ),
-            onPressed: _eliminarApartado,
+            onPressed: _editarApartado,
           ),
+        IconButton(
+          icon: Container(
+            padding: EdgeInsets.all(6.r),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            child: const Icon(
+              Icons.delete_outline_rounded,
+              color: Colors.white,
+            ),
+          ),
+          onPressed: _eliminarApartado,
+        ),
       ],
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
