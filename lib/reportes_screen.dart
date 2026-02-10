@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:notificaciones/models/Reporte.dart';
 import 'package:notificaciones/reporte_detalle_screen.dart';
+import 'package:notificaciones/data_provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:provider/provider.dart';
 import 'utils/animation_utils.dart';
 import 'componentes/empty_states.dart';
 import 'widgets/animated_goo_background.dart';
@@ -20,7 +20,6 @@ class ReportesScreen extends StatefulWidget {
 class ReportesScreenState extends State<ReportesScreen>
     with WidgetsBindingObserver {
   // State
-  late Stream<List<Reporte>> _reportesStream;
   bool _isLoading = false;
   bool _isManualRefresh = false;
 
@@ -50,51 +49,9 @@ class ReportesScreenState extends State<ReportesScreen>
     setState(() => _isLoading = true);
     try {
       await initializeDateFormatting('es_ES', null);
-      _reportesStream = _obtenerReportesDesdeFirebase();
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  /// Obtiene reportes desde Firebase en tiempo real
-  Stream<List<Reporte>> _obtenerReportesDesdeFirebase() {
-    return FirebaseFirestore.instance
-        .collection('reportes')
-        .orderBy('fechaCreacion', descending: true)
-        .snapshots()
-        .map((snapshot) {
-          return snapshot.docs.map((doc) {
-            final data = doc.data();
-            return Reporte(
-              name: data['nombre'] ?? 'Reporte Mensual.pdf',
-              file: data['urlReporte'] ?? '',
-              fechaCorte: '${data['mes']} ${data['año']}',
-              totalIngresos: (data['totalIngresos'] as num?)?.toDouble() ?? 0,
-              totalGastos: (data['totalGastos'] as num?)?.toDouble() ?? 0,
-              saldoTotal: (data['saldoTotal'] as num?)?.toDouble() ?? 0,
-              cantidadTransacciones:
-                  (data['cantidadTransacciones'] as int?) ?? 0,
-              gastosPorCategoria:
-                  data['gastosPorCategoria'] != null
-                      ? Map<String, double>.from(
-                        (data['gastosPorCategoria'] as Map).map(
-                          (k, v) =>
-                              MapEntry(k.toString(), (v as num).toDouble()),
-                        ),
-                      )
-                      : {},
-              gastosPorCuenta:
-                  data['gastosPorCuenta'] != null
-                      ? Map<String, double>.from(
-                        (data['gastosPorCuenta'] as Map).map(
-                          (k, v) =>
-                              MapEntry(k.toString(), (v as num).toDouble()),
-                        ),
-                      )
-                      : {},
-            );
-          }).toList();
-        });
   }
 
   Future<void> refreshData() async {
@@ -203,15 +160,13 @@ class ReportesScreenState extends State<ReportesScreen>
                           children: [
                             Text(
                               'Último Reporte',
-                              style: GoogleFonts.lato(
-                                fontSize: 11.sp,
+                              style: theme.textTheme.bodySmall?.copyWith(
                                 color: Colors.white.withOpacity(0.7),
                               ),
                             ),
                             Text(
                               reporte.fechaCorte,
-                              style: GoogleFonts.poppins(
-                                fontSize: 18.sp,
+                              style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white,
                               ),
@@ -241,8 +196,7 @@ class ReportesScreenState extends State<ReportesScreen>
                             SizedBox(width: 4.w),
                             Text(
                               '${isPositive ? '+' : ''}${_currencyFormat.format(reporte.balance)}',
-                              style: GoogleFonts.lato(
-                                fontSize: 12.sp,
+                              style: theme.textTheme.bodySmall?.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white,
                               ),
@@ -329,15 +283,13 @@ class ReportesScreenState extends State<ReportesScreen>
           children: [
             Text(
               label,
-              style: GoogleFonts.lato(
-                fontSize: 11.sp,
+              style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurface.withOpacity(0.5),
               ),
             ),
             Text(
               _currencyFormat.format(amount),
-              style: GoogleFonts.lato(
-                fontSize: 12.sp,
+              style: theme.textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: theme.colorScheme.onSurface.withOpacity(0.85),
               ),
@@ -374,16 +326,14 @@ class ReportesScreenState extends State<ReportesScreen>
         SizedBox(height: 3.h),
         Text(
           value,
-          style: GoogleFonts.lato(
-            fontSize: 12.sp,
+          style: theme.textTheme.bodySmall?.copyWith(
             fontWeight: FontWeight.w700,
             color: theme.colorScheme.onSurface,
           ),
         ),
         Text(
           label,
-          style: GoogleFonts.lato(
-            fontSize: 9.sp,
+          style: theme.textTheme.labelSmall?.copyWith(
             color: theme.colorScheme.onSurface.withOpacity(0.45),
           ),
         ),
@@ -420,8 +370,7 @@ class ReportesScreenState extends State<ReportesScreen>
             ),
             child: Text(
               year,
-              style: GoogleFonts.poppins(
-                fontSize: 14.sp,
+              style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: theme.colorScheme.primary,
               ),
@@ -430,8 +379,7 @@ class ReportesScreenState extends State<ReportesScreen>
           SizedBox(width: 10.w),
           Text(
             '${reportes.length} reporte${reportes.length != 1 ? 's' : ''}',
-            style: GoogleFonts.lato(
-              fontSize: 11.sp,
+            style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurface.withOpacity(0.4),
             ),
           ),
@@ -448,8 +396,7 @@ class ReportesScreenState extends State<ReportesScreen>
               ),
               child: Text(
                 '${isPositive ? '+' : ''}${_currencyFormat.format(balance)}',
-                style: GoogleFonts.lato(
-                  fontSize: 11.sp,
+                style: theme.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w600,
                   color:
                       isPositive
@@ -543,16 +490,14 @@ class ReportesScreenState extends State<ReportesScreen>
                 children: [
                   Text(
                     mes,
-                    style: GoogleFonts.poppins(
-                      fontSize: 15.sp,
+                    style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: theme.colorScheme.onSurface,
                     ),
                   ),
                   Text(
                     '${reporte.cantidadTransacciones} transacciones',
-                    style: GoogleFonts.lato(
-                      fontSize: 10.sp,
+                    style: theme.textTheme.labelSmall?.copyWith(
                       color: theme.colorScheme.onSurface.withOpacity(0.4),
                     ),
                   ),
@@ -575,8 +520,7 @@ class ReportesScreenState extends State<ReportesScreen>
                     SizedBox(width: 2.w),
                     Text(
                       _currencyFormat.format(reporte.balance.abs()),
-                      style: GoogleFonts.lato(
-                        fontSize: 14.sp,
+                      style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: balanceColor,
                       ),
@@ -585,8 +529,7 @@ class ReportesScreenState extends State<ReportesScreen>
                 ),
                 Text(
                   'balance',
-                  style: GoogleFonts.lato(
-                    fontSize: 9.sp,
+                  style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.onSurface.withOpacity(0.35),
                   ),
                 ),
@@ -649,16 +592,14 @@ class ReportesScreenState extends State<ReportesScreen>
             children: [
               Text(
                 mes,
-                style: GoogleFonts.poppins(
-                  fontSize: 15.sp,
+                style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: theme.colorScheme.onSurface,
                 ),
               ),
               Text(
                 reporte.name,
-                style: GoogleFonts.lato(
-                  fontSize: 10.sp,
+                style: theme.textTheme.labelSmall?.copyWith(
                   color: theme.colorScheme.onSurface.withOpacity(0.4),
                 ),
               ),
@@ -690,15 +631,13 @@ class ReportesScreenState extends State<ReportesScreen>
           children: [
             Text(
               label,
-              style: GoogleFonts.lato(
-                fontSize: 10.sp,
+              style: theme.textTheme.labelSmall?.copyWith(
                 color: theme.colorScheme.onSurface.withOpacity(0.45),
               ),
             ),
             Text(
               _currencyFormat.format(amount),
-              style: GoogleFonts.lato(
-                fontSize: 11.sp,
+              style: theme.textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: theme.colorScheme.onSurface.withOpacity(0.8),
               ),
@@ -751,53 +690,8 @@ class ReportesScreenState extends State<ReportesScreen>
           SizedBox(height: 12.h),
           Text(
             'Cargando reportes...',
-            style: GoogleFonts.openSans(
+            style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.secondary,
-              fontSize: 12.sp,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorState(dynamic error) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: EdgeInsets.all(24.r),
-            decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.error_outline_rounded,
-              size: 60.sp,
-              color: Colors.red.shade400,
-            ),
-          ),
-          SizedBox(height: 16.h),
-          Text(
-            'Error al cargar reportes',
-            style: GoogleFonts.lato(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.onBackground,
-            ),
-          ),
-          SizedBox(height: 5.h),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 32.w),
-            child: Text(
-              error.toString(),
-              style: GoogleFonts.openSans(
-                fontSize: 12.sp,
-                color: theme.colorScheme.secondary.withOpacity(0.7),
-              ),
-              textAlign: TextAlign.center,
             ),
           ),
         ],
@@ -840,26 +734,19 @@ class ReportesScreenState extends State<ReportesScreen>
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       body: Stack(
         children: [
           _isLoading
               ? _buildLoadingIndicator(theme)
-              : StreamBuilder<List<Reporte>>(
-                stream: _reportesStream,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting &&
-                      !snapshot.hasData) {
-                    return _buildLoadingIndicator(theme);
-                  }
-                  if (snapshot.hasError) {
-                    return _buildErrorState(snapshot.error);
-                  }
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              : Builder(
+                builder: (context) {
+                  final reportes = Provider.of<DataProvider>(context).reportes;
+
+                  if (reportes.isEmpty) {
                     return const EmptyReportsState();
                   }
 
-                  final reportes = snapshot.data!;
                   final items = _buildReportList(reportes, theme);
 
                   return ListView.builder(

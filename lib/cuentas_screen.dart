@@ -10,6 +10,7 @@ import 'data_provider.dart';
 import 'theme_provider.dart';
 import 'api_service.dart';
 import 'services/firestore_service.dart';
+import 'utils/haptic_utils.dart';
 import 'widgets/animations.dart';
 import 'crear_cuenta_screen.dart';
 import 'widgets/shimmer_loading.dart';
@@ -34,23 +35,23 @@ class _CuentasScreenState extends State<CuentasScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         backgroundColor: theme.colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: Icon(
-            Icons.arrow_back,
+            Icons.arrow_back_rounded,
             color: theme.colorScheme.onSurface,
             size: 22.sp,
           ),
           onPressed: () => Navigator.pop(context),
         ),
+        centerTitle: true,
         title: Text(
-          'Cuentas',
-          style: GoogleFonts.poppins(
-            fontSize: 20.sp,
-            fontWeight: FontWeight.w600,
+          'Mis Cuentas',
+          style: theme.textTheme.titleLarge?.copyWith(
             color: theme.colorScheme.onSurface,
           ),
         ),
@@ -94,7 +95,7 @@ class _CuentasScreenState extends State<CuentasScreen> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: theme.colorScheme.shadow.withOpacity(0.1),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -146,9 +147,7 @@ class _CuentasScreenState extends State<CuentasScreen> {
               SizedBox(height: 28.h),
               Text(
                 'Sin cuentas',
-                style: GoogleFonts.poppins(
-                  fontSize: 20.sp,
-                  fontWeight: FontWeight.w600,
+                style: theme.textTheme.titleLarge?.copyWith(
                   color: theme.colorScheme.onSurface,
                 ),
               ),
@@ -156,8 +155,7 @@ class _CuentasScreenState extends State<CuentasScreen> {
               Text(
                 'Agrega tu primera cuenta para\ncomenzar a administrar tu dinero',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                  fontSize: 14.sp,
+                style: theme.textTheme.titleSmall?.copyWith(
                   color: theme.colorScheme.secondary.withOpacity(0.6),
                   height: 1.6,
                 ),
@@ -180,185 +178,192 @@ class _CuentasScreenState extends State<CuentasScreen> {
       (sum, cuenta) => sum + cuenta.saldoRetenido,
     );
     final disponibleTotal = saldoTotal - retenidoTotal;
+    final retainedPercent = saldoTotal > 0 ? retenidoTotal / saldoTotal : 0.0;
 
     return Container(
       margin: EdgeInsets.only(bottom: 8.h),
-      padding: EdgeInsets.all(24.r),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(
-          color: theme.colorScheme.primary.withOpacity(0.2),
-          width: 1.5,
+        gradient: LinearGradient(
+          colors: [
+            theme.colorScheme.primary.withOpacity(0.08),
+            theme.colorScheme.secondary.withOpacity(0.04),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10.r,
-            offset: Offset(0, 2.h),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(22.r),
+        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(10.r),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    child: Icon(
-                      Icons.account_balance_wallet_rounded,
-                      color: theme.colorScheme.primary,
-                      size: 22.sp,
-                    ),
-                  ),
-                  SizedBox(width: 12.w),
-                  Text(
-                    'Saldo Total',
-                    style: GoogleFonts.poppins(
-                      fontSize: 15.sp,
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                  ),
-                ],
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.secondary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20.r),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+          Padding(
+            padding: EdgeInsets.fromLTRB(22.r, 22.r, 22.r, 0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
                   children: [
-                    Icon(
-                      Icons.credit_card,
-                      color: theme.colorScheme.secondary.withOpacity(0.7),
-                      size: 14.sp,
-                    ),
-                    SizedBox(width: 6.w),
-                    Text(
-                      '${cuentas.length} cuenta${cuentas.length != 1 ? 's' : ''}',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12.sp,
-                        color: theme.colorScheme.secondary.withOpacity(0.8),
-                        fontWeight: FontWeight.w500,
+                    Container(
+                      padding: EdgeInsets.all(10.r),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(12.r),
                       ),
+                      child: Icon(
+                        Icons.account_balance_wallet_rounded,
+                        color: theme.colorScheme.primary,
+                        size: 22.sp,
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Balance Total',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          _currencyFormat.format(saldoTotal),
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            color: theme.colorScheme.onSurface,
+                            letterSpacing: -0.5,
+                            height: 1.1,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ),
-            ],
-          ),
-          SizedBox(height: 20.h),
-          Text(
-            _currencyFormat.format(saldoTotal),
-            style: GoogleFonts.poppins(
-              color: theme.colorScheme.primary,
-              fontSize: 32.sp,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -1,
-              height: 1.1,
-            ),
-          ),
-          if (retenidoTotal > 0) ...[
-            SizedBox(height: 12.h),
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 12.w,
-                      vertical: 8.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFF9800).withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.lock_outline_rounded,
-                          size: 14.sp,
-                          color: const Color(0xFFFF9800),
-                        ),
-                        SizedBox(width: 6.w),
-                        Text(
-                          'Apartado: ${_currencyFormat.format(retenidoTotal)}',
-                          style: GoogleFonts.poppins(
-                            fontSize: 11.sp,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFFFF9800),
-                          ),
-                        ),
-                      ],
-                    ),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 10.w,
+                    vertical: 5.h,
                   ),
-                ),
-                SizedBox(width: 8.w),
-                Expanded(
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 12.w,
-                      vertical: 8.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.check_circle_outline_rounded,
-                          size: 14.sp,
-                          color: const Color(0xFF10B981),
-                        ),
-                        SizedBox(width: 6.w),
-                        Text(
-                          'Disponible: ${_currencyFormat.format(disponibleTotal)}',
-                          style: GoogleFonts.poppins(
-                            fontSize: 11.sp,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF10B981),
-                          ),
-                        ),
-                      ],
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainer,
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Text(
+                    '${cuentas.length} cuenta${cuentas.length != 1 ? 's' : ''}',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(0.5),
                     ),
                   ),
                 ),
               ],
             ),
-          ],
-          SizedBox(height: 14.h),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.secondary.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(8.r),
+          ),
+          if (retenidoTotal > 0) ...[
+            SizedBox(height: 18.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 22.r),
+              child: Column(
+                children: [
+                  // Barra visual de distribución
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6.r),
+                    child: SizedBox(
+                      height: 8.h,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: ((1 - retainedPercent) * 100).round().clamp(
+                              1,
+                              100,
+                            ),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color(0xFF10B981),
+                                    const Color(0xFF10B981).withOpacity(0.7),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: (retainedPercent * 100).round().clamp(1, 100),
+                            child: Container(
+                              color: const Color(0xFFFF9800).withOpacity(0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 12.h),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildSummaryMiniCard(
+                          icon: Icons.check_circle_outline_rounded,
+                          label: 'Disponible',
+                          amount: disponibleTotal,
+                          color: const Color(0xFF10B981),
+                          theme: theme,
+                        ),
+                      ),
+                      SizedBox(width: 10.w),
+                      Expanded(
+                        child: _buildSummaryMiniCard(
+                          icon: Icons.lock_outline_rounded,
+                          label: 'Apartado',
+                          amount: retenidoTotal,
+                          color: const Color(0xFFFF9800),
+                          theme: theme,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+          ],
+          SizedBox(height: 18.h),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryMiniCard({
+    required IconData icon,
+    required String label,
+    required double amount,
+    required Color color,
+    required ThemeData theme,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: color.withOpacity(0.12)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16.sp, color: color),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.info_outline,
-                  color: theme.colorScheme.secondary.withOpacity(0.6),
-                  size: 14.sp,
-                ),
-                SizedBox(width: 6.w),
                 Text(
-                  'Toca una cuenta para editar',
-                  style: GoogleFonts.poppins(
-                    color: theme.colorScheme.secondary.withOpacity(0.7),
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w500,
+                  label,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: color.withOpacity(0.8),
+                  ),
+                ),
+                Text(
+                  _currencyFormat.format(amount),
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: color,
                   ),
                 ),
               ],
@@ -372,25 +377,21 @@ class _CuentasScreenState extends State<CuentasScreen> {
   Widget _buildCuentaCard(Account cuenta, ThemeManager themeManager) {
     final theme = Theme.of(context);
     final saldoDisponible = cuenta.saldoDisponible;
-    final saldoColor =
-        saldoDisponible >= 0
-            ? const Color(0xFF10B981)
-            : const Color(0xFFEF4444);
+    final accentColor = _getAccountColor(cuenta);
 
     return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
+      margin: EdgeInsets.only(bottom: 14.h),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(20.r),
         border: Border.all(
-          color: theme.colorScheme.secondary.withOpacity(0.15),
-          width: 1,
+          color: theme.colorScheme.onSurface.withOpacity(0.06),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10.r,
-            offset: Offset(0, 2.h),
+            color: theme.colorScheme.shadow.withOpacity(0.03),
+            blurRadius: 12.r,
+            offset: Offset(0, 4.h),
           ),
         ],
       ),
@@ -399,198 +400,234 @@ class _CuentasScreenState extends State<CuentasScreen> {
         child: InkWell(
           onTap: () => _mostrarDialogoEditarSaldo(cuenta),
           borderRadius: BorderRadius.circular(20.r),
-          child: Padding(
-            padding: EdgeInsets.all(18.r),
-            child: Row(
-              children: [
-                // Imagen/Icono de la cuenta
-                Container(
-                  width: 54.w,
-                  height: 54.h,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(14.r),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(14.r),
-                    child: Image.asset(
-                      'assets/images/${cuenta.imagen}.png',
-                      width: 54.w,
-                      height: 54.h,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Icon(
-                          Icons.account_balance_wallet_rounded,
-                          color: theme.colorScheme.primary,
-                          size: 26.sp,
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                SizedBox(width: 14.w),
-                // Información de la cuenta
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        cuenta.nombre,
-                        style: GoogleFonts.poppins(
-                          fontSize: 15.sp,
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.onSurface,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: 6.h),
-                      if (cuenta.beneficiario != null &&
-                          cuenta.beneficiario!.isNotEmpty) ...[
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.person_outline,
-                              size: 13.sp,
-                              color: theme.colorScheme.secondary.withOpacity(
-                                0.6,
-                              ),
-                            ),
-                            SizedBox(width: 4.w),
-                            Expanded(
-                              child: Text(
-                                cuenta.beneficiario!,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12.sp,
-                                  color: theme.colorScheme.secondary
-                                      .withOpacity(0.7),
-                                  fontWeight: FontWeight.w400,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 4.h),
-                      ],
-                      if (cuenta.numeroTarjeta != null &&
-                          cuenta.numeroTarjeta!.isNotEmpty)
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.credit_card,
-                              size: 13.sp,
-                              color: theme.colorScheme.secondary.withOpacity(
-                                0.5,
-                              ),
-                            ),
-                            SizedBox(width: 4.w),
-                            Text(
-                              '•••• ${cuenta.numeroTarjeta!.substring(cuenta.numeroTarjeta!.length - 4)}',
-                              style: GoogleFonts.robotoMono(
-                                fontSize: 11.sp,
-                                color: theme.colorScheme.secondary.withOpacity(
-                                  0.6,
-                                ),
-                                letterSpacing: 1.2,
-                              ),
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                ),
-                SizedBox(width: 12.w),
-                // Saldo y acciones
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+          child: Column(
+            children: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(18.r, 18.r, 18.r, 14.r),
+                child: Row(
                   children: [
-                    Text(
-                      _currencyFormat.format(cuenta.saldo),
-                      style: GoogleFonts.poppins(
-                        fontSize: 17.sp,
-                        fontWeight: FontWeight.w700,
-                        color:
-                            cuenta.saldo >= 0
-                                ? theme.colorScheme.onSurface
-                                : const Color(0xFFEF4444),
-                        letterSpacing: -0.5,
+                    // Imagen de la cuenta con borde de acento
+                    Container(
+                      width: 52.w,
+                      height: 52.h,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14.r),
+                        border: Border.all(
+                          color: accentColor.withOpacity(0.3),
+                          width: 2,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12.r),
+                        child: Image.asset(
+                          'assets/images/${cuenta.imagen}.png',
+                          width: 52.w,
+                          height: 52.h,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: accentColor.withOpacity(0.08),
+                              child: Icon(
+                                Icons.account_balance_wallet_rounded,
+                                color: accentColor,
+                                size: 24.sp,
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
-                    if (cuenta.saldoRetenido > 0) ...[
-                      SizedBox(height: 2.h),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
+                    SizedBox(width: 14.w),
+                    // Información de la cuenta
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.lock_outline_rounded,
-                            size: 11.sp,
-                            color: const Color(0xFFFF9800),
-                          ),
-                          SizedBox(width: 3.w),
                           Text(
-                            _currencyFormat.format(cuenta.saldoRetenido),
-                            style: GoogleFonts.poppins(
-                              fontSize: 11.sp,
-                              fontWeight: FontWeight.w500,
-                              color: const Color(0xFFFF9800),
+                            cuenta.nombre,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              color: theme.colorScheme.onSurface,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(height: 4.h),
+                          Row(
+                            children: [
+                              if (cuenta.numeroTarjeta != null &&
+                                  cuenta.numeroTarjeta!.isNotEmpty) ...[
+                                Icon(
+                                  Icons.credit_card_rounded,
+                                  size: 12.sp,
+                                  color: theme.colorScheme.onSurface
+                                      .withOpacity(0.35),
+                                ),
+                                SizedBox(width: 4.w),
+                                Text(
+                                  '•••• ${cuenta.numeroTarjeta!.substring(cuenta.numeroTarjeta!.length - 4)}',
+                                  style: GoogleFonts.robotoMono(
+                                    fontSize: 11.sp,
+                                    color: theme.colorScheme.onSurface
+                                        .withOpacity(0.4),
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                              ],
+                              if (cuenta.beneficiario != null &&
+                                  cuenta.beneficiario!.isNotEmpty) ...[
+                                if (cuenta.numeroTarjeta != null &&
+                                    cuenta.numeroTarjeta!.isNotEmpty)
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 6.w,
+                                    ),
+                                    child: Text(
+                                      '·',
+                                      style: TextStyle(
+                                        color: theme.colorScheme.onSurface
+                                            .withOpacity(0.25),
+                                        fontSize: 12.sp,
+                                      ),
+                                    ),
+                                  ),
+                                Flexible(
+                                  child: Text(
+                                    cuenta.beneficiario!,
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: theme.colorScheme.onSurface
+                                          .withOpacity(0.4),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ],
                       ),
-                      Text(
-                        'Disp: ${_currencyFormat.format(saldoDisponible)}',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w600,
-                          color: saldoColor,
-                        ),
-                      ),
-                    ],
-                    SizedBox(height: 4.h),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
+                    ),
+                    SizedBox(width: 10.w),
+                    // Saldo principal
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        // Botón editar
-                        InkWell(
-                          onTap: () => _mostrarDialogoEditarSaldo(cuenta),
-                          borderRadius: BorderRadius.circular(10.r),
-                          child: Container(
-                            padding: EdgeInsets.all(8.r),
-                            child: Icon(
-                              Icons.edit_outlined,
-                              size: 20.sp,
-                              color: theme.colorScheme.secondary.withOpacity(
-                                0.6,
-                              ),
-                            ),
+                        Text(
+                          _currencyFormat.format(cuenta.saldo),
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color:
+                                cuenta.saldo >= 0
+                                    ? theme.colorScheme.onSurface
+                                    : const Color(0xFFEF4444),
+                            letterSpacing: -0.5,
                           ),
                         ),
-                        SizedBox(width: 4.w),
-                        // Botón eliminar
-                        InkWell(
-                          onTap: () => _confirmarEliminarCuenta(cuenta),
-                          borderRadius: BorderRadius.circular(10.r),
-                          child: Container(
-                            padding: EdgeInsets.all(8.r),
-                            child: Icon(
-                              Icons.delete_outline_rounded,
-                              size: 20.sp,
-                              color: const Color(0xFFEF4444).withOpacity(0.7),
+                        if (cuenta.saldoRetenido > 0)
+                          Text(
+                            'Disp: ${_currencyFormat.format(saldoDisponible)}',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color:
+                                  saldoDisponible >= 0
+                                      ? const Color(0xFF10B981)
+                                      : const Color(0xFFEF4444),
                             ),
                           ),
-                        ),
                       ],
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              // Barra inferior con apartado + acciones
+              Container(
+                padding: EdgeInsets.fromLTRB(18.r, 0, 10.r, 10.r),
+                child: Row(
+                  children: [
+                    if (cuenta.saldoRetenido > 0) ...[
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 8.w,
+                          vertical: 4.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF9800).withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.lock_outline_rounded,
+                              size: 12.sp,
+                              color: const Color(0xFFFF9800),
+                            ),
+                            SizedBox(width: 4.w),
+                            Text(
+                              'Apartado: ${_currencyFormat.format(cuenta.saldoRetenido)}',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFFFF9800),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const Spacer(),
+                    // Botón editar
+                    _buildActionButton(
+                      icon: Icons.edit_outlined,
+                      color: theme.colorScheme.onSurface.withOpacity(0.4),
+                      onTap: () => _mostrarDialogoEditarSaldo(cuenta),
+                    ),
+                    SizedBox(width: 2.w),
+                    // Botón eliminar
+                    _buildActionButton(
+                      icon: Icons.delete_outline_rounded,
+                      color: const Color(0xFFEF4444).withOpacity(0.5),
+                      onTap: () => _confirmarEliminarCuenta(cuenta),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: () {
+        Haptics.light();
+        onTap();
+      },
+      borderRadius: BorderRadius.circular(10.r),
+      child: Container(
+        padding: EdgeInsets.all(8.r),
+        child: Icon(icon, size: 20.sp, color: color),
+      ),
+    );
+  }
+
+  Color _getAccountColor(Account cuenta) {
+    // Asignar colores según el nombre de la imagen o un hash del nombre
+    final colors = [
+      const Color(0xFF667eea),
+      const Color(0xFF4facfe),
+      const Color(0xFFf093fb),
+      const Color(0xFF30cfd0),
+      const Color(0xFFfa709a),
+      const Color(0xFF5f27cd),
+      const Color(0xFF10B981),
+      const Color(0xFFfeca57),
+    ];
+    return colors[cuenta.nombre.hashCode.abs() % colors.length];
   }
 
   Future<void> _mostrarDialogoCuentaAsociadaAMeta() async {
@@ -603,7 +640,7 @@ class _CuentasScreenState extends State<CuentasScreen> {
       builder:
           (context) => Container(
             decoration: BoxDecoration(
-              color: theme.colorScheme.background,
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
             ),
             child: Column(
@@ -632,8 +669,7 @@ class _CuentasScreenState extends State<CuentasScreen> {
                       Expanded(
                         child: Text(
                           'Cuenta asociada a meta',
-                          style: GoogleFonts.lato(
-                            fontSize: 18.sp,
+                          style: theme.textTheme.bodyLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: theme.colorScheme.onSurface,
                           ),
@@ -643,7 +679,7 @@ class _CuentasScreenState extends State<CuentasScreen> {
                         onPressed: () => Navigator.pop(context),
                         icon: Icon(
                           Icons.close,
-                          color: Colors.grey.shade600,
+                          color: theme.colorScheme.onSurfaceVariant,
                           size: 20.sp,
                         ),
                         padding: EdgeInsets.zero,
@@ -674,9 +710,8 @@ class _CuentasScreenState extends State<CuentasScreen> {
                       Text(
                         'Esta cuenta está asociada a una meta de ahorro. Puedes editarla o eliminarla desde la pantalla de Metas.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.openSans(
-                          fontSize: 14.sp,
-                          color: Colors.grey.shade600,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
                           height: 1.5,
                         ),
                       ),
@@ -687,7 +722,7 @@ class _CuentasScreenState extends State<CuentasScreen> {
                           onPressed: () => Navigator.pop(context),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFf59e0b),
-                            foregroundColor: Colors.white,
+                            foregroundColor: theme.colorScheme.onPrimary,
                             padding: EdgeInsets.symmetric(vertical: 14.h),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12.r),
@@ -696,10 +731,9 @@ class _CuentasScreenState extends State<CuentasScreen> {
                           ),
                           child: Text(
                             'Entendido',
-                            style: GoogleFonts.lato(
-                              fontSize: 15.sp,
+                            style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: theme.colorScheme.onPrimary,
                             ),
                           ),
                         ),
@@ -731,7 +765,7 @@ class _CuentasScreenState extends State<CuentasScreen> {
       message:
           'Se eliminará "${cuenta.nombre}" con saldo ${_currencyFormat.format(cuenta.saldo)}. Esta acción es permanente y no se puede deshacer.',
       confirmText: 'Eliminar',
-      confirmColor: Colors.red.shade400,
+      confirmColor: Theme.of(context).colorScheme.error,
       icon: Icons.delete_forever_rounded,
     );
 

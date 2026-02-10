@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -83,6 +84,13 @@ class MyApp extends StatelessWidget {
           ), // ✅ Fuerza reconstrucción al cambiar color
           debugShowCheckedModeBanner: false,
           title: 'Administración de Gastos',
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('es', 'ES'), Locale('en', 'US')],
+          locale: const Locale('es', 'ES'),
           theme: themeProvider.lightTheme,
           darkTheme: themeProvider.darkTheme,
           themeMode:

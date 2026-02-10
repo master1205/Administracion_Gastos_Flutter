@@ -1,9 +1,9 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'utils/haptic_utils.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'models/Apartado.dart';
 import 'models/Account.dart';
@@ -41,7 +41,6 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
   Categoria? _categoriaSeleccionada;
   Account? _cuentaSeleccionada;
   List<Categoria> _categorias = [];
-  StreamSubscription<List<Map<String, dynamic>>>? _categoriasSubscription;
 
   bool _isLoading = false;
 
@@ -107,38 +106,32 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
   }
 
   void _loadCategorias() {
-    _categoriasSubscription = _firestoreService.obtenerCategorias().listen((
-      categoriasData,
-    ) {
-      if (mounted) {
-        setState(() {
-          _categorias =
-              categoriasData.map((cat) => Categoria.fromJson(cat)).toList();
+    final dp = Provider.of<DataProvider>(context, listen: false);
+    final categoriasData = dp.categorias;
 
-          // Filtrar solo categorías de pagos
-          _categorias =
-              _categorias.where((cat) {
-                return cat.tipoTransaccion
-                    .split(',')
-                    .map((e) => e.trim())
-                    .any((t) => t == 'Pago' || t == 'Pagos');
-              }).toList();
+    _categorias = categoriasData.map((cat) => Categoria.fromJson(cat)).toList();
 
-          // Seleccionar categoría del apartado si estamos editando
-          if (widget.apartado != null && _categoriaSeleccionada == null) {
-            try {
-              _categoriaSeleccionada = _categorias.firstWhere(
-                (c) => c.categoria == widget.apartado!.categoria,
-              );
-            } catch (_) {
-              if (_categorias.isNotEmpty) {
-                _categoriaSeleccionada = _categorias.first;
-              }
-            }
-          }
-        });
+    // Filtrar solo categorías de pagos
+    _categorias =
+        _categorias.where((cat) {
+          return cat.tipoTransaccion
+              .split(',')
+              .map((e) => e.trim())
+              .any((t) => t == 'Pago' || t == 'Pagos');
+        }).toList();
+
+    // Seleccionar categoría del apartado si estamos editando
+    if (widget.apartado != null && _categoriaSeleccionada == null) {
+      try {
+        _categoriaSeleccionada = _categorias.firstWhere(
+          (c) => c.categoria == widget.apartado!.categoria,
+        );
+      } catch (_) {
+        if (_categorias.isNotEmpty) {
+          _categoriaSeleccionada = _categorias.first;
+        }
       }
-    });
+    }
 
     // Seleccionar cuenta del apartado si estamos editando
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -191,7 +184,6 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
     _descripcionController.dispose();
     _montoController.dispose();
     _numeroPagosController.dispose();
-    _categoriasSubscription?.cancel();
     super.dispose();
   }
 
@@ -281,9 +273,8 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                   ),
                   title: Text(
                     'Seleccionar color',
-                    style: GoogleFonts.lato(
+                    style: theme.textTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.bold,
-                      fontSize: 18.sp,
                       color: theme.colorScheme.onSurface,
                     ),
                   ),
@@ -306,16 +297,14 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                           wheelDiameter: 200.w,
                           heading: Text(
                             'Selector de color',
-                            style: GoogleFonts.lato(
-                              fontSize: 14.sp,
+                            style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: theme.colorScheme.onSurface,
                             ),
                           ),
                           subheading: Text(
                             'Toca para seleccionar',
-                            style: GoogleFonts.openSans(
-                              fontSize: 11.sp,
+                            style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurface.withOpacity(
                                 0.6,
                               ),
@@ -344,8 +333,7 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                         SizedBox(height: 8.h),
                         Text(
                           'Colores rápidos',
-                          style: GoogleFonts.lato(
-                            fontSize: 13.sp,
+                          style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: theme.colorScheme.onSurface,
                           ),
@@ -417,10 +405,9 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                       onPressed: () => Navigator.pop(context),
                       child: Text(
                         'Cancelar',
-                        style: GoogleFonts.lato(
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.6),
                           fontWeight: FontWeight.w600,
-                          fontSize: 14.sp,
                         ),
                       ),
                     ),
@@ -433,7 +420,7 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: tempColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: theme.colorScheme.onPrimary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8.r),
@@ -445,9 +432,8 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                       ),
                       child: Text(
                         'Aplicar',
-                        style: GoogleFonts.lato(
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          fontSize: 14.sp,
                         ),
                       ),
                     ),
@@ -459,6 +445,7 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
 
   Future<void> _guardar() async {
     if (!_formKey.currentState!.validate()) return;
+    Haptics.medium();
 
     final monto = double.tryParse(_montoController.text.replaceAll(',', ''));
     if (monto == null || monto <= 0) {
@@ -574,7 +561,7 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
       },
       child: Scaffold(
         resizeToAvoidBottomInset: true,
-        backgroundColor: theme.colorScheme.background,
+        backgroundColor: theme.colorScheme.surface,
         appBar: AppBar(
           backgroundColor: theme.colorScheme.surface,
           elevation: 0,
@@ -589,9 +576,7 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
           ),
           title: Text(
             widget.apartado == null ? 'Nuevo Apartado' : 'Editar Apartado',
-            style: GoogleFonts.poppins(
-              fontSize: 20.sp,
-              fontWeight: FontWeight.w600,
+            style: theme.textTheme.titleLarge?.copyWith(
               color: theme.colorScheme.onSurface,
             ),
           ),
@@ -628,8 +613,7 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                   SizedBox(height: 12.h),
                   Text(
                     'Reserva dinero para un gasto planeado',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13.sp,
+                    style: theme.textTheme.labelMedium?.copyWith(
                       fontWeight: FontWeight.w500,
                       color: theme.colorScheme.secondary.withOpacity(0.7),
                     ),
@@ -768,8 +752,7 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                                             0.0,
                                       )
                                       : '\$ 0.00',
-                                  style: GoogleFonts.lato(
-                                    fontSize: 16.sp,
+                                  style: theme.textTheme.bodyLarge?.copyWith(
                                     fontWeight: FontWeight.w600,
                                     color:
                                         _montoController.text.isNotEmpty
@@ -869,12 +852,14 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                                             value: f['value'],
                                             child: Text(
                                               f['label']!,
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 13.sp,
-                                                fontWeight: FontWeight.w500,
-                                                color:
-                                                    theme.colorScheme.onSurface,
-                                              ),
+                                              style: theme.textTheme.labelMedium
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.w500,
+                                                    color:
+                                                        theme
+                                                            .colorScheme
+                                                            .onSurface,
+                                                  ),
                                             ),
                                           );
                                         }).toList(),
@@ -912,8 +897,7 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                               Expanded(
                                 child: RichText(
                                   text: TextSpan(
-                                    style: GoogleFonts.lato(
-                                      fontSize: 13.sp,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
                                       color: theme.colorScheme.onSurface
                                           .withOpacity(0.8),
                                     ),
@@ -927,10 +911,11 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                                           symbol: '\$',
                                           decimalDigits: 2,
                                         ).format(_montoPorPago),
-                                        style: GoogleFonts.lato(
-                                          fontWeight: FontWeight.bold,
-                                          color: colorSeleccionado,
-                                        ),
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: colorSeleccionado,
+                                            ),
                                       ),
                                     ],
                                   ),
@@ -972,16 +957,13 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                                 children: [
                                   Text(
                                     'Recurrente',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14.sp,
-                                      fontWeight: FontWeight.w600,
+                                    style: theme.textTheme.titleSmall?.copyWith(
                                       color: theme.colorScheme.onSurface,
                                     ),
                                   ),
                                   Text(
                                     'Al pagar, se creará uno nuevo automáticamente',
-                                    style: GoogleFonts.lato(
-                                      fontSize: 11.sp,
+                                    style: theme.textTheme.bodySmall?.copyWith(
                                       color: theme.colorScheme.onSurface
                                           .withOpacity(0.6),
                                     ),
@@ -1040,8 +1022,7 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                                 SizedBox(width: 8.w),
                                 Text(
                                   'Generar fechas automáticamente',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 13.sp,
+                                  style: theme.textTheme.labelMedium?.copyWith(
                                     fontWeight: FontWeight.w600,
                                     color: colorSeleccionado,
                                   ),
@@ -1081,11 +1062,12 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                                     Expanded(
                                       child: Text(
                                         '${_fechasPago.length} pagos programados',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 12.sp,
-                                          fontWeight: FontWeight.w600,
-                                          color: theme.colorScheme.onSurface,
-                                        ),
+                                        style: theme.textTheme.labelMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                              color:
+                                                  theme.colorScheme.onSurface,
+                                            ),
                                       ),
                                     ),
                                     TextButton.icon(
@@ -1096,9 +1078,7 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                                       ),
                                       label: Text(
                                         'Regenerar',
-                                        style: GoogleFonts.lato(
-                                          fontSize: 11.sp,
-                                        ),
+                                        style: theme.textTheme.bodySmall,
                                       ),
                                       style: TextButton.styleFrom(
                                         foregroundColor: colorSeleccionado,
@@ -1159,14 +1139,14 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                                             alignment: Alignment.center,
                                             child: Text(
                                               '${index + 1}',
-                                              style: GoogleFonts.lato(
-                                                fontSize: 12.sp,
-                                                fontWeight: FontWeight.bold,
-                                                color:
-                                                    esPasada
-                                                        ? Colors.orange
-                                                        : colorSeleccionado,
-                                              ),
+                                              style: theme.textTheme.bodySmall
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                    color:
+                                                        esPasada
+                                                            ? Colors.orange
+                                                            : colorSeleccionado,
+                                                  ),
                                             ),
                                           ),
                                           SizedBox(width: 12.w),
@@ -1176,12 +1156,14 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                                                 "EEEE d 'de' MMMM, yyyy",
                                                 'es',
                                               ).format(fecha),
-                                              style: GoogleFonts.lato(
-                                                fontSize: 13.sp,
-                                                fontWeight: FontWeight.w500,
-                                                color:
-                                                    theme.colorScheme.onSurface,
-                                              ),
+                                              style: theme.textTheme.bodyMedium
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.w500,
+                                                    color:
+                                                        theme
+                                                            .colorScheme
+                                                            .onSurface,
+                                                  ),
                                             ),
                                           ),
                                           Icon(
@@ -1232,16 +1214,13 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                                 children: [
                                   Text(
                                     'Recordatorios de pago',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14.sp,
-                                      fontWeight: FontWeight.w600,
+                                    style: theme.textTheme.titleSmall?.copyWith(
                                       color: theme.colorScheme.onSurface,
                                     ),
                                   ),
                                   Text(
                                     'Notificación el día anterior y el día de pago',
-                                    style: GoogleFonts.lato(
-                                      fontSize: 11.sp,
+                                    style: theme.textTheme.bodySmall?.copyWith(
                                       color: theme.colorScheme.onSurface
                                           .withOpacity(0.6),
                                     ),
@@ -1313,8 +1292,7 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                                   'dd \'de\' MMMM \'de\' yyyy',
                                   'es',
                                 ).format(_fechaLimite),
-                                style: GoogleFonts.lato(
-                                  fontSize: 14.sp,
+                                style: theme.textTheme.bodyMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
                                   color: theme.colorScheme.onSurface,
                                 ),
@@ -1346,8 +1324,7 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                             padding: EdgeInsets.symmetric(horizontal: 12.w),
                             child: Text(
                               'Al completar, se registrará como gasto',
-                              style: GoogleFonts.lato(
-                                fontSize: 11.sp,
+                              style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurface.withOpacity(
                                   0.5,
                                 ),
@@ -1413,8 +1390,7 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                               Expanded(
                                 child: Text(
                                   'Toca para seleccionar color',
-                                  style: GoogleFonts.lato(
-                                    fontSize: 13.sp,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
                                     color: theme.colorScheme.onSurface
                                         .withOpacity(0.7),
                                   ),
@@ -1431,7 +1407,54 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                           ),
                         ),
                       ),
-                      SizedBox(height: 80.h),
+                      SizedBox(height: 24.h),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.tonal(
+                          onPressed: _isLoading ? null : _guardar,
+                          style: FilledButton.styleFrom(
+                            backgroundColor:
+                                theme.colorScheme.secondaryContainer,
+                            foregroundColor:
+                                theme.colorScheme.onSecondaryContainer,
+                            disabledBackgroundColor: theme
+                                .colorScheme
+                                .secondaryContainer
+                                .withOpacity(0.5),
+                            padding: EdgeInsets.symmetric(vertical: 16.h),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            elevation: 0,
+                          ),
+                          child:
+                              _isLoading
+                                  ? SizedBox(
+                                    width: 20.w,
+                                    height: 20.h,
+                                    child: CircularProgressIndicator(
+                                      color:
+                                          theme
+                                              .colorScheme
+                                              .onSecondaryContainer,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                  : Text(
+                                    widget.apartado == null
+                                        ? 'Crear Apartado'
+                                        : 'Guardar Cambios',
+                                    style: theme.textTheme.titleSmall?.copyWith(
+                                      color:
+                                          theme
+                                              .colorScheme
+                                              .onSecondaryContainer,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                        ),
+                      ),
+                      SizedBox(height: 24.h),
                     ],
                   ),
                 ),
@@ -1439,42 +1462,6 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
             ),
           ],
         ),
-        floatingActionButton: Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(horizontal: 20.r, vertical: 12.h),
-          child: ElevatedButton(
-            onPressed: _isLoading ? null : _guardar,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: colorSeleccionado,
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: 16.h),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-              elevation: 0,
-            ),
-            child:
-                _isLoading
-                    ? SizedBox(
-                      width: 20.w,
-                      height: 20.h,
-                      child: const CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                    : Text(
-                      widget.apartado == null
-                          ? 'Crear Apartado'
-                          : 'Guardar Cambios',
-                      style: GoogleFonts.poppins(
-                        fontSize: 15.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-          ),
-        ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
     );
   }
@@ -1515,9 +1502,8 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
             ),
             hint: Text(
               'Selecciona una categoría',
-              style: GoogleFonts.poppins(
+              style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.secondary.withOpacity(0.5),
-                fontSize: 12.sp,
               ),
             ),
             icon: Icon(
@@ -1550,8 +1536,7 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                         Flexible(
                           child: Text(
                             category.categoria,
-                            style: GoogleFonts.poppins(
-                              fontSize: 13.sp,
+                            style: theme.textTheme.labelMedium?.copyWith(
                               fontWeight: FontWeight.w500,
                               color: theme.colorScheme.onSurface,
                             ),
@@ -1604,9 +1589,8 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
             ),
             hint: Text(
               'Selecciona una cuenta',
-              style: GoogleFonts.poppins(
+              style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.secondary.withOpacity(0.5),
-                fontSize: 12.sp,
               ),
             ),
             icon: Icon(
@@ -1651,8 +1635,7 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                         Flexible(
                           child: Text(
                             account.nombre,
-                            style: GoogleFonts.poppins(
-                              fontSize: 13.sp,
+                            style: theme.textTheme.labelMedium?.copyWith(
                               fontWeight: FontWeight.w500,
                               color: theme.colorScheme.onSurface,
                             ),
@@ -1672,8 +1655,7 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
   Widget _buildSectionTitle(String title, ThemeData theme) {
     return Text(
       title,
-      style: GoogleFonts.poppins(
-        fontSize: 13.sp,
+      style: theme.textTheme.labelMedium?.copyWith(
         fontWeight: FontWeight.w600,
         color: theme.colorScheme.secondary.withOpacity(0.7),
       ),
@@ -1688,9 +1670,8 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
   }) {
     return InputDecoration(
       hintText: hintText,
-      hintStyle: GoogleFonts.openSans(
+      hintStyle: theme.textTheme.bodySmall?.copyWith(
         color: theme.colorScheme.secondary.withOpacity(0.5),
-        fontSize: 12.sp,
       ),
       prefixIcon: Container(
         margin: EdgeInsets.all(10.r),
@@ -1701,27 +1682,10 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
         ),
         child: Icon(prefixIcon, color: color, size: 20.sp),
       ),
-      filled: true,
-      fillColor: theme.colorScheme.surface,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide(
-          color: theme.colorScheme.secondary.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide(
-          color: theme.colorScheme.secondary.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide(color: color, width: 1.5),
+        borderSide: BorderSide(color: color, width: 2),
       ),
-      contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
     );
   }
 

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// Widget genérico para secciones expandibles con cards
 class ExpandableSection<T> extends StatelessWidget {
@@ -61,6 +60,7 @@ class ExpandableSection<T> extends StatelessWidget {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 5.h),
       child: Row(
@@ -68,8 +68,7 @@ class ExpandableSection<T> extends StatelessWidget {
         children: [
           Text(
             title,
-            style: GoogleFonts.lato(
-              fontSize: 16.sp,
+            style: theme.textTheme.bodyLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -77,8 +76,7 @@ class ExpandableSection<T> extends StatelessWidget {
             onPressed: onViewAll,
             child: Text(
               'Ver todos',
-              style: GoogleFonts.lato(
-                fontSize: 12.sp,
+              style: theme.textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -123,9 +121,8 @@ class ExpandToggleButton extends StatelessWidget {
               isExpanded
                   ? 'Ver menos'
                   : 'Ver $itemCount $itemLabel${itemCount > 1 ? 's' : ''} más',
-              style: GoogleFonts.lato(
+              style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.primary,
-                fontSize: 12.sp,
                 fontWeight: FontWeight.w600,
               ),
             ),

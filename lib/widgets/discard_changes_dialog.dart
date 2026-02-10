@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// Diálogo para confirmar el descarte de cambios
 class DiscardChangesDialog extends StatelessWidget {
@@ -56,9 +55,7 @@ class DiscardChangesDialog extends StatelessWidget {
             // Título
             Text(
               title,
-              style: GoogleFonts.poppins(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
+              style: theme.textTheme.titleMedium?.copyWith(
                 color: theme.colorScheme.onSurface,
               ),
               textAlign: TextAlign.center,
@@ -68,8 +65,7 @@ class DiscardChangesDialog extends StatelessWidget {
             // Mensaje
             Text(
               message,
-              style: GoogleFonts.poppins(
-                fontSize: 12.sp,
+              style: theme.textTheme.labelMedium?.copyWith(
                 fontWeight: FontWeight.w400,
                 color: theme.colorScheme.secondary.withOpacity(0.7),
               ),
@@ -143,9 +139,7 @@ class DiscardChangesDialog extends StatelessWidget {
           ),
           child: Text(
             label,
-            style: GoogleFonts.poppins(
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w600,
+            style: theme.textTheme.titleSmall?.copyWith(
               color:
                   isPrimary
                       ? theme.colorScheme.secondary

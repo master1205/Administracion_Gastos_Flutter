@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 enum SuccessAnimationType { confetti, moneyRain, ripple, simple }
 
@@ -284,6 +283,7 @@ class _SuccessAnimationDialogState extends State<SuccessAnimationDialog>
   }
 
   Widget _buildSuccessCard() {
+    final theme = Theme.of(context);
     return Transform.scale(
       scale: _scaleAnimation.value,
       child: Container(
@@ -329,8 +329,7 @@ class _SuccessAnimationDialogState extends State<SuccessAnimationDialog>
             SizedBox(height: 20.h),
             Text(
               '¡Éxito!',
-              style: GoogleFonts.lato(
-                fontSize: 26.sp,
+              style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: Colors.green,
               ),
@@ -339,8 +338,7 @@ class _SuccessAnimationDialogState extends State<SuccessAnimationDialog>
             Text(
               widget.message,
               textAlign: TextAlign.center,
-              style: GoogleFonts.openSans(
-                fontSize: 16.sp,
+              style: theme.textTheme.bodyLarge?.copyWith(
                 color: Colors.grey[700],
               ),
             ),

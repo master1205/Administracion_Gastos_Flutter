@@ -5,6 +5,7 @@ import 'package:notificaciones/models/Budget.dart';
 import 'package:notificaciones/models/Meta.dart';
 import 'package:notificaciones/models/Transaccion.dart' as models;
 import 'package:notificaciones/models/Apartado.dart';
+import 'package:notificaciones/models/Reporte.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -1459,5 +1460,48 @@ class FirestoreService {
       default:
         return desde.add(const Duration(days: 7));
     }
+  }
+
+  // ==================== REPORTES ====================
+
+  /// Obtiene los reportes mensuales en tiempo real
+  Stream<List<Reporte>> obtenerReportes() {
+    return _db
+        .collection('reportes')
+        .orderBy('fechaCreacion', descending: true)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs.map((doc) {
+            final data = doc.data();
+            return Reporte(
+              name: data['nombre'] ?? 'Reporte Mensual.pdf',
+              file: data['urlReporte'] ?? '',
+              fechaCorte: '${data['mes']} ${data['año']}',
+              totalIngresos: (data['totalIngresos'] as num?)?.toDouble() ?? 0,
+              totalGastos: (data['totalGastos'] as num?)?.toDouble() ?? 0,
+              saldoTotal: (data['saldoTotal'] as num?)?.toDouble() ?? 0,
+              cantidadTransacciones:
+                  (data['cantidadTransacciones'] as int?) ?? 0,
+              gastosPorCategoria:
+                  data['gastosPorCategoria'] != null
+                      ? Map<String, double>.from(
+                        (data['gastosPorCategoria'] as Map).map(
+                          (k, v) =>
+                              MapEntry(k.toString(), (v as num).toDouble()),
+                        ),
+                      )
+                      : {},
+              gastosPorCuenta:
+                  data['gastosPorCuenta'] != null
+                      ? Map<String, double>.from(
+                        (data['gastosPorCuenta'] as Map).map(
+                          (k, v) =>
+                              MapEntry(k.toString(), (v as num).toDouble()),
+                        ),
+                      )
+                      : {},
+            );
+          }).toList();
+        });
   }
 }

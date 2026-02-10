@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:notificaciones/models/Reporte.dart';
 import 'package:notificaciones/widgets/animated_goo_background.dart';
@@ -25,7 +24,7 @@ class ReporteDetalleScreen extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       body: CustomScrollView(
         slivers: [
           _buildSliverAppBar(context, theme),
@@ -143,10 +142,12 @@ class ReporteDetalleScreen extends StatelessWidget {
                                       SizedBox(height: 28.h),
                                       Text(
                                         'Reporte Mensual',
-                                        style: GoogleFonts.lato(
-                                          fontSize: 13.sp,
-                                          color: Colors.white.withOpacity(0.85),
-                                        ),
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                              color: Colors.white.withOpacity(
+                                                0.85,
+                                              ),
+                                            ),
                                       ),
                                     ],
                                   ),
@@ -165,6 +166,7 @@ class ReporteDetalleScreen extends StatelessWidget {
                                       reporte.totalIngresos,
                                     ),
                                     icon: Icons.trending_up_rounded,
+                                    theme: theme,
                                   ),
                                   _buildHeaderStat(
                                     label: 'Gastos',
@@ -172,11 +174,13 @@ class ReporteDetalleScreen extends StatelessWidget {
                                       reporte.totalGastos,
                                     ),
                                     icon: Icons.trending_down_rounded,
+                                    theme: theme,
                                   ),
                                   _buildHeaderStat(
                                     label: 'Transacciones',
                                     value: '${reporte.cantidadTransacciones}',
                                     icon: Icons.receipt_long_rounded,
+                                    theme: theme,
                                   ),
                                 ],
                               ),
@@ -201,7 +205,7 @@ class ReporteDetalleScreen extends StatelessWidget {
                       )!,
                   child: Text(
                     reporte.fechaCorte,
-                    style: GoogleFonts.poppins(
+                    style: theme.textTheme.titleLarge?.copyWith(
                       fontSize: titleFontSize.sp,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -222,6 +226,7 @@ class ReporteDetalleScreen extends StatelessWidget {
     required String label,
     required String value,
     required IconData icon,
+    required ThemeData theme,
   }) {
     return Column(
       children: [
@@ -229,16 +234,14 @@ class ReporteDetalleScreen extends StatelessWidget {
         SizedBox(height: 4.h),
         Text(
           value,
-          style: GoogleFonts.lato(
-            fontSize: 12.sp,
+          style: theme.textTheme.bodySmall?.copyWith(
             fontWeight: FontWeight.w700,
             color: Colors.white,
           ),
         ),
         Text(
           label,
-          style: GoogleFonts.lato(
-            fontSize: 10.sp,
+          style: theme.textTheme.labelSmall?.copyWith(
             color: Colors.white.withOpacity(0.7),
           ),
         ),
@@ -262,16 +265,14 @@ class ReporteDetalleScreen extends StatelessWidget {
             SizedBox(height: 8.h),
             Text(
               'Reporte sin datos de resumen',
-              style: GoogleFonts.lato(
-                fontSize: 14.sp,
+              style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withOpacity(0.5),
               ),
             ),
             SizedBox(height: 4.h),
             Text(
               'Este reporte fue generado antes de la actualización. Puedes ver el PDF directamente.',
-              style: GoogleFonts.lato(
-                fontSize: 11.sp,
+              style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurface.withOpacity(0.4),
               ),
               textAlign: TextAlign.center,
@@ -319,8 +320,7 @@ class ReporteDetalleScreen extends StatelessWidget {
                   children: [
                     Text(
                       isPositive ? '+' : '-',
-                      style: GoogleFonts.lato(
-                        fontSize: 10.sp,
+                      style: theme.textTheme.labelSmall?.copyWith(
                         color:
                             isPositive
                                 ? const Color(0xFF66BB6A)
@@ -329,8 +329,7 @@ class ReporteDetalleScreen extends StatelessWidget {
                     ),
                     Text(
                       _currencyFormat.format(reporte.balance.abs()),
-                      style: GoogleFonts.poppins(
-                        fontSize: 14.sp,
+                      style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color:
                             isPositive
@@ -401,16 +400,14 @@ class ReporteDetalleScreen extends StatelessWidget {
         SizedBox(height: 4.h),
         Text(
           label,
-          style: GoogleFonts.lato(
-            fontSize: 11.sp,
+          style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurface.withOpacity(0.6),
           ),
         ),
         SizedBox(height: 2.h),
         Text(
           _currencyFormat.format(amount),
-          style: GoogleFonts.lato(
-            fontSize: 16.sp,
+          style: theme.textTheme.bodyLarge?.copyWith(
             fontWeight: FontWeight.bold,
             color: color,
           ),
@@ -442,15 +439,13 @@ class ReporteDetalleScreen extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: GoogleFonts.lato(
-                    fontSize: 10.sp,
+                  style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.onSurface.withOpacity(0.5),
                   ),
                 ),
                 Text(
                   value,
-                  style: GoogleFonts.lato(
-                    fontSize: 13.sp,
+                  style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: theme.colorScheme.onSurface,
                   ),
@@ -488,8 +483,7 @@ class ReporteDetalleScreen extends StatelessWidget {
         children: [
           Text(
             'Gastos por Categoría',
-            style: GoogleFonts.poppins(
-              fontSize: 16.sp,
+            style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onSurface,
             ),
@@ -526,7 +520,7 @@ class ReporteDetalleScreen extends StatelessWidget {
                     width: 95.w,
                     height: 95.h,
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.surface.withOpacity(0.4),
+                      color: theme.colorScheme.surfaceContainerLow,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -542,16 +536,14 @@ class ReporteDetalleScreen extends StatelessWidget {
                       children: [
                         Text(
                           _currencyFormat.format(reporte.totalGastos),
-                          style: GoogleFonts.poppins(
-                            fontSize: 11.sp,
+                          style: theme.textTheme.labelMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                             color: theme.colorScheme.onSurface,
                           ),
                         ),
                         Text(
                           'total',
-                          style: GoogleFonts.lato(
-                            fontSize: 10.sp,
+                          style: theme.textTheme.labelSmall?.copyWith(
                             color: theme.colorScheme.onSurface.withOpacity(0.5),
                           ),
                         ),
@@ -590,8 +582,7 @@ class ReporteDetalleScreen extends StatelessWidget {
                   Expanded(
                     child: Text(
                       cat,
-                      style: GoogleFonts.lato(
-                        fontSize: 13.sp,
+                      style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w500,
                         color: theme.colorScheme.onSurface,
                       ),
@@ -599,8 +590,7 @@ class ReporteDetalleScreen extends StatelessWidget {
                   ),
                   Text(
                     _currencyFormat.format(monto),
-                    style: GoogleFonts.lato(
-                      fontSize: 13.sp,
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: theme.colorScheme.onSurface,
                     ),
@@ -617,8 +607,7 @@ class ReporteDetalleScreen extends StatelessWidget {
                     ),
                     child: Text(
                       '${porcentaje.toStringAsFixed(0)}%',
-                      style: GoogleFonts.lato(
-                        fontSize: 11.sp,
+                      style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: color,
                       ),
@@ -647,8 +636,7 @@ class ReporteDetalleScreen extends StatelessWidget {
         children: [
           Text(
             'Gastos por Cuenta',
-            style: GoogleFonts.poppins(
-              fontSize: 16.sp,
+            style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onSurface,
             ),
@@ -694,8 +682,7 @@ class ReporteDetalleScreen extends StatelessWidget {
                       children: [
                         Text(
                           cuenta,
-                          style: GoogleFonts.lato(
-                            fontSize: 13.sp,
+                          style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: theme.colorScheme.onSurface,
                           ),
@@ -723,16 +710,14 @@ class ReporteDetalleScreen extends StatelessWidget {
                     children: [
                       Text(
                         _currencyFormat.format(monto),
-                        style: GoogleFonts.lato(
-                          fontSize: 13.sp,
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: theme.colorScheme.onSurface,
                         ),
                       ),
                       Text(
                         '${porcentaje.toStringAsFixed(0)}%',
-                        style: GoogleFonts.lato(
-                          fontSize: 11.sp,
+                        style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.primary,
                           fontWeight: FontWeight.w600,
                         ),
@@ -784,8 +769,7 @@ class ReporteDetalleScreen extends StatelessWidget {
               SizedBox(width: 10.w),
               Text(
                 'Ver Reporte PDF',
-                style: GoogleFonts.poppins(
-                  fontSize: 15.sp,
+                style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                 ),

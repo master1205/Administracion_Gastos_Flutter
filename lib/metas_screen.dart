@@ -1,18 +1,17 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'api_service.dart';
+import 'data_provider.dart';
+import 'utils/haptic_utils.dart';
 import 'models/Meta.dart';
 import 'models/api_response.dart';
-import 'services/firestore_service.dart';
 import 'widgets/animations.dart';
 import 'widgets/animated_card.dart';
 import 'widgets/budget_widgets.dart';
 import 'crear_meta_screen.dart';
 import 'meta_detalle_screen.dart';
-import 'widgets/shimmer_loading.dart';
 import 'componentes/heads_up_notification.dart';
 
 class MetasScreen extends StatefulWidget {
@@ -26,13 +25,7 @@ class MetasScreen extends StatefulWidget {
 
 class _MetasScreenState extends State<MetasScreen>
     with TickerProviderStateMixin {
-  final ValueNotifier<List<Meta>> _metasNotifier = ValueNotifier<List<Meta>>(
-    [],
-  );
-  final ValueNotifier<bool> _isLoadingNotifier = ValueNotifier<bool>(true);
   bool _isManualRefresh = false;
-  StreamSubscription<List<Meta>>? _metasSubscription;
-  final FirestoreService _firestoreService = FirestoreService();
   late TabController _tabController;
 
   static final _currencyFormat = NumberFormat.currency(
@@ -45,40 +38,24 @@ class _MetasScreenState extends State<MetasScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _cargarDatos();
   }
 
   @override
   void dispose() {
-    _metasSubscription?.cancel();
-    _metasNotifier.dispose();
-    _isLoadingNotifier.dispose();
     _tabController.dispose();
     super.dispose();
   }
 
-  Future<void> _cargarDatos() async {
-    _isLoadingNotifier.value = true;
-
-    // Configurar el Stream de Firebase
-    _metasSubscription?.cancel();
-    _metasSubscription = _firestoreService.obtenerMetas().listen((metas) {
-      if (mounted) {
-        _metasNotifier.value = metas;
-        _isLoadingNotifier.value = false;
-        if (_isManualRefresh) {
-          setState(() => _isManualRefresh = false);
-        }
-      }
+  Future<void> refreshData() async {
+    setState(() => _isManualRefresh = true);
+    // DataProvider streams se actualizan automáticamente
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) setState(() => _isManualRefresh = false);
     });
   }
 
-  Future<void> refreshData() async {
-    setState(() => _isManualRefresh = true);
-    // El Stream se actualizará automáticamente
-  }
-
   Future<void> _crearMeta() async {
+    Haptics.light();
     final resultado = await Navigator.push<Meta>(
       context,
       MaterialPageRoute(builder: (context) => CrearMetaScreen()),
@@ -103,7 +80,7 @@ class _MetasScreenState extends State<MetasScreen>
                         SizedBox(height: 16.h),
                         Text(
                           'Creando cuenta y meta...',
-                          style: GoogleFonts.poppins(fontSize: 14.sp),
+                          style: Theme.of(context).textTheme.titleSmall,
                         ),
                       ],
                     ),
@@ -160,7 +137,7 @@ class _MetasScreenState extends State<MetasScreen>
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         backgroundColor: theme.colorScheme.surface,
         elevation: 0,
@@ -174,30 +151,25 @@ class _MetasScreenState extends State<MetasScreen>
         ),
         title: Text(
           'Metas',
-          style: GoogleFonts.poppins(
-            fontSize: 20.sp,
+          style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w600,
             color: theme.colorScheme.onSurface,
           ),
         ),
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(48.h),
-          child: ValueListenableBuilder<List<Meta>>(
-            valueListenable: _metasNotifier,
-            builder: (context, metas, _) {
+          child: Builder(
+            builder: (context) {
+              final metas = Provider.of<DataProvider>(context).metas;
               final countActivas = metas.where((m) => !m.completada).length;
               final countCompletadas = metas.where((m) => m.completada).length;
 
               return TabBar(
                 controller: _tabController,
-                labelStyle: GoogleFonts.poppins(
-                  fontSize: 13.sp,
+                labelStyle: theme.textTheme.labelMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
-                unselectedLabelStyle: GoogleFonts.poppins(
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w500,
-                ),
+                unselectedLabelStyle: theme.textTheme.labelMedium,
                 labelColor: theme.colorScheme.primary,
                 unselectedLabelColor: theme.colorScheme.onSurface.withOpacity(
                   0.5,
@@ -215,38 +187,26 @@ class _MetasScreenState extends State<MetasScreen>
       ),
       body: Stack(
         children: [
-          ValueListenableBuilder<bool>(
-            valueListenable: _isLoadingNotifier,
-            builder: (context, isLoading, child) {
-              if (isLoading) {
-                return ShimmerList(
-                  shimmerItem: MetaCardShimmer(),
-                  itemCount: 3,
-                );
-              }
+          Builder(
+            builder: (context) {
+              final metas = Provider.of<DataProvider>(context).metas;
+              final activas = metas.where((m) => !m.completada).toList();
+              final completadas = metas.where((m) => m.completada).toList();
 
-              return ValueListenableBuilder<List<Meta>>(
-                valueListenable: _metasNotifier,
-                builder: (context, metas, child) {
-                  final activas = metas.where((m) => !m.completada).toList();
-                  final completadas = metas.where((m) => m.completada).toList();
-
-                  return TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildTabContent(
-                        activas,
-                        'Sin metas activas',
-                        'Crea tu primera meta de ahorro',
-                      ),
-                      _buildTabContent(
-                        completadas,
-                        'Sin metas completadas',
-                        'Las metas completadas aparecerán aquí',
-                      ),
-                    ],
-                  );
-                },
+              return TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildTabContent(
+                    activas,
+                    'Sin metas activas',
+                    'Crea tu primera meta de ahorro',
+                  ),
+                  _buildTabContent(
+                    completadas,
+                    'Sin metas completadas',
+                    'Las metas completadas aparecerán aquí',
+                  ),
+                ],
               );
             },
           ),
@@ -289,7 +249,7 @@ class _MetasScreenState extends State<MetasScreen>
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: theme.colorScheme.shadow.withOpacity(0.1),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -331,8 +291,7 @@ class _MetasScreenState extends State<MetasScreen>
               ),
               child: Text(
                 '$count',
-                style: GoogleFonts.lato(
-                  fontSize: 10.sp,
+                style: theme.textTheme.labelSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: theme.colorScheme.primary,
                 ),
@@ -366,8 +325,7 @@ class _MetasScreenState extends State<MetasScreen>
               SizedBox(height: 16.h),
               Text(
                 emptyTitle,
-                style: GoogleFonts.poppins(
-                  fontSize: 16.sp,
+                style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: theme.colorScheme.onSurface.withOpacity(0.5),
                 ),
@@ -376,8 +334,7 @@ class _MetasScreenState extends State<MetasScreen>
               Text(
                 emptySubtitle,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.lato(
-                  fontSize: 13.sp,
+                style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurface.withOpacity(0.4),
                 ),
               ),
@@ -445,8 +402,7 @@ class _MetasScreenState extends State<MetasScreen>
               children: [
                 Text(
                   '$count meta${count != 1 ? 's' : ''}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 13.sp,
+                  style: theme.textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: theme.colorScheme.onSurface,
                   ),
@@ -454,8 +410,7 @@ class _MetasScreenState extends State<MetasScreen>
                 SizedBox(height: 2.h),
                 Text(
                   '${_currencyFormat.format(ahorrado)} de ${_currencyFormat.format(objetivo)}',
-                  style: GoogleFonts.lato(
-                    fontSize: 11.sp,
+                  style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurface.withOpacity(0.6),
                     fontWeight: FontWeight.w500,
                   ),
@@ -479,8 +434,7 @@ class _MetasScreenState extends State<MetasScreen>
                 ),
                 Text(
                   '${progreso.toStringAsFixed(0)}%',
-                  style: GoogleFonts.lato(
-                    fontSize: 10.sp,
+                  style: theme.textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w800,
                     color: theme.colorScheme.primary,
                   ),
@@ -552,8 +506,7 @@ class _MetasScreenState extends State<MetasScreen>
               children: [
                 Text(
                   meta.nombre,
-                  style: GoogleFonts.lato(
-                    fontSize: 15.sp,
+                  style: theme.textTheme.bodyLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -564,8 +517,7 @@ class _MetasScreenState extends State<MetasScreen>
                   SizedBox(height: 1.h),
                   Text(
                     meta.descripcion,
-                    style: GoogleFonts.lato(
-                      fontSize: 11.sp,
+                    style: theme.textTheme.bodySmall?.copyWith(
                       color: Colors.white.withValues(alpha: 0.75),
                     ),
                     maxLines: 1,
@@ -576,8 +528,7 @@ class _MetasScreenState extends State<MetasScreen>
                   SizedBox(height: 1.h),
                   Text(
                     meta.cuentaNombre!,
-                    style: GoogleFonts.lato(
-                      fontSize: 11.sp,
+                    style: theme.textTheme.bodySmall?.copyWith(
                       color: Colors.white.withOpacity(0.75),
                     ),
                     maxLines: 1,
@@ -603,8 +554,7 @@ class _MetasScreenState extends State<MetasScreen>
                   ],
                   Text(
                     estadoLabel,
-                    style: GoogleFonts.lato(
-                      fontSize: 10.sp,
+                    style: theme.textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
@@ -630,8 +580,7 @@ class _MetasScreenState extends State<MetasScreen>
                   SizedBox(width: 3.w),
                   Text(
                     '$diasRestantes d',
-                    style: GoogleFonts.lato(
-                      fontSize: 10.sp,
+                    style: theme.textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
@@ -659,8 +608,7 @@ class _MetasScreenState extends State<MetasScreen>
                 SizedBox(width: 10.w),
                 Text(
                   '${meta.progreso.toStringAsFixed(0)}%',
-                  style: GoogleFonts.lato(
-                    fontSize: 12.sp,
+                  style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w800,
                     color: theme.colorScheme.onSurface.withOpacity(0.7),
                   ),
@@ -678,16 +626,14 @@ class _MetasScreenState extends State<MetasScreen>
                     children: [
                       Text(
                         'Ahorrado',
-                        style: GoogleFonts.lato(
-                          fontSize: 10.sp,
+                        style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.5),
                         ),
                       ),
                       SizedBox(height: 1.h),
                       Text(
                         _currencyFormat.format(meta.montoActual),
-                        style: GoogleFonts.lato(
-                          fontSize: 14.sp,
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: theme.colorScheme.primary,
                         ),
@@ -702,16 +648,14 @@ class _MetasScreenState extends State<MetasScreen>
                     children: [
                       Text(
                         'Objetivo',
-                        style: GoogleFonts.lato(
-                          fontSize: 10.sp,
+                        style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.5),
                         ),
                       ),
                       SizedBox(height: 1.h),
                       Text(
                         _currencyFormat.format(meta.montoObjetivo),
-                        style: GoogleFonts.lato(
-                          fontSize: 14.sp,
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: theme.colorScheme.onSurface.withOpacity(0.7),
                         ),
@@ -737,8 +681,7 @@ class _MetasScreenState extends State<MetasScreen>
                           SizedBox(width: 3.w),
                           Text(
                             _formatDate(meta.fechaObjetivo),
-                            style: GoogleFonts.lato(
-                              fontSize: 11.sp,
+                            style: theme.textTheme.bodySmall?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: theme.colorScheme.onSurface.withOpacity(
                                 0.55,
@@ -761,8 +704,7 @@ class _MetasScreenState extends State<MetasScreen>
                             meta.diasRestantes > 0
                                 ? '${meta.diasRestantes} días'
                                 : 'Vencida',
-                            style: GoogleFonts.lato(
-                              fontSize: 10.sp,
+                            style: theme.textTheme.labelSmall?.copyWith(
                               fontWeight: FontWeight.w500,
                               color: theme.colorScheme.onSurface.withOpacity(
                                 0.5,

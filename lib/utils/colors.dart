@@ -189,24 +189,38 @@ Color getColor(BuildContext context, String colorName) {
       Theme.of(context).colorScheme.primary;
 }
 
-/// Obtiene colores personalizados según el tema
+/// Obtiene colores personalizados según el tema (sistema Cashew)
 AppColors getAppColors({
   required Brightness brightness,
   required Color accentColor,
+  required ThemeData themeData,
+  required bool materialYou,
 }) {
-  // Color base para contenedores ligeros/pesados
-  final lightDarkAccentHeavyLight =
-      brightness == Brightness.light
-          ? lightenPastel(accentColor, amount: 0.92)
-          : darkenPastel(accentColor, amount: 0.8);
+  // Color base para contenedores (igual que Cashew)
+  final Color lightDarkAccentHeavyLight;
+  if (brightness == Brightness.light) {
+    lightDarkAccentHeavyLight =
+        materialYou ? lightenPastel(accentColor, amount: 0.92) : Colors.white;
+  } else {
+    lightDarkAccentHeavyLight =
+        materialYou
+            ? darkenPastel(accentColor, amount: 0.8)
+            : const Color(0xFF242424);
+  }
 
   if (brightness == Brightness.light) {
     return AppColors(
       colors: {
         'white': Colors.white,
         'black': Colors.black,
-        'textLight': Colors.black.withOpacity(0.4),
-        'lightDarkAccent': lightenPastel(accentColor, amount: 0.6),
+        'textLight':
+            materialYou
+                ? Colors.black.withValues(alpha: 0.4)
+                : const Color(0xFF888888),
+        'lightDarkAccent':
+            materialYou
+                ? lightenPastel(accentColor, amount: 0.6)
+                : const Color(0xFFF7F7F7),
         'lightDarkAccentHeavyLight': lightDarkAccentHeavyLight,
         'canvasContainer': const Color(0xFFEBEBEB),
         'lightDarkAccentHeavy': const Color(0xFFEBEBEB),
@@ -218,8 +232,15 @@ AppColors getAppColors({
         'expenseAmount': const Color(0xFFCA5A5A),
         'warningOrange': const Color(0xFFCA995A),
         'starYellow': const Color(0xFFFFD723),
-        'dividerColor': const Color(0x0F000000),
-        'standardContainerColor': lightenPastel(accentColor, amount: 0.96),
+        'dividerColor':
+            materialYou ? const Color(0x0F000000) : const Color(0xFFF0F0F0),
+        'standardContainerColor':
+            materialYou
+                ? lightenPastel(
+                  themeData.colorScheme.secondaryContainer,
+                  amount: 0.3,
+                )
+                : lightDarkAccentHeavyLight,
       },
     );
   } else {
@@ -227,21 +248,35 @@ AppColors getAppColors({
       colors: {
         'white': Colors.black,
         'black': Colors.white,
-        'textLight': Colors.white.withOpacity(0.25),
-        'lightDarkAccent': darkenPastel(accentColor, amount: 0.83),
+        'textLight':
+            materialYou
+                ? Colors.white.withValues(alpha: 0.25)
+                : const Color(0xFF494949),
+        'lightDarkAccent':
+            materialYou
+                ? darkenPastel(accentColor, amount: 0.83)
+                : const Color(0xFF161616),
         'lightDarkAccentHeavyLight': lightDarkAccentHeavyLight,
         'canvasContainer': const Color(0xFF242424),
         'lightDarkAccentHeavy': const Color(0xFF444444),
         'shadowColor': const Color(0x69BDBDBD),
-        'shadowColorLight': Colors.transparent,
+        'shadowColorLight':
+            materialYou ? Colors.transparent : const Color(0x28747474),
         'unPaidUpcoming': const Color(0xFF7DB6CC),
         'unPaidOverdue': const Color(0xFF8395FF),
         'incomeAmount': const Color(0xFF62CA77),
         'expenseAmount': const Color(0xFFDA7272),
         'warningOrange': const Color(0xFFDA9C72),
         'starYellow': Colors.yellow,
-        'dividerColor': const Color(0x13FFFFFF),
-        'standardContainerColor': darkenPastel(accentColor, amount: 0.6),
+        'dividerColor':
+            materialYou ? const Color(0x13FFFFFF) : const Color(0x6F363636),
+        'standardContainerColor':
+            materialYou
+                ? darkenPastel(
+                  themeData.colorScheme.secondaryContainer,
+                  amount: 0.6,
+                )
+                : lightDarkAccentHeavyLight,
       },
     );
   }
@@ -398,13 +433,11 @@ class AppGradients {
 class AppShadows {
   /// Sombra general para cards
   static List<BoxShadow> cardShadow(BuildContext context) {
+    final shadow = Theme.of(context).colorScheme.shadow;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return [
       BoxShadow(
-        color:
-            isDark
-                ? Colors.black.withOpacity(0.3)
-                : Colors.black.withOpacity(0.08),
+        color: shadow.withValues(alpha: isDark ? 0.3 : 0.08),
         blurRadius: isDark ? 12 : 8,
         offset: const Offset(0, 2),
       ),
@@ -413,13 +446,11 @@ class AppShadows {
 
   /// Sombra ligera
   static List<BoxShadow> lightShadow(BuildContext context) {
+    final shadow = Theme.of(context).colorScheme.shadow;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return [
       BoxShadow(
-        color:
-            isDark
-                ? Colors.black.withOpacity(0.2)
-                : Colors.black.withOpacity(0.04),
+        color: shadow.withValues(alpha: isDark ? 0.2 : 0.04),
         blurRadius: isDark ? 8 : 4,
         offset: const Offset(0, 1),
       ),
@@ -428,13 +459,11 @@ class AppShadows {
 
   /// Sombra fuerte (para elementos elevados)
   static List<BoxShadow> strongShadow(BuildContext context) {
+    final shadow = Theme.of(context).colorScheme.shadow;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return [
       BoxShadow(
-        color:
-            isDark
-                ? Colors.black.withOpacity(0.5)
-                : Colors.black.withOpacity(0.15),
+        color: shadow.withValues(alpha: isDark ? 0.5 : 0.15),
         blurRadius: isDark ? 20 : 16,
         offset: const Offset(0, 4),
       ),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:math_expressions/math_expressions.dart';
 
@@ -348,8 +347,7 @@ class _SelectAmountWidgetState extends State<SelectAmountWidget> {
                 // Resultado formateado
                 Text(
                   formatMoney(calculatedAmount),
-                  style: GoogleFonts.poppins(
-                    fontSize: 32.sp,
+                  style: theme.textTheme.headlineLarge?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: theme.colorScheme.onSurface,
                   ),
@@ -361,8 +359,7 @@ class _SelectAmountWidgetState extends State<SelectAmountWidget> {
                     padding: EdgeInsets.only(top: 4.h),
                     child: Text(
                       displayAmount,
-                      style: GoogleFonts.lato(
-                        fontSize: 16.sp,
+                      style: theme.textTheme.bodyLarge?.copyWith(
                         color: theme.colorScheme.secondary.withOpacity(0.6),
                       ),
                       textAlign: TextAlign.end,
@@ -412,8 +409,7 @@ class _SelectAmountWidgetState extends State<SelectAmountWidget> {
                     child: Center(
                       child: Text(
                         widget.nextLabel ?? 'Continuar',
-                        style: GoogleFonts.poppins(
-                          fontSize: 15.sp,
+                        style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                           color:
                               (calculatedAmount > 0 || widget.allowZero)
@@ -665,11 +661,9 @@ class _SelectAmountWidgetState extends State<SelectAmountWidget> {
                   ? Icon(icon, size: 24.sp, color: textColor)
                   : Text(
                     label,
-                    style: GoogleFonts.poppins(
-                      fontSize: 22.sp,
-                      fontWeight: FontWeight.w600,
-                      color: textColor,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleLarge?.copyWith(color: textColor),
                   ),
         ),
       ),
@@ -701,7 +695,7 @@ Future<double?> showSelectAmountBottomSheet(
       return SafeArea(
         child: Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.background,
+            color: theme.colorScheme.surface,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
           ),
           padding: EdgeInsets.only(top: 16.h, bottom: bottomPadding + 16.h),
@@ -716,9 +710,7 @@ Future<double?> showSelectAmountBottomSheet(
                     Expanded(
                       child: Text(
                         title,
-                        style: GoogleFonts.poppins(
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.w600,
+                        style: theme.textTheme.titleLarge?.copyWith(
                           color: theme.colorScheme.onSurface,
                         ),
                       ),

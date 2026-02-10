@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:notificaciones/widgets/confirmation_dialog.dart';
+import 'package:notificaciones/data_provider.dart';
 import 'package:notificaciones/services/firestore_service.dart';
 import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'widgets/animations.dart';
 import 'componentes/heads_up_notification.dart';
-import 'widgets/shimmer_loading.dart';
 import 'crear_categoria_screen.dart';
 
 class CategoriasScreen extends StatefulWidget {
@@ -20,7 +19,8 @@ class CategoriasScreen extends StatefulWidget {
 }
 
 class _CategoriasScreenState extends State<CategoriasScreen> {
-  final FirestoreService _firestoreService = FirestoreService();
+  final FirestoreService _firestoreService =
+      FirestoreService(); // Solo para mutaciones
   String _filtroTipo = 'Todas'; // Todas, Gasto, Ingreso
 
   @override
@@ -30,7 +30,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
     final isDark = themeManager.isDarkMode;
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: theme.colorScheme.surface,
@@ -44,9 +44,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
         ),
         title: Text(
           'Categorías',
-          style: GoogleFonts.poppins(
-            fontSize: 20.sp,
-            fontWeight: FontWeight.w600,
+          style: theme.textTheme.titleLarge?.copyWith(
             color: theme.colorScheme.onSurface,
           ),
         ),
@@ -71,21 +69,9 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
           ),
         ),
       ),
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: _firestoreService.obtenerCategorias(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return ShimmerList(
-              shimmerItem: CategoriaCardShimmer(),
-              itemCount: 4,
-            );
-          }
-
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-
-          final categorias = snapshot.data ?? [];
+      body: Builder(
+        builder: (context) {
+          final categorias = Provider.of<DataProvider>(context).categorias;
 
           // Aplicar filtro
           final categoriasFiltradas =
@@ -130,7 +116,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: theme.colorScheme.shadow.withOpacity(0.1),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -182,9 +168,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
               SizedBox(height: 28.h),
               Text(
                 'Sin categorías',
-                style: GoogleFonts.poppins(
-                  fontSize: 20.sp,
-                  fontWeight: FontWeight.w600,
+                style: theme.textTheme.titleLarge?.copyWith(
                   color: theme.colorScheme.onSurface,
                 ),
               ),
@@ -192,8 +176,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
               Text(
                 'Crea tu primera categoría para\norganizar tus transacciones',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                  fontSize: 14.sp,
+                style: theme.textTheme.titleSmall?.copyWith(
                   color: theme.colorScheme.secondary.withOpacity(0.6),
                   height: 1.6,
                 ),
@@ -225,7 +208,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: theme.colorScheme.shadow.withOpacity(0.02),
             blurRadius: 10.r,
             offset: Offset(0, 2.h),
           ),
@@ -253,8 +236,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                 children: [
                   Text(
                     categoria['categoria'] ?? '',
-                    style: GoogleFonts.poppins(
-                      fontSize: 15.sp,
+                    style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: theme.colorScheme.onSurface,
                     ),
@@ -273,8 +255,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                       SizedBox(width: 6.w),
                       Text(
                         tipoTransaccion,
-                        style: GoogleFonts.poppins(
-                          fontSize: 13.sp,
+                        style: theme.textTheme.labelMedium?.copyWith(
                           color: theme.colorScheme.secondary.withOpacity(0.8),
                           fontWeight: FontWeight.w500,
                         ),
@@ -576,7 +557,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
       message:
           '¿Estás seguro de eliminar "${categoria['categoria']}"? Esta acción no se puede deshacer.',
       confirmText: 'Eliminar',
-      confirmColor: Colors.red.shade400,
+      confirmColor: Theme.of(context).colorScheme.error,
       icon: Icons.delete_outline_rounded,
     );
 
@@ -636,8 +617,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
             ],
             Text(
               label,
-              style: GoogleFonts.poppins(
-                fontSize: 13.sp,
+              style: theme.textTheme.labelMedium?.copyWith(
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 color:
                     isSelected

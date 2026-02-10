@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:lottie/lottie.dart';
 import 'package:notificaciones/home_screen.dart';
@@ -200,8 +199,7 @@ class _LoadingScreenState extends State<LoadingScreen>
                 SizedBox(height: 16.h),
                 Text(
                   'Autenticación fallida',
-                  style: GoogleFonts.lato(
-                    fontSize: 20.sp,
+                  style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: theme.colorScheme.onSurface,
                   ),
@@ -210,8 +208,7 @@ class _LoadingScreenState extends State<LoadingScreen>
                 Text(
                   'No se pudo verificar tu identidad. Inténtalo de nuevo.',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.lato(
-                    fontSize: 14.sp,
+                  style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
@@ -233,8 +230,7 @@ class _LoadingScreenState extends State<LoadingScreen>
                         ),
                         child: Text(
                           'Reintentar',
-                          style: GoogleFonts.lato(
-                            fontSize: 14.sp,
+                          style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
@@ -252,6 +248,7 @@ class _LoadingScreenState extends State<LoadingScreen>
   }
 
   void _showErrorDialog(String error) {
+    final theme = Theme.of(context);
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -263,7 +260,7 @@ class _LoadingScreenState extends State<LoadingScreen>
             child: Container(
               padding: EdgeInsets.all(20.r), // ✅ REDUCIDO de 24
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(20.r),
               ),
               child: Column(
@@ -284,18 +281,16 @@ class _LoadingScreenState extends State<LoadingScreen>
                   SizedBox(height: 16.h), // ✅ REDUCIDO de 20
                   Text(
                     'Error al Cargar',
-                    style: GoogleFonts.lato(
-                      fontSize: 18.sp, // ✅ REDUCIDO de 20
+                    style: theme.textTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF2D3436),
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
                   SizedBox(height: 10.h), // ✅ REDUCIDO de 12
                   Text(
                     'Hubo un problema al cargar los datos. Por favor, intenta nuevamente.',
-                    style: GoogleFonts.openSans(
-                      fontSize: 12.sp, // ✅ REDUCIDO de 14
-                      color: Colors.grey.shade600,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -304,8 +299,11 @@ class _LoadingScreenState extends State<LoadingScreen>
                     width: double.infinity,
                     height: 44.h, // ✅ REDUCIDO de 48
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                      gradient: LinearGradient(
+                        colors: [
+                          Theme.of(context).colorScheme.primary,
+                          Theme.of(context).colorScheme.secondary,
+                        ],
                       ),
                       borderRadius: BorderRadius.circular(10.r),
                     ),
@@ -323,9 +321,8 @@ class _LoadingScreenState extends State<LoadingScreen>
                         child: Center(
                           child: Text(
                             'Reintentar',
-                            style: GoogleFonts.lato(
+                            style: theme.textTheme.bodyMedium?.copyWith(
                               color: Colors.white,
-                              fontSize: 14.sp, // ✅ REDUCIDO de 16
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -342,7 +339,7 @@ class _LoadingScreenState extends State<LoadingScreen>
 
   // UI Builders
   Widget _buildBackground(ThemeData theme) {
-    return Container(color: theme.colorScheme.background);
+    return Container(color: theme.colorScheme.surface);
   }
 
   Widget _buildLoadingContent(ThemeManager themeManager) {
@@ -379,8 +376,7 @@ class _LoadingScreenState extends State<LoadingScreen>
             // Título
             Text(
               'Administración de Gastos',
-              style: GoogleFonts.lato(
-                fontSize: 28.sp,
+              style: theme.textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.onSurface,
                 letterSpacing: 1.2,
@@ -389,8 +385,7 @@ class _LoadingScreenState extends State<LoadingScreen>
             SizedBox(height: 6.h),
             Text(
               'Tu gestor financiero personal',
-              style: GoogleFonts.openSans(
-                fontSize: 12.sp,
+              style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.secondary.withOpacity(0.7),
               ),
             ),
@@ -409,7 +404,7 @@ class _LoadingScreenState extends State<LoadingScreen>
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
+                    color: theme.colorScheme.shadow.withOpacity(0.03),
                     blurRadius: 8.r,
                     offset: Offset(0, 2.h),
                   ),
@@ -420,8 +415,7 @@ class _LoadingScreenState extends State<LoadingScreen>
                   // Mensaje de carga
                   Text(
                     _loadingMessage,
-                    style: GoogleFonts.lato(
-                      fontSize: 13.sp,
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: theme.colorScheme.onSurface,
                     ),
@@ -459,8 +453,7 @@ class _LoadingScreenState extends State<LoadingScreen>
             // Mensaje de espera
             Text(
               'Preparando tu experiencia financiera',
-              style: GoogleFonts.openSans(
-                fontSize: 11.sp,
+              style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.secondary.withOpacity(0.6),
                 fontStyle: FontStyle.italic,
               ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:notificaciones/models/Meta.dart';
@@ -236,10 +235,13 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
                                         _meta.completada
                                             ? '¡Meta completada!'
                                             : 'Faltan ${_currencyFormat.format(montoRestante.clamp(0, double.infinity))}',
-                                        style: GoogleFonts.lato(
-                                          fontSize: 13.sp,
-                                          color: Colors.white.withOpacity(0.85),
-                                        ),
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                              fontSize: 13.sp,
+                                              color: Colors.white.withOpacity(
+                                                0.85,
+                                              ),
+                                            ),
                                       ),
                                     ],
                                   ),
@@ -260,7 +262,7 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
                               children: [
                                 Text(
                                   '${_meta.progreso.toStringAsFixed(1)}%',
-                                  style: GoogleFonts.lato(
+                                  style: theme.textTheme.bodySmall?.copyWith(
                                     fontSize: 12.sp,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white.withOpacity(0.9),
@@ -278,11 +280,12 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
                                     ),
                                     child: Text(
                                       '✓ Completada',
-                                      style: GoogleFonts.lato(
-                                        fontSize: 11.sp,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            fontSize: 11.sp,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
                                     ),
                                   )
                                 else if (_meta.estaProxima)
@@ -297,18 +300,19 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
                                     ),
                                     child: Text(
                                       '🔥 Casi listo',
-                                      style: GoogleFonts.lato(
-                                        fontSize: 11.sp,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            fontSize: 11.sp,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
                                     ),
                                   ),
                                 Text(
                                   _meta.diasRestantes > 0
                                       ? '${_meta.diasRestantes} días'
                                       : 'Plazo vencido',
-                                  style: GoogleFonts.lato(
+                                  style: theme.textTheme.bodySmall?.copyWith(
                                     fontSize: 12.sp,
                                     color: Colors.white.withOpacity(0.8),
                                   ),
@@ -336,7 +340,7 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
                       )!,
                   child: Text(
                     _meta.nombre,
-                    style: GoogleFonts.poppins(
+                    style: theme.textTheme.titleLarge?.copyWith(
                       fontSize: titleFontSize.sp,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -388,7 +392,7 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
                 ),
                 child: Text(
                   '${_meta.progreso.toStringAsFixed(0)}%',
-                  style: GoogleFonts.poppins(
+                  style: theme.textTheme.titleLarge?.copyWith(
                     fontSize: 20.sp,
                     fontWeight: FontWeight.bold,
                     color: _statusColor,
@@ -530,7 +534,7 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
                   children: [
                     Text(
                       'Para alcanzar tu meta necesitas ahorrar:',
-                      style: GoogleFonts.lato(
+                      style: theme.textTheme.bodyMedium?.copyWith(
                         fontSize: 13.sp,
                         fontWeight: FontWeight.w600,
                         color: theme.colorScheme.onSurface,
@@ -601,7 +605,7 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
           SizedBox(height: 4.h),
           Text(
             value,
-            style: GoogleFonts.lato(
+            style: theme.textTheme.bodySmall?.copyWith(
               fontSize: 11.sp,
               fontWeight: FontWeight.w700,
               color: theme.colorScheme.onSurface,
@@ -613,7 +617,7 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
           SizedBox(height: 2.h),
           Text(
             label,
-            style: GoogleFonts.lato(
+            style: theme.textTheme.labelSmall?.copyWith(
               fontSize: 10.sp,
               color: theme.colorScheme.onSurface.withOpacity(0.5),
             ),
@@ -674,7 +678,7 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
               children: [
                 Text(
                   isCompleted ? '¡Meta alcanzada!' : 'Plazo vencido',
-                  style: GoogleFonts.poppins(
+                  style: theme.textTheme.titleLarge?.copyWith(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w600,
                     color: isCompleted ? Colors.green : theme.colorScheme.error,
@@ -687,7 +691,7 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
                       : isExpired
                       ? 'El plazo para esta meta ha finalizado. Puedes editar la fecha objetivo para continuar.'
                       : '',
-                  style: GoogleFonts.lato(
+                  style: theme.textTheme.bodySmall?.copyWith(
                     fontSize: 12.sp,
                     color: theme.colorScheme.onSurface.withOpacity(0.6),
                   ),
@@ -737,7 +741,7 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
         children: [
           Text(
             'Línea de tiempo',
-            style: GoogleFonts.poppins(
+            style: theme.textTheme.titleLarge?.copyWith(
               fontSize: 16.sp,
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onSurface,
@@ -782,14 +786,14 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
                                 'es_MX',
                               ).format(fechaInicio)
                               : _meta.fechaInicio,
-                          style: GoogleFonts.lato(
+                          style: theme.textTheme.labelSmall?.copyWith(
                             fontSize: 10.sp,
                             color: theme.colorScheme.onSurface.withOpacity(0.5),
                           ),
                         ),
                         Text(
                           '${porcentajeTiempo.toStringAsFixed(0)}% del tiempo',
-                          style: GoogleFonts.lato(
+                          style: theme.textTheme.labelSmall?.copyWith(
                             fontSize: 10.sp,
                             fontWeight: FontWeight.w600,
                             color: theme.colorScheme.onSurface.withOpacity(0.6),
@@ -802,7 +806,7 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
                                 'es_MX',
                               ).format(fechaObjetivo)
                               : _meta.fechaObjetivo,
-                          style: GoogleFonts.lato(
+                          style: theme.textTheme.labelSmall?.copyWith(
                             fontSize: 10.sp,
                             color: theme.colorScheme.onSurface.withOpacity(0.5),
                           ),
@@ -870,7 +874,7 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
                       _meta.progreso >= porcentajeTiempo
                           ? 'Vas por buen camino, tu ahorro supera el avance del tiempo'
                           : 'Necesitas acelerar el ritmo de ahorro para llegar a tiempo',
-                      style: GoogleFonts.lato(
+                      style: theme.textTheme.bodySmall?.copyWith(
                         fontSize: 11.sp,
                         color:
                             _meta.progreso >= porcentajeTiempo
@@ -900,7 +904,7 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
           width: 120.w,
           child: Text(
             label,
-            style: GoogleFonts.lato(
+            style: theme.textTheme.bodySmall?.copyWith(
               fontSize: 11.sp,
               color: theme.colorScheme.onSurface.withOpacity(0.6),
             ),
@@ -920,7 +924,7 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
         SizedBox(width: 8.w),
         Text(
           '${value.toStringAsFixed(0)}%',
-          style: GoogleFonts.lato(
+          style: theme.textTheme.bodySmall?.copyWith(
             fontSize: 11.sp,
             fontWeight: FontWeight.w700,
             color: color,
@@ -950,7 +954,7 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
               SizedBox(width: 8.w),
               Text(
                 'Descripción',
-                style: GoogleFonts.poppins(
+                style: theme.textTheme.titleLarge?.copyWith(
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w600,
                   color: theme.colorScheme.onSurface,
@@ -961,7 +965,7 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
           SizedBox(height: 10.h),
           Text(
             _meta.descripcion,
-            style: GoogleFonts.lato(
+            style: theme.textTheme.bodyMedium?.copyWith(
               fontSize: 13.sp,
               height: 1.5,
               color: theme.colorScheme.onSurface.withOpacity(0.7),
@@ -1040,7 +1044,7 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
         children: [
           Text(
             'Detalles',
-            style: GoogleFonts.poppins(
+            style: theme.textTheme.titleLarge?.copyWith(
               fontSize: 16.sp,
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onSurface,
@@ -1071,7 +1075,7 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
                       children: [
                         Text(
                           detail.label,
-                          style: GoogleFonts.lato(
+                          style: theme.textTheme.labelSmall?.copyWith(
                             fontSize: 10.sp,
                             color: theme.colorScheme.onSurface.withOpacity(0.5),
                           ),
@@ -1079,7 +1083,7 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
                         SizedBox(height: 2.h),
                         Text(
                           detail.value,
-                          style: GoogleFonts.lato(
+                          style: theme.textTheme.bodyMedium?.copyWith(
                             fontSize: 13.sp,
                             fontWeight: FontWeight.w600,
                             color: theme.colorScheme.onSurface,
@@ -1129,7 +1133,7 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
       children: [
         Text(
           label,
-          style: GoogleFonts.lato(
+          style: theme.textTheme.bodySmall?.copyWith(
             fontSize: 11.sp,
             color: theme.colorScheme.onSurface.withOpacity(0.6),
           ),
@@ -1137,7 +1141,7 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
         SizedBox(height: 4.h),
         Text(
           _currencyFormat.format(amount),
-          style: GoogleFonts.lato(
+          style: theme.textTheme.bodyLarge?.copyWith(
             fontSize: 18.sp,
             fontWeight: FontWeight.bold,
             color: color,
@@ -1170,14 +1174,14 @@ class _MetaDetalleScreenState extends State<MetaDetalleScreen> {
               children: [
                 Text(
                   label,
-                  style: GoogleFonts.lato(
+                  style: theme.textTheme.labelSmall?.copyWith(
                     fontSize: 10.sp,
                     color: theme.colorScheme.onSurface.withOpacity(0.5),
                   ),
                 ),
                 Text(
                   value,
-                  style: GoogleFonts.lato(
+                  style: theme.textTheme.bodyMedium?.copyWith(
                     fontSize: 13.sp,
                     fontWeight: FontWeight.w700,
                     color: theme.colorScheme.onSurface,

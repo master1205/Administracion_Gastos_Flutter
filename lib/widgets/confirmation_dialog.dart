@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/haptic_utils.dart';
 
 /// Diálogo de confirmación reutilizable con diseño Cashew
 ///
@@ -100,9 +100,7 @@ class ConfirmationDialog extends StatelessWidget {
             // Título
             Text(
               title,
-              style: GoogleFonts.poppins(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
+              style: theme.textTheme.titleMedium?.copyWith(
                 color: theme.colorScheme.onSurface,
               ),
               textAlign: TextAlign.center,
@@ -112,8 +110,7 @@ class ConfirmationDialog extends StatelessWidget {
             // Mensaje
             Text(
               message,
-              style: GoogleFonts.poppins(
-                fontSize: 12.sp,
+              style: theme.textTheme.labelMedium?.copyWith(
                 fontWeight: FontWeight.w400,
                 color: theme.colorScheme.secondary.withOpacity(0.7),
               ),
@@ -145,8 +142,7 @@ class ConfirmationDialog extends StatelessWidget {
                           child: Center(
                             child: Text(
                               cancelText,
-                              style: GoogleFonts.poppins(
-                                fontSize: 13.sp,
+                              style: theme.textTheme.labelMedium?.copyWith(
                                 fontWeight: FontWeight.w600,
                                 color: theme.colorScheme.onSurface,
                               ),
@@ -173,7 +169,10 @@ class ConfirmationDialog extends StatelessWidget {
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () => Navigator.of(context).pop(true),
+                        onTap: () {
+                          Haptics.heavy();
+                          Navigator.of(context).pop(true);
+                        },
                         borderRadius: BorderRadius.circular(10.r),
                         splashColor: effectiveConfirmColor.withOpacity(0.1),
                         highlightColor: effectiveConfirmColor.withOpacity(0.05),
@@ -182,10 +181,9 @@ class ConfirmationDialog extends StatelessWidget {
                           child: Center(
                             child: Text(
                               confirmText,
-                              style: GoogleFonts.poppins(
+                              style: theme.textTheme.labelMedium?.copyWith(
                                 color: effectiveConfirmColor,
                                 fontWeight: FontWeight.w600,
-                                fontSize: 13.sp,
                               ),
                             ),
                           ),

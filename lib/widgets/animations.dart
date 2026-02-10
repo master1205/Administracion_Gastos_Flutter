@@ -725,7 +725,11 @@ class AnimatedEmptyState extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             ScaleIn(
-              child: Icon(icon, size: 80, color: Colors.grey.withOpacity(0.5)),
+              child: Icon(
+                icon,
+                size: 80,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 24),
             FadeIn(
@@ -740,9 +744,9 @@ class AnimatedEmptyState extends StatelessWidget {
               FadeIn(
                 child: Text(
                   subtitle,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),

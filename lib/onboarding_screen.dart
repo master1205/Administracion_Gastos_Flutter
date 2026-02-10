@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:notificaciones/local_notifications.dart';
 import 'package:notificaciones/loading_screen.dart';
 import 'package:notificaciones/services/firebase_messaging_service.dart';
@@ -214,7 +214,7 @@ class OnboardingScreenState extends State<OnboardingScreen>
             Expanded(child: Text(message, style: TextStyle(fontSize: 13.sp))),
           ],
         ),
-        backgroundColor: Colors.red,
+        backgroundColor: Theme.of(context).colorScheme.error,
         behavior: SnackBarBehavior.fixed,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.r),
@@ -234,7 +234,7 @@ class OnboardingScreenState extends State<OnboardingScreen>
             Expanded(child: Text(message, style: TextStyle(fontSize: 13.sp))),
           ],
         ),
-        backgroundColor: Colors.green,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         behavior: SnackBarBehavior.fixed,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.r),
@@ -249,8 +249,8 @@ class OnboardingScreenState extends State<OnboardingScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF667eea).withOpacity(0.1),
-            const Color(0xFF764ba2).withOpacity(0.1),
+            Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            Theme.of(context).colorScheme.secondary.withOpacity(0.1),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -271,12 +271,17 @@ class OnboardingScreenState extends State<OnboardingScreen>
                     padding: EdgeInsets.all(18.r),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                      gradient: LinearGradient(
+                        colors: [
+                          Theme.of(context).colorScheme.primary,
+                          Theme.of(context).colorScheme.secondary,
+                        ],
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF667eea).withOpacity(0.4),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withOpacity(0.4),
                           blurRadius: 22.r,
                           offset: Offset(0, 10.h),
                         ),
@@ -293,19 +298,17 @@ class OnboardingScreenState extends State<OnboardingScreen>
               SizedBox(height: 36.h),
               Text(
                 '¡Bienvenido!',
-                style: GoogleFonts.lato(
-                  fontSize: 30.sp,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF2D3436),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 10.h),
               Text(
                 'Administra tus finanzas de manera\nsencilla y eficiente',
-                style: GoogleFonts.openSans(
-                  fontSize: 13.sp,
-                  color: Colors.grey.shade600,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   height: 1.4,
                 ),
                 textAlign: TextAlign.center,
@@ -314,11 +317,13 @@ class OnboardingScreenState extends State<OnboardingScreen>
               Container(
                 padding: EdgeInsets.all(18.r),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(18.r),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.shadow.withOpacity(0.05),
                       blurRadius: 16.r,
                       offset: Offset(0, 6.h),
                     ),
@@ -331,10 +336,11 @@ class OnboardingScreenState extends State<OnboardingScreen>
                       children: [
                         Text(
                           'Personaliza tu experiencia',
-                          style: GoogleFonts.lato(
-                            fontSize: 15.sp,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFF2D3436),
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         // ✅ NUEVO: Indicador de guardado automático
@@ -358,21 +364,26 @@ class OnboardingScreenState extends State<OnboardingScreen>
                     TextField(
                       controller: _nameController,
                       textCapitalization: TextCapitalization.words,
-                      style: GoogleFonts.openSans(
-                        fontSize: 13.sp,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w500,
                       ),
                       decoration: InputDecoration(
                         hintText: 'Ingresa tu nombre',
-                        hintStyle: GoogleFonts.openSans(
-                          color: Colors.grey.shade400,
-                          fontSize: 13.sp,
+                        hintStyle: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.4),
                         ),
                         prefixIcon: Container(
                           margin: EdgeInsets.all(9.r),
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                            gradient: LinearGradient(
+                              colors: [
+                                Theme.of(context).colorScheme.primary,
+                                Theme.of(context).colorScheme.secondary,
+                              ],
                             ),
                             borderRadius: BorderRadius.circular(9.r),
                           ),
@@ -390,12 +401,14 @@ class OnboardingScreenState extends State<OnboardingScreen>
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12.r),
-                          borderSide: BorderSide(color: Colors.grey.shade200),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.outlineVariant,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12.r),
                           borderSide: BorderSide(
-                            color: const Color(0xFF667eea),
+                            color: Theme.of(context).colorScheme.primary,
                             width: 2.w,
                           ),
                         ),
@@ -422,8 +435,9 @@ class OnboardingScreenState extends State<OnboardingScreen>
                               SizedBox(width: 6.w),
                               Text(
                                 'Guardado automáticamente',
-                                style: GoogleFonts.openSans(
-                                  fontSize: 11.sp,
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.bodySmall?.copyWith(
                                   color: Colors.green.shade600,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -488,19 +502,17 @@ class OnboardingScreenState extends State<OnboardingScreen>
               SizedBox(height: 36.h),
               Text(
                 'Mantente Informado',
-                style: GoogleFonts.lato(
-                  fontSize: 26.sp,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF2D3436),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 10.h),
               Text(
                 'Recibe notificaciones sobre tus\ntransacciones y presupuestos',
-                style: GoogleFonts.openSans(
-                  fontSize: 13.sp,
-                  color: Colors.grey.shade600,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   height: 1.4,
                 ),
                 textAlign: TextAlign.center,
@@ -509,11 +521,13 @@ class OnboardingScreenState extends State<OnboardingScreen>
               Container(
                 padding: EdgeInsets.all(18.r),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(18.r),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.shadow.withOpacity(0.05),
                       blurRadius: 16.r,
                       offset: Offset(0, 6.h),
                     ),
@@ -525,7 +539,7 @@ class OnboardingScreenState extends State<OnboardingScreen>
                       icon: Icons.schedule_rounded,
                       title: 'Recordatorios Diarios',
                       description: 'A las 10 AM, 3 PM y 9 PM',
-                      color: const Color(0xFF667eea),
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     SizedBox(height: 12.h),
                     _buildFeatureItem(
@@ -570,8 +584,7 @@ class OnboardingScreenState extends State<OnboardingScreen>
                       SizedBox(width: 9.w),
                       Text(
                         '¡Notificaciones Activadas!',
-                        style: GoogleFonts.lato(
-                          fontSize: 13.sp,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: Colors.green.shade700,
                         ),
@@ -623,9 +636,10 @@ class OnboardingScreenState extends State<OnboardingScreen>
                                     SizedBox(width: 9.w),
                                     Text(
                                       'Activar Notificaciones',
-                                      style: GoogleFonts.lato(
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodyMedium?.copyWith(
                                         color: Colors.white,
-                                        fontSize: 14.sp,
                                         fontWeight: FontWeight.bold,
                                         letterSpacing: 0.5,
                                       ),
@@ -687,19 +701,17 @@ class OnboardingScreenState extends State<OnboardingScreen>
               SizedBox(height: 36.h),
               Text(
                 '¡Todo Listo!',
-                style: GoogleFonts.lato(
-                  fontSize: 30.sp,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF2D3436),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 10.h),
               Text(
                 'Estás listo para comenzar a\nadministrar tus finanzas',
-                style: GoogleFonts.openSans(
-                  fontSize: 13.sp,
-                  color: Colors.grey.shade600,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   height: 1.4,
                 ),
                 textAlign: TextAlign.center,
@@ -708,11 +720,13 @@ class OnboardingScreenState extends State<OnboardingScreen>
               Container(
                 padding: EdgeInsets.all(18.r),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(18.r),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.shadow.withOpacity(0.05),
                       blurRadius: 16.r,
                       offset: Offset(0, 6.h),
                     ),
@@ -723,7 +737,7 @@ class OnboardingScreenState extends State<OnboardingScreen>
                     _buildCheckItem(
                       icon: Icons.person_rounded,
                       text: 'Perfil configurado',
-                      color: const Color(0xFF667eea),
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     SizedBox(height: 9.h),
                     _buildCheckItem(
@@ -784,9 +798,10 @@ class OnboardingScreenState extends State<OnboardingScreen>
                                 children: [
                                   Text(
                                     '¡Empezar Ahora!',
-                                    style: GoogleFonts.lato(
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium?.copyWith(
                                       color: Colors.white,
-                                      fontSize: 14.sp,
                                       fontWeight: FontWeight.bold,
                                       letterSpacing: 0.5,
                                     ),
@@ -834,17 +849,15 @@ class OnboardingScreenState extends State<OnboardingScreen>
             children: [
               Text(
                 title,
-                style: GoogleFonts.lato(
-                  fontSize: 13.sp,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF2D3436),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               Text(
                 description,
-                style: GoogleFonts.openSans(
-                  fontSize: 11.sp,
-                  color: Colors.grey.shade600,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -872,10 +885,9 @@ class OnboardingScreenState extends State<OnboardingScreen>
         SizedBox(width: 9.w),
         Text(
           text,
-          style: GoogleFonts.lato(
-            fontSize: 13.sp,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w600,
-            color: const Color(0xFF2D3436),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],
@@ -914,11 +926,13 @@ class OnboardingScreenState extends State<OnboardingScreen>
                   if (_currentPage > 0)
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.shadow.withOpacity(0.1),
                             blurRadius: 7.r,
                             offset: Offset(0, 2.h),
                           ),
@@ -927,7 +941,7 @@ class OnboardingScreenState extends State<OnboardingScreen>
                       child: IconButton(
                         onPressed: _previousPage,
                         icon: Icon(Icons.arrow_back_rounded, size: 20.sp),
-                        color: const Color(0xFF667eea),
+                        color: Theme.of(context).colorScheme.primary,
                         padding: EdgeInsets.all(9.r),
                       ),
                     )
@@ -938,8 +952,8 @@ class OnboardingScreenState extends State<OnboardingScreen>
                     activeIndex: _currentPage,
                     count: _totalPages,
                     effect: ExpandingDotsEffect(
-                      activeDotColor: const Color(0xFF667eea),
-                      dotColor: Colors.grey.shade300,
+                      activeDotColor: Theme.of(context).colorScheme.primary,
+                      dotColor: Theme.of(context).colorScheme.outlineVariant,
                       dotHeight: 6.h,
                       dotWidth: 6.w,
                       spacing: 4.w,
@@ -949,13 +963,18 @@ class OnboardingScreenState extends State<OnboardingScreen>
                   // Next/Finish Button
                   Container(
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                      gradient: LinearGradient(
+                        colors: [
+                          Theme.of(context).colorScheme.primary,
+                          Theme.of(context).colorScheme.secondary,
+                        ],
                       ),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF667eea).withOpacity(0.4),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withOpacity(0.4),
                           blurRadius: 7.r,
                           offset: Offset(0, 2.h),
                         ),

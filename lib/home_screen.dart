@@ -15,13 +15,13 @@ import 'package:notificaciones/notificaciones_screen.dart';
 import 'package:notificaciones/budgets_screen.dart';
 import 'package:notificaciones/apartados_screen.dart';
 import 'package:notificaciones/reportes_screen.dart';
-import 'package:notificaciones/theme_provider.dart';
 import 'package:notificaciones/transacciones_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import 'dart:async';
-import 'services/firestore_service.dart';
+import 'data_provider.dart';
+import 'utils/haptic_utils.dart';
 import 'widgets/animations.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -38,12 +38,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _selectedIndex = 0;
   bool _isScrollingDown = false;
   String _userName = '';
-  int _cantidadMetas = 0;
-  int _cantidadPresupuestos = 0;
-  int _cantidadApartados = 0;
-  StreamSubscription? _metasSubscription;
-  StreamSubscription? _presupuestosSubscription;
-  StreamSubscription? _apartadosSubscription;
+  // Conteos ahora vienen de DataProvider
 
   late TutorialCoachMark _tutorialCoachMark;
   final List<TargetFocus> _targets = [];
@@ -59,7 +54,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final GlobalKey _navItemGraficasKey = GlobalKey();
   final GlobalKey _navItemReportesKey = GlobalKey();
   final GlobalKey _drawerButtonKey = GlobalKey();
-  final GlobalKey _themeButtonKey = GlobalKey();
 
   late final List<Widget> _widgetOptions;
 
@@ -69,25 +63,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _initializeWidgets();
     _checkUserName();
-    _cargarCantidadMetas();
-    _cargarCantidadPresupuestos();
-    _cargarCantidadApartados();
     _maybeShowTutorial();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _metasSubscription?.cancel();
-    _presupuestosSubscription?.cancel();
-    _apartadosSubscription?.cancel();
     super.dispose();
   }
 
   void _initializeWidgets() {
     _widgetOptions = [
       NewDashboardScreen(key: _dashboardKey, onTabChange: _onItemTapped),
-      TransaccionesScreen(key: _transaccionesKey),
+      TransaccionesScreen(
+        key: _transaccionesKey,
+        onStateChanged: () {
+          if (mounted) setState(() {});
+        },
+      ),
       GraficasScreen(key: _graficasKey),
       ReportesScreen(key: _reportesKey),
     ];
@@ -106,42 +99,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _cargarCantidadMetas() {
-    final firestoreService = FirestoreService();
-    _metasSubscription = firestoreService.obtenerMetas().listen((metas) {
-      if (mounted) {
-        setState(() {
-          _cantidadMetas = metas.length;
-        });
-      }
-    });
-  }
-
-  void _cargarCantidadPresupuestos() {
-    final firestoreService = FirestoreService();
-    _presupuestosSubscription = firestoreService
-        .obtenerPresupuestosActivos()
-        .listen((presupuestos) {
-          if (mounted) {
-            setState(() {
-              _cantidadPresupuestos = presupuestos.length;
-            });
-          }
-        });
-  }
-
-  void _cargarCantidadApartados() {
-    final firestoreService = FirestoreService();
-    _apartadosSubscription = firestoreService.obtenerApartadosActivos().listen((
-      apartados,
-    ) {
-      if (mounted) {
-        setState(() {
-          _cantidadApartados = apartados.length;
-        });
-      }
-    });
-  }
+  // Conteos ahora vienen de DataProvider — sin streams duplicados
 
   void _promptUserName() {
     final controller = TextEditingController();
@@ -168,7 +126,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: theme.colorScheme.shadow.withOpacity(0.08),
                   blurRadius: 20.r,
                   offset: Offset(0, 6.h),
                 ),
@@ -329,7 +287,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _initTutorialTargets();
     _tutorialCoachMark = TutorialCoachMark(
       targets: _targets,
-      colorShadow: Colors.black,
+      colorShadow: Theme.of(context).colorScheme.shadow,
       textSkip: "",
       paddingFocus: 10,
       opacityShadow: 0.8,
@@ -351,7 +309,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _targets.clear();
     _targets.addAll([
       _createDrawerTarget(),
-      _createThemeTarget(),
       _createNavInicioTarget(),
       _createNavTransaccionesTarget(),
       _createNavGraficasTarget(),
@@ -379,37 +336,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 icon: Icons.menu_rounded,
                 gradientColors: const [Color(0xFF4facfe), Color(0xFF00f2fe)],
                 currentStep: 1,
-                totalSteps: 6,
+                totalSteps: 5,
                 onNext: controller.next,
-                onSkip: controller.skip,
-              ),
-        ),
-      ],
-    );
-  }
-
-  TargetFocus _createThemeTarget() {
-    return TargetFocus(
-      identify: "ThemeButton",
-      keyTarget: _themeButtonKey,
-      color: Colors.transparent,
-      enableOverlayTab: true,
-      shape: ShapeLightFocus.Circle,
-      radius: 10,
-      contents: [
-        TargetContent(
-          align: ContentAlign.bottom,
-          padding: EdgeInsets.all(16.r),
-          builder:
-              (context, controller) => _buildModernTutorialCard(
-                title: "🌓 Cambiar Tema",
-                description: "Alterna entre modo claro y oscuro.",
-                icon: Icons.brightness_6_rounded,
-                gradientColors: const [Color(0xFFf093fb), Color(0xFFF5576c)],
-                currentStep: 2,
-                totalSteps: 6,
-                onNext: controller.next,
-                onBack: controller.previous,
                 onSkip: controller.skip,
               ),
         ),
@@ -435,8 +363,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 description: "Resumen de balance, cuentas y transacciones.",
                 icon: Icons.home_rounded,
                 gradientColors: const [Color(0xFFfa709a), Color(0xFFfee140)],
-                currentStep: 3,
-                totalSteps: 6,
+                currentStep: 2,
+                totalSteps: 5,
                 onNext: controller.next,
                 onBack: controller.previous,
                 onSkip: controller.skip,
@@ -463,9 +391,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 title: "💸 Transacciones",
                 description: "Consulta, edita o elimina tus movimientos.",
                 icon: Icons.swap_horiz_rounded,
-                gradientColors: const [Color(0xFF667eea), Color(0xFF764ba2)],
-                currentStep: 4,
-                totalSteps: 6,
+                gradientColors: [
+                  Theme.of(context).colorScheme.primary,
+                  Theme.of(context).colorScheme.secondary,
+                ],
+                currentStep: 3,
+                totalSteps: 5,
                 onNext: controller.next,
                 onBack: controller.previous,
                 onSkip: controller.skip,
@@ -493,8 +424,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 description: "Visualiza tus gastos con gráficos interactivos.",
                 icon: Icons.bar_chart_rounded,
                 gradientColors: const [Color(0xFF30cfd0), Color(0xFF330867)],
-                currentStep: 5,
-                totalSteps: 6,
+                currentStep: 4,
+                totalSteps: 5,
                 onNext: controller.next,
                 onBack: controller.previous,
                 onSkip: controller.skip,
@@ -522,8 +453,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 description: "Genera informes y exporta tus datos.",
                 icon: Icons.description_rounded,
                 gradientColors: const [Color(0xFFa8edea), Color(0xFFfed6e3)],
-                currentStep: 6,
-                totalSteps: 6,
+                currentStep: 5,
+                totalSteps: 5,
                 onNext: controller.next,
                 onBack: controller.previous,
                 isLastStep: true,
@@ -610,7 +541,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   style: TextStyle(
                     fontSize: 12.sp,
                     height: 1.3,
-                    color: Colors.grey.shade700,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 2,
@@ -639,7 +570,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         child: Text(
                           'Omitir',
                           style: TextStyle(
-                            color: Colors.grey.shade600,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w600,
                           ),
@@ -653,13 +585,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           Container(
                             margin: EdgeInsets.only(right: 6.w),
                             decoration: BoxDecoration(
-                              color: Colors.grey.shade200,
+                              color:
+                                  Theme.of(context).colorScheme.outlineVariant,
                               shape: BoxShape.circle,
                             ),
                             child: IconButton(
                               onPressed: onBack,
                               icon: Icon(Icons.arrow_back_rounded, size: 16.sp),
-                              color: Colors.grey.shade700,
+                              color:
+                                  Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                               padding: EdgeInsets.all(6.r),
                               constraints: BoxConstraints(
                                 minWidth: 30.w,
@@ -750,7 +686,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 isActive || isCurrent
                     ? LinearGradient(colors: gradientColors)
                     : null,
-            color: !isActive && !isCurrent ? Colors.grey.shade300 : null,
+            color:
+                !isActive && !isCurrent
+                    ? Theme.of(context).colorScheme.outlineVariant
+                    : null,
             borderRadius: BorderRadius.circular(2.5.r),
           ),
         );
@@ -759,20 +698,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildDrawer() {
+    final dp = Provider.of<DataProvider>(context, listen: true);
     final menuItems = [
       _DrawerItem(
         icon: Icons.category_rounded,
         title: "Categorías",
         subtitle: "Organiza tus gastos",
-        color: const Color(0xFF667eea),
+        color: Theme.of(context).colorScheme.primary,
         onTap: () {
           Navigator.pop(context);
           Navigator.push(
             context,
             MaterialPageRoute(
               builder:
-                  (context) =>
-                      const CategoriasScreen(headerColor: Color(0xFF667eea)),
+                  (context) => CategoriasScreen(
+                    headerColor: Theme.of(context).colorScheme.primary,
+                  ),
             ),
           );
         },
@@ -795,7 +736,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         title: "Metas de Ahorro",
         subtitle: "Alcanza tus objetivos",
         color: const Color(0xFF4CAF50),
-        badge: _cantidadMetas > 0 ? _cantidadMetas.toString() : null,
+        badge: dp.cantidadMetas > 0 ? dp.cantidadMetas.toString() : null,
         onTap: () {
           Navigator.pop(context);
           Navigator.push(
@@ -814,7 +755,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         subtitle: "Controla tus gastos",
         color: const Color(0xFFFF9800),
         badge:
-            _cantidadPresupuestos > 0 ? _cantidadPresupuestos.toString() : null,
+            dp.cantidadPresupuestos > 0
+                ? dp.cantidadPresupuestos.toString()
+                : null,
         onTap: () {
           Navigator.pop(context);
           Navigator.push(
@@ -828,7 +771,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         title: "Apartados",
         subtitle: "Reserva para gastos planeados",
         color: const Color(0xFF2196F3),
-        badge: _cantidadApartados > 0 ? _cantidadApartados.toString() : null,
+        badge:
+            dp.cantidadApartados > 0 ? dp.cantidadApartados.toString() : null,
         onTap: () {
           Navigator.pop(context);
           Navigator.push(
@@ -869,219 +813,201 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     final theme = Theme.of(context);
 
-    return Drawer(
-      width: 280.w,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-      child: Container(
-        color: theme.colorScheme.background,
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.fromLTRB(20.w, 50.h, 20.w, 28.h),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.08),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(26.r),
-                  bottomRight: Radius.circular(26.r),
+    return NavigationDrawer(
+      backgroundColor: theme.colorScheme.surface,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.fromLTRB(20.w, 50.h, 20.w, 28.h),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary.withOpacity(0.08),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(26.r),
+              bottomRight: Radius.circular(26.r),
+            ),
+            border: Border(
+              bottom: BorderSide(
+                color: theme.colorScheme.primary.withOpacity(0.15),
+                width: 1.5,
+              ),
+            ),
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: EdgeInsets.all(14.r),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withOpacity(0.15),
+                  shape: BoxShape.circle,
                 ),
-                border: Border(
-                  bottom: BorderSide(
-                    color: theme.colorScheme.primary.withOpacity(0.15),
-                    width: 1.5,
+                child: Image.asset('assets/icons/cochinito.png', height: 44.h),
+              ),
+              SizedBox(height: 14.h),
+              Text(
+                'Hola, $_userName',
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface,
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              SizedBox(height: 4.h),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(18.r),
+                  border: Border.all(
+                    color: theme.colorScheme.primary.withOpacity(0.2),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  'Administrador',
+                  style: TextStyle(
+                    color: theme.colorScheme.primary,
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-              child: Column(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(14.r),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Image.asset(
-                      'assets/icons/cochinito.png',
-                      height: 44.h,
-                    ),
-                  ),
-                  SizedBox(height: 14.h),
-                  Text(
-                    'Hola, $_userName',
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurface,
-                      fontSize: 20.sp,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 10.w,
-                      vertical: 5.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(18.r),
-                      border: Border.all(
-                        color: theme.colorScheme.primary.withOpacity(0.2),
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      'Administrador',
-                      style: TextStyle(
-                        color: theme.colorScheme.primary,
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 20.h),
-            Expanded(
-              child: ListView.builder(
-                padding: EdgeInsets.symmetric(horizontal: 14.w),
-                itemCount: menuItems.length,
-                itemBuilder: (context, index) {
-                  final item = menuItems[index];
-                  return FadeIn(
-                    duration: Duration(milliseconds: 300 + (index * 50)),
-                    child: Container(
-                      margin: EdgeInsets.only(bottom: 10.h),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surface,
-                        borderRadius: BorderRadius.circular(14.r),
-                        border: Border.all(
-                          color: theme.colorScheme.secondary.withOpacity(0.25),
-                          width: 1.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.03),
-                            blurRadius: 8.r,
-                            offset: Offset(0, 2.h),
-                          ),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: item.onTap,
-                          borderRadius: BorderRadius.circular(14.r),
-                          child: Padding(
-                            padding: EdgeInsets.all(14.r),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.all(10.r),
-                                  decoration: BoxDecoration(
-                                    color: item.color.withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(10.r),
-                                  ),
-                                  child: Icon(
-                                    item.icon,
-                                    color: item.color,
-                                    size: 20.sp,
-                                  ),
-                                ),
-                                SizedBox(width: 14.w),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        item.title,
-                                        style: TextStyle(
-                                          fontSize: 14.sp,
-                                          fontWeight: FontWeight.bold,
-                                          color: theme.colorScheme.onSurface,
-                                        ),
-                                      ),
-                                      SizedBox(height: 2.h),
-                                      Text(
-                                        item.subtitle,
-                                        style: TextStyle(
-                                          fontSize: 11.sp,
-                                          color: theme.colorScheme.secondary
-                                              .withOpacity(0.7),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                if (item.badge != null)
-                                  Container(
-                                    padding: EdgeInsets.all(6.r),
-                                    decoration: BoxDecoration(
-                                      color: item.color,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Text(
-                                      item.badge!,
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10.sp,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  )
-                                else
-                                  Icon(
-                                    Icons.chevron_right_rounded,
-                                    color: theme.colorScheme.secondary
-                                        .withOpacity(0.5),
-                                    size: 18.sp,
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            Container(
-              padding: EdgeInsets.all(18.r),
-              child: Column(
-                children: [
-                  Divider(color: theme.colorScheme.secondary.withOpacity(0.2)),
-                  SizedBox(height: 10.h),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.info_outline_rounded,
-                        size: 14.sp,
-                        color: theme.colorScheme.secondary.withOpacity(0.6),
-                      ),
-                      SizedBox(width: 6.w),
-                      Text(
-                        'Versión 1.0.0',
-                        style: TextStyle(
-                          fontSize: 12.sp,
-                          color: theme.colorScheme.secondary.withOpacity(0.6),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+        SizedBox(height: 20.h),
+        ...menuItems.asMap().entries.map((entry) {
+          final index = entry.key;
+          final item = entry.value;
+          return FadeIn(
+            duration: Duration(milliseconds: 300 + (index * 50)),
+            child: Container(
+              margin: EdgeInsets.only(bottom: 10.h, left: 14.w, right: 14.w),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(14.r),
+                border: Border.all(
+                  color: theme.colorScheme.secondary.withOpacity(0.25),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.shadow.withOpacity(0.03),
+                    blurRadius: 8.r,
+                    offset: Offset(0, 2.h),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: item.onTap,
+                  borderRadius: BorderRadius.circular(14.r),
+                  child: Padding(
+                    padding: EdgeInsets.all(14.r),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(10.r),
+                          decoration: BoxDecoration(
+                            color: item.color.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(10.r),
+                          ),
+                          child: Icon(
+                            item.icon,
+                            color: item.color,
+                            size: 20.sp,
+                          ),
+                        ),
+                        SizedBox(width: 14.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.title,
+                                style: TextStyle(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                              ),
+                              SizedBox(height: 2.h),
+                              Text(
+                                item.subtitle,
+                                style: TextStyle(
+                                  fontSize: 11.sp,
+                                  color: theme.colorScheme.secondary
+                                      .withOpacity(0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (item.badge != null)
+                          Container(
+                            padding: EdgeInsets.all(6.r),
+                            decoration: BoxDecoration(
+                              color: item.color,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              item.badge!,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          )
+                        else
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            color: theme.colorScheme.secondary.withOpacity(0.5),
+                            size: 18.sp,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+        Container(
+          padding: EdgeInsets.all(18.r),
+          child: Column(
+            children: [
+              Divider(color: theme.colorScheme.secondary.withOpacity(0.2)),
+              SizedBox(height: 10.h),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 14.sp,
+                    color: theme.colorScheme.secondary.withOpacity(0.6),
+                  ),
+                  SizedBox(width: 6.w),
+                  Text(
+                    'Versión 1.0.0',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: theme.colorScheme.secondary.withOpacity(0.6),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
   void _onItemTapped(int index) {
+    Haptics.selection();
     setState(() => _selectedIndex = index);
   }
 
@@ -1309,10 +1235,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final themeManager = Provider.of<ThemeManager>(context);
     final theme = Theme.of(context);
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       extendBody: true,
       key: _scaffoldKey,
       drawer: _buildDrawer(),
@@ -1351,20 +1277,79 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ],
         ),
         actions: [
-          IconButton(
-            key: _themeButtonKey,
-            icon: Icon(
-              themeManager.isDarkMode
-                  ? Icons.dark_mode_rounded
-                  : Icons.light_mode_rounded,
-              color: theme.colorScheme.onSurface,
-              size: 22.sp,
-            ),
-            onPressed: () => themeManager.toggleTheme(),
-          ),
+          // Botones de búsqueda y filtros (solo en pestaña Transacciones)
+          if (_selectedIndex == 1) ...[
+            () {
+              final ts = _transaccionesKey.currentState;
+              final isSearching = ts?.showSearch ?? false;
+              final hasQuery = ts?.hasSearchQuery ?? false;
+              return IconButton(
+                onPressed: () {
+                  ts?.toggleSearch();
+                },
+                icon: Icon(
+                  isSearching ? Icons.search_off_rounded : Icons.search_rounded,
+                  size: 22.sp,
+                  color:
+                      hasQuery
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurface.withOpacity(0.7),
+                ),
+              );
+            }(),
+            () {
+              final ts = _transaccionesKey.currentState;
+              final advancedCount = ts?.activeAdvancedFilterCount ?? 0;
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      ts?.openAdvancedFilters();
+                    },
+                    icon: Icon(
+                      Icons.tune_rounded,
+                      size: 22.sp,
+                      color:
+                          advancedCount > 0
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                  ),
+                  if (advancedCount > 0)
+                    Positioned(
+                      top: 6.h,
+                      right: 6.w,
+                      child: Container(
+                        width: 16.w,
+                        height: 16.h,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: theme.colorScheme.surface,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '$advancedCount',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              fontSize: 8.sp,
+                              fontWeight: FontWeight.w700,
+                              color: theme.colorScheme.onPrimary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            }(),
+          ],
         ],
       ),
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       body: NotificationListener<UserScrollNotification>(
         onNotification: (notification) {
           final isScrollingDown =
@@ -1374,7 +1359,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           }
           return true;
         },
-        child: Center(child: _widgetOptions[_selectedIndex]),
+        child: IndexedStack(index: _selectedIndex, children: _widgetOptions),
       ),
       bottomNavigationBar: BottomAppBar(
         color: theme.colorScheme.surface,
@@ -1430,7 +1415,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: theme.colorScheme.shadow.withOpacity(0.1),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'componentes/heads_up_notification.dart';
 import 'models/NotificacionPersonalizada.dart';
@@ -92,7 +91,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
           data: ThemeData.light().copyWith(
             colorScheme: ColorScheme.light(
               primary: Color(int.parse('0xFF$_selectedColor')),
-              onPrimary: Colors.white,
+              onPrimary: theme.colorScheme.onPrimary,
               surface: theme.colorScheme.surface,
               onSurface: theme.colorScheme.onSurface,
             ),
@@ -135,14 +134,11 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
     final isEdit = widget.notificacion != null;
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         title: Text(
           isEdit ? 'Editar Notificación' : 'Nueva Notificación',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
-            fontSize: 18.sp,
-          ),
+          style: theme.textTheme.titleLarge,
         ),
         backgroundColor: theme.colorScheme.surface,
         elevation: 0,
@@ -221,9 +217,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
         SizedBox(width: 8.w),
         Text(
           titulo,
-          style: GoogleFonts.poppins(
-            fontSize: 15.sp,
-            fontWeight: FontWeight.w600,
+          style: theme.textTheme.titleSmall?.copyWith(
             color: theme.colorScheme.primary,
           ),
         ),
@@ -253,21 +247,18 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
       child: TextFormField(
         controller: controller,
         maxLines: maxLines,
-        style: GoogleFonts.poppins(
-          fontSize: 13.sp,
+        style: theme.textTheme.labelMedium?.copyWith(
           fontWeight: FontWeight.w400,
           color: theme.colorScheme.onSurface,
         ),
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
-          labelStyle: GoogleFonts.poppins(
+          labelStyle: theme.textTheme.labelMedium?.copyWith(
             color: theme.colorScheme.secondary.withOpacity(0.7),
-            fontSize: 12.sp,
           ),
-          hintStyle: GoogleFonts.poppins(
+          hintStyle: theme.textTheme.labelMedium?.copyWith(
             color: theme.colorScheme.secondary.withOpacity(0.4),
-            fontSize: 12.sp,
           ),
           prefixIcon: Container(
             margin: EdgeInsets.all(10.r),
@@ -323,15 +314,13 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
               children: [
                 Text(
                   'Hora',
-                  style: GoogleFonts.openSans(
-                    fontSize: 12.sp,
-                    color: Colors.grey.shade600,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
                 Text(
                   _selectedTime.format(context),
-                  style: GoogleFonts.lato(
-                    fontSize: 18.sp,
+                  style: theme.textTheme.bodyLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: theme.colorScheme.onSurface,
                   ),
@@ -347,7 +336,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
                 borderRadius: BorderRadius.circular(10.r),
               ),
             ),
-            child: Text('Cambiar', style: GoogleFonts.openSans()),
+            child: Text('Cambiar', style: theme.textTheme.bodyMedium),
           ),
         ],
       ),
@@ -363,7 +352,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
         borderRadius: BorderRadius.circular(12.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: theme.colorScheme.shadow.withOpacity(0.05),
             blurRadius: 8.r,
             offset: Offset(0, 3.h),
           ),
@@ -374,8 +363,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
         children: [
           Text(
             'Días de la semana',
-            style: GoogleFonts.lato(
-              fontSize: 13.sp,
+            style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.onSurface,
             ),
@@ -405,17 +393,18 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
                         color:
                             isSelected
                                 ? Color(int.parse('0xFF$_selectedColor'))
-                                : Colors.grey.shade200,
+                                : theme.colorScheme.outlineVariant,
                         borderRadius: BorderRadius.circular(10.r),
                       ),
                       alignment: Alignment.center,
                       child: Text(
                         dia['nombre'],
-                        style: GoogleFonts.lato(
-                          fontSize: 12.sp,
+                        style: theme.textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           color:
-                              isSelected ? Colors.white : Colors.grey.shade600,
+                              isSelected
+                                  ? Colors.white
+                                  : theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -436,7 +425,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
         borderRadius: BorderRadius.circular(12.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: theme.colorScheme.shadow.withOpacity(0.05),
             blurRadius: 8.r,
             offset: Offset(0, 3.h),
           ),
@@ -447,8 +436,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
         children: [
           Text(
             'Icono',
-            style: GoogleFonts.lato(
-              fontSize: 13.sp,
+            style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.onSurface,
             ),
@@ -472,7 +460,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
                                 ? Color(
                                   int.parse('0xFF$_selectedColor'),
                                 ).withOpacity(0.2)
-                                : Colors.grey.shade200,
+                                : theme.colorScheme.outlineVariant,
                         borderRadius: BorderRadius.circular(12.r),
                         border:
                             isSelected
@@ -490,7 +478,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
                         color:
                             isSelected
                                 ? Color(int.parse('0xFF$_selectedColor'))
-                                : Colors.grey.shade600,
+                                : theme.colorScheme.onSurfaceVariant,
                         size: 24.sp,
                       ),
                     ),
@@ -511,7 +499,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
         borderRadius: BorderRadius.circular(12.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: theme.colorScheme.shadow.withOpacity(0.05),
             blurRadius: 8.r,
             offset: Offset(0, 3.h),
           ),
@@ -522,8 +510,7 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
         children: [
           Text(
             'Color',
-            style: GoogleFonts.lato(
-              fontSize: 13.sp,
+            style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.onSurface,
             ),
@@ -581,46 +568,33 @@ class _CrearNotificacionScreenState extends State<CrearNotificacionScreen> {
 
   Widget _buildBotonGuardar() {
     final theme = Theme.of(context);
-    return Container(
-      height: 50.h,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.secondary.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(
-          color: theme.colorScheme.secondary.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: _guardarNotificacion,
-          borderRadius: BorderRadius.circular(12.r),
-          splashColor: theme.colorScheme.secondary.withOpacity(0.1),
-          highlightColor: theme.colorScheme.secondary.withOpacity(0.05),
-          child: Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.check_circle_outline,
-                  color: theme.colorScheme.secondary,
-                  size: 22.sp,
-                ),
-                SizedBox(width: 8.w),
-                Text(
-                  widget.notificacion != null
-                      ? 'Actualizar'
-                      : 'Crear Notificación',
-                  style: GoogleFonts.poppins(
-                    color: theme.colorScheme.secondary,
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
+    return SizedBox(
+      width: double.infinity,
+      height: 48.h,
+      child: FilledButton.tonal(
+        onPressed: _guardarNotificacion,
+        style: FilledButton.styleFrom(
+          backgroundColor: theme.colorScheme.secondaryContainer,
+          foregroundColor: theme.colorScheme.onSecondaryContainer,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.r),
           ),
+          elevation: 0,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.check_circle_outline, size: 20.sp),
+            SizedBox(width: 8.w),
+            Text(
+              widget.notificacion != null ? 'Actualizar' : 'Crear Notificación',
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: theme.colorScheme.onSecondaryContainer,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
         ),
       ),
     );

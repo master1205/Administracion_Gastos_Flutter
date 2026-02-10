@@ -1,14 +1,13 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'data_provider.dart';
+import 'utils/haptic_utils.dart';
 import 'models/Apartado.dart';
-import 'services/firestore_service.dart';
 import 'widgets/animations.dart';
 import 'widgets/animated_card.dart';
 import 'widgets/budget_widgets.dart';
-import 'widgets/shimmer_loading.dart';
 import 'crear_apartado_screen.dart';
 import 'apartado_detalle_screen.dart';
 import 'componentes/heads_up_notification.dart';
@@ -22,12 +21,7 @@ class ApartadosScreen extends StatefulWidget {
 
 class _ApartadosScreenState extends State<ApartadosScreen>
     with TickerProviderStateMixin {
-  final ValueNotifier<List<Apartado>> _apartadosNotifier =
-      ValueNotifier<List<Apartado>>([]);
-  final ValueNotifier<bool> _isLoadingNotifier = ValueNotifier<bool>(true);
   bool _isManualRefresh = false;
-  StreamSubscription<List<Apartado>>? _apartadosSubscription;
-  final FirestoreService _firestoreService = FirestoreService();
   late TabController _tabController;
 
   static final _currencyFormat = NumberFormat.currency(
@@ -40,32 +34,12 @@ class _ApartadosScreenState extends State<ApartadosScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _cargarDatos();
   }
 
   @override
   void dispose() {
-    _apartadosSubscription?.cancel();
-    _apartadosNotifier.dispose();
-    _isLoadingNotifier.dispose();
     _tabController.dispose();
     super.dispose();
-  }
-
-  void _cargarDatos() {
-    _apartadosSubscription?.cancel();
-    _apartadosSubscription = _firestoreService.obtenerApartados().listen(
-      (apartados) {
-        // Ordenar por progreso descendente
-        apartados.sort((a, b) => b.progreso.compareTo(a.progreso));
-        _apartadosNotifier.value = apartados;
-        _isLoadingNotifier.value = false;
-      },
-      onError: (e) {
-        debugPrint('Error cargando apartados: $e');
-        _isLoadingNotifier.value = false;
-      },
-    );
   }
 
   Future<void> refreshData() async {
@@ -75,6 +49,7 @@ class _ApartadosScreenState extends State<ApartadosScreen>
   }
 
   void _crearApartado() async {
+    Haptics.light();
     final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const CrearApartadoScreen()),
@@ -93,7 +68,7 @@ class _ApartadosScreenState extends State<ApartadosScreen>
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         backgroundColor: theme.colorScheme.surface,
         elevation: 0,
@@ -107,17 +82,18 @@ class _ApartadosScreenState extends State<ApartadosScreen>
         ),
         title: Text(
           'Apartados',
-          style: GoogleFonts.poppins(
-            fontSize: 20.sp,
+          style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w600,
             color: theme.colorScheme.onSurface,
           ),
         ),
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(48.h),
-          child: ValueListenableBuilder<List<Apartado>>(
-            valueListenable: _apartadosNotifier,
-            builder: (context, apartados, _) {
+          child: Builder(
+            builder: (context) {
+              final apartados =
+                  Provider.of<DataProvider>(context).apartados
+                    ..sort((a, b) => b.progreso.compareTo(a.progreso));
               final countAbonando =
                   apartados
                       .where((a) => a.estado == 'activo' || a.estaVencido)
@@ -129,14 +105,10 @@ class _ApartadosScreenState extends State<ApartadosScreen>
 
               return TabBar(
                 controller: _tabController,
-                labelStyle: GoogleFonts.poppins(
-                  fontSize: 13.sp,
+                labelStyle: theme.textTheme.labelMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
-                unselectedLabelStyle: GoogleFonts.poppins(
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w500,
-                ),
+                unselectedLabelStyle: theme.textTheme.labelMedium,
                 labelColor: theme.colorScheme.primary,
                 unselectedLabelColor: theme.colorScheme.onSurface.withOpacity(
                   0.5,
@@ -155,49 +127,39 @@ class _ApartadosScreenState extends State<ApartadosScreen>
       ),
       body: Stack(
         children: [
-          ValueListenableBuilder<bool>(
-            valueListenable: _isLoadingNotifier,
-            builder: (context, isLoading, child) {
-              if (isLoading) {
-                return ShimmerList(
-                  shimmerItem: MetaCardShimmer(),
-                  itemCount: 3,
-                );
-              }
+          Builder(
+            builder: (context) {
+              final apartados = List<Apartado>.from(
+                Provider.of<DataProvider>(context).apartados,
+              )..sort((a, b) => b.progreso.compareTo(a.progreso));
+              final abonando =
+                  apartados
+                      .where((a) => a.estado == 'activo' || a.estaVencido)
+                      .toList();
+              final listos =
+                  apartados.where((a) => a.estado == 'completado').toList();
+              final pagados =
+                  apartados.where((a) => a.estado == 'pagado').toList();
 
-              return ValueListenableBuilder<List<Apartado>>(
-                valueListenable: _apartadosNotifier,
-                builder: (context, apartados, child) {
-                  final abonando =
-                      apartados
-                          .where((a) => a.estado == 'activo' || a.estaVencido)
-                          .toList();
-                  final listos =
-                      apartados.where((a) => a.estado == 'completado').toList();
-                  final pagados =
-                      apartados.where((a) => a.estado == 'pagado').toList();
-
-                  return TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildTabContent(
-                        abonando,
-                        'Sin apartados activos',
-                        'Crea un apartado para empezar a abonar',
-                      ),
-                      _buildTabContent(
-                        listos,
-                        'Sin apartados listos',
-                        'Los apartados completados aparecerán aquí',
-                      ),
-                      _buildTabContent(
-                        pagados,
-                        'Sin apartados pagados',
-                        'Los apartados pagados aparecerán aquí',
-                      ),
-                    ],
-                  );
-                },
+              return TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildTabContent(
+                    abonando,
+                    'Sin apartados activos',
+                    'Crea un apartado para empezar a abonar',
+                  ),
+                  _buildTabContent(
+                    listos,
+                    'Sin apartados listos',
+                    'Los apartados completados aparecerán aquí',
+                  ),
+                  _buildTabContent(
+                    pagados,
+                    'Sin apartados pagados',
+                    'Los apartados pagados aparecerán aquí',
+                  ),
+                ],
               );
             },
           ),
@@ -232,18 +194,17 @@ class _ApartadosScreenState extends State<ApartadosScreen>
           width: 50.w,
           height: 50.w,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                theme.colorScheme.primary,
-                theme.colorScheme.primary.withOpacity(0.8),
-              ],
-            ),
             shape: BoxShape.circle,
+            color: theme.colorScheme.surface,
+            border: Border.all(
+              color: theme.colorScheme.secondary.withOpacity(0.2),
+              width: 1.5,
+            ),
             boxShadow: [
               BoxShadow(
-                color: theme.colorScheme.primary.withOpacity(0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+                color: theme.colorScheme.shadow.withOpacity(0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
@@ -257,7 +218,7 @@ class _ApartadosScreenState extends State<ApartadosScreen>
               child: Center(
                 child: Icon(
                   Icons.add_rounded,
-                  color: Colors.white,
+                  color: theme.colorScheme.primary,
                   size: 24.sp,
                 ),
               ),
@@ -284,8 +245,7 @@ class _ApartadosScreenState extends State<ApartadosScreen>
               ),
               child: Text(
                 '$count',
-                style: GoogleFonts.lato(
-                  fontSize: 10.sp,
+                style: theme.textTheme.labelSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: theme.colorScheme.primary,
                 ),
@@ -319,8 +279,7 @@ class _ApartadosScreenState extends State<ApartadosScreen>
               SizedBox(height: 16.h),
               Text(
                 emptyTitle,
-                style: GoogleFonts.poppins(
-                  fontSize: 16.sp,
+                style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: theme.colorScheme.onSurface.withOpacity(0.5),
                 ),
@@ -329,8 +288,7 @@ class _ApartadosScreenState extends State<ApartadosScreen>
               Text(
                 emptySubtitle,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.lato(
-                  fontSize: 13.sp,
+                style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurface.withOpacity(0.4),
                 ),
               ),
@@ -395,8 +353,7 @@ class _ApartadosScreenState extends State<ApartadosScreen>
               children: [
                 Text(
                   '$count apartado${count != 1 ? 's' : ''}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 13.sp,
+                  style: theme.textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: theme.colorScheme.onSurface,
                   ),
@@ -404,8 +361,7 @@ class _ApartadosScreenState extends State<ApartadosScreen>
                 SizedBox(height: 2.h),
                 Text(
                   '${_currencyFormat.format(apartado)} de ${_currencyFormat.format(total)}',
-                  style: GoogleFonts.lato(
-                    fontSize: 11.sp,
+                  style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurface.withOpacity(0.6),
                     fontWeight: FontWeight.w500,
                   ),
@@ -429,8 +385,7 @@ class _ApartadosScreenState extends State<ApartadosScreen>
                 ),
                 Text(
                   '${progreso.toStringAsFixed(0)}%',
-                  style: GoogleFonts.lato(
-                    fontSize: 10.sp,
+                  style: theme.textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w800,
                     color: theme.colorScheme.primary,
                   ),
@@ -514,8 +469,7 @@ class _ApartadosScreenState extends State<ApartadosScreen>
                     Flexible(
                       child: Text(
                         apartado.nombre,
-                        style: GoogleFonts.lato(
-                          fontSize: 15.sp,
+                        style: theme.textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -537,8 +491,7 @@ class _ApartadosScreenState extends State<ApartadosScreen>
                   SizedBox(height: 1.h),
                   Text(
                     apartado.descripcion,
-                    style: GoogleFonts.lato(
-                      fontSize: 11.sp,
+                    style: theme.textTheme.bodySmall?.copyWith(
                       color: Colors.white.withOpacity(0.75),
                     ),
                     maxLines: 1,
@@ -564,8 +517,7 @@ class _ApartadosScreenState extends State<ApartadosScreen>
                   ],
                   Text(
                     estadoLabel,
-                    style: GoogleFonts.lato(
-                      fontSize: 10.sp,
+                    style: theme.textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
@@ -591,8 +543,7 @@ class _ApartadosScreenState extends State<ApartadosScreen>
                   SizedBox(width: 3.w),
                   Text(
                     '$diasRestantes d',
-                    style: GoogleFonts.lato(
-                      fontSize: 10.sp,
+                    style: theme.textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
@@ -620,8 +571,7 @@ class _ApartadosScreenState extends State<ApartadosScreen>
                 SizedBox(width: 10.w),
                 Text(
                   '${apartado.progreso.toStringAsFixed(0)}%',
-                  style: GoogleFonts.lato(
-                    fontSize: 12.sp,
+                  style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w800,
                     color: theme.colorScheme.onSurface.withOpacity(0.7),
                   ),
@@ -639,16 +589,14 @@ class _ApartadosScreenState extends State<ApartadosScreen>
                     children: [
                       Text(
                         'Apartado',
-                        style: GoogleFonts.lato(
-                          fontSize: 10.sp,
+                        style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.5),
                         ),
                       ),
                       SizedBox(height: 1.h),
                       Text(
                         _currencyFormat.format(apartado.montoApartado),
-                        style: GoogleFonts.lato(
-                          fontSize: 14.sp,
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: theme.colorScheme.primary,
                         ),
@@ -663,16 +611,14 @@ class _ApartadosScreenState extends State<ApartadosScreen>
                     children: [
                       Text(
                         'Total',
-                        style: GoogleFonts.lato(
-                          fontSize: 10.sp,
+                        style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.5),
                         ),
                       ),
                       SizedBox(height: 1.h),
                       Text(
                         _currencyFormat.format(apartado.montoTotal),
-                        style: GoogleFonts.lato(
-                          fontSize: 14.sp,
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: theme.colorScheme.onSurface.withOpacity(0.7),
                         ),
@@ -698,8 +644,7 @@ class _ApartadosScreenState extends State<ApartadosScreen>
                           SizedBox(width: 3.w),
                           Text(
                             '${apartado.pagosRealizados}/${apartado.numeroPagos}',
-                            style: GoogleFonts.lato(
-                              fontSize: 11.sp,
+                            style: theme.textTheme.bodySmall?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: theme.colorScheme.onSurface.withOpacity(
                                 0.55,
@@ -723,8 +668,7 @@ class _ApartadosScreenState extends State<ApartadosScreen>
                               'dd MMM',
                               'es',
                             ).format(apartado.fechaLimite),
-                            style: GoogleFonts.lato(
-                              fontSize: 10.sp,
+                            style: theme.textTheme.labelSmall?.copyWith(
                               fontWeight: FontWeight.w500,
                               color: theme.colorScheme.onSurface.withOpacity(
                                 0.5,
@@ -751,8 +695,7 @@ class _ApartadosScreenState extends State<ApartadosScreen>
                   SizedBox(width: 4.w),
                   Text(
                     'Próximo pago: ',
-                    style: GoogleFonts.lato(
-                      fontSize: 10.sp,
+                    style: theme.textTheme.labelSmall?.copyWith(
                       color: theme.colorScheme.onSurface.withOpacity(0.5),
                     ),
                   ),
@@ -761,8 +704,7 @@ class _ApartadosScreenState extends State<ApartadosScreen>
                       'dd MMM',
                       'es',
                     ).format(apartado.fechaProximoPago!),
-                    style: GoogleFonts.lato(
-                      fontSize: 10.sp,
+                    style: theme.textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: theme.colorScheme.primary,
                     ),

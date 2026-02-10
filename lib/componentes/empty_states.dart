@@ -24,7 +24,8 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final defaultIconColor = iconColor ?? theme.primaryColor.withOpacity(0.5);
+    final defaultIconColor =
+        iconColor ?? theme.colorScheme.primary.withOpacity(0.5);
 
     return Center(
       child: Padding(

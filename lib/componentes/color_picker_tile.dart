@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import '../theme_provider.dart';
@@ -22,17 +21,15 @@ class ColorPickerTile extends StatelessWidget {
       ),
       title: Text(
         'Color de acento',
-        style: GoogleFonts.lato(
-          fontSize: 14.sp,
+        style: theme.textTheme.bodyMedium?.copyWith(
           fontWeight: FontWeight.w600,
           color: theme.colorScheme.onSurface,
         ),
       ),
       subtitle: Text(
         'Personaliza el tema de la app',
-        style: GoogleFonts.openSans(
-          fontSize: 11.sp,
-          color: Colors.grey.shade600,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
       ),
       trailing: Row(
@@ -54,7 +51,11 @@ class ColorPickerTile extends StatelessWidget {
             ),
           ),
           SizedBox(width: 8.w),
-          Icon(Icons.chevron_right, size: 20.sp, color: Colors.grey.shade400),
+          Icon(
+            Icons.chevron_right,
+            size: 20.sp,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ],
       ),
       onTap: () => _showColorPicker(context, themeManager),
@@ -77,7 +78,7 @@ class ColorPickerTile extends StatelessWidget {
                   ),
                   title: Text(
                     'Seleccionar color',
-                    style: GoogleFonts.lato(
+                    style: theme.textTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       fontSize: 18.sp,
                       color: theme.colorScheme.onSurface,
@@ -103,8 +104,7 @@ class ColorPickerTile extends StatelessWidget {
                           wheelDiameter: 200.w,
                           heading: Text(
                             'Selector de color',
-                            style: GoogleFonts.lato(
-                              fontSize: 14.sp,
+                            style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                               color:
                                   themeManager.isDarkMode
@@ -114,9 +114,11 @@ class ColorPickerTile extends StatelessWidget {
                           ),
                           subheading: Text(
                             'Toca para seleccionar',
-                            style: GoogleFonts.openSans(
-                              fontSize: 11.sp,
-                              color: Colors.grey.shade600,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color:
+                                  Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                             ),
                           ),
                           pickersEnabled: const <ColorPickerType, bool>{
@@ -136,13 +138,14 @@ class ColorPickerTile extends StatelessWidget {
                           enableTonalPalette: true,
                         ),
                         SizedBox(height: 16.h),
-                        Divider(color: Colors.grey.shade400),
+                        Divider(
+                          color: Theme.of(context).colorScheme.outlineVariant,
+                        ),
                         SizedBox(height: 8.h),
                         // Colores predefinidos
                         Text(
                           'Colores rápidos',
-                          style: GoogleFonts.lato(
-                            fontSize: 13.sp,
+                          style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             color:
                                 themeManager.isDarkMode
@@ -218,10 +221,9 @@ class ColorPickerTile extends StatelessWidget {
                       onPressed: () => Navigator.pop(context),
                       child: Text(
                         'Cancelar',
-                        style: GoogleFonts.lato(
-                          color: Colors.grey.shade600,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w600,
-                          fontSize: 14.sp,
                         ),
                       ),
                     ),
@@ -244,9 +246,8 @@ class ColorPickerTile extends StatelessWidget {
                       ),
                       child: Text(
                         'Aplicar',
-                        style: GoogleFonts.lato(
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          fontSize: 14.sp,
                         ),
                       ),
                     ),

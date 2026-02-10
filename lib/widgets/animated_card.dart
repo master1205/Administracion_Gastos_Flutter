@@ -62,7 +62,7 @@ class AnimatedCard extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: theme.colorScheme.shadow.withOpacity(0.08),
               blurRadius: 12.r,
               offset: Offset(0, 4.h),
             ),

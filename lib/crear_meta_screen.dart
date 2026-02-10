@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:intl/intl.dart';
 import 'componentes/heads_up_notification.dart';
 import 'models/Meta.dart';
@@ -125,9 +125,8 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                   ),
                   title: Text(
                     'Seleccionar color',
-                    style: GoogleFonts.lato(
+                    style: theme.textTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.bold,
-                      fontSize: 18.sp,
                       color: theme.colorScheme.onSurface,
                     ),
                   ),
@@ -151,16 +150,14 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                           wheelDiameter: 200.w,
                           heading: Text(
                             'Selector de color',
-                            style: GoogleFonts.lato(
-                              fontSize: 14.sp,
+                            style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: theme.colorScheme.onSurface,
                             ),
                           ),
                           subheading: Text(
                             'Toca para seleccionar',
-                            style: GoogleFonts.openSans(
-                              fontSize: 11.sp,
+                            style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurface.withOpacity(
                                 0.6,
                               ),
@@ -190,8 +187,7 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                         // Colores rápidos
                         Text(
                           'Colores rápidos',
-                          style: GoogleFonts.lato(
-                            fontSize: 13.sp,
+                          style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: theme.colorScheme.onSurface,
                           ),
@@ -263,10 +259,9 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                       onPressed: () => Navigator.pop(context),
                       child: Text(
                         'Cancelar',
-                        style: GoogleFonts.lato(
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.6),
                           fontWeight: FontWeight.w600,
-                          fontSize: 14.sp,
                         ),
                       ),
                     ),
@@ -279,7 +274,7 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: tempColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: theme.colorScheme.onPrimary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8.r),
@@ -291,9 +286,8 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                       ),
                       child: Text(
                         'Aplicar',
-                        style: GoogleFonts.lato(
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          fontSize: 14.sp,
                         ),
                       ),
                     ),
@@ -319,7 +313,7 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
       },
       child: Scaffold(
         resizeToAvoidBottomInset: true,
-        backgroundColor: theme.colorScheme.background,
+        backgroundColor: theme.colorScheme.surface,
         appBar: AppBar(
           backgroundColor: theme.colorScheme.surface,
           elevation: 0,
@@ -334,9 +328,7 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
           ),
           title: Text(
             widget.meta == null ? 'Nueva Meta' : 'Editar Meta',
-            style: GoogleFonts.poppins(
-              fontSize: 20.sp,
-              fontWeight: FontWeight.w600,
+            style: theme.textTheme.titleLarge?.copyWith(
               color: theme.colorScheme.onSurface,
             ),
           ),
@@ -373,9 +365,7 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                   SizedBox(height: 12.h),
                   Text(
                     'Define tu objetivo de ahorro',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w500,
+                    style: theme.textTheme.labelMedium?.copyWith(
                       color: theme.colorScheme.secondary.withOpacity(0.7),
                     ),
                   ),
@@ -511,8 +501,7 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                                             0.0,
                                       )
                                       : '\$ 0.00',
-                                  style: GoogleFonts.lato(
-                                    fontSize: 16.sp,
+                                  style: theme.textTheme.bodyLarge?.copyWith(
                                     fontWeight: FontWeight.w600,
                                     color:
                                         _montoController.text.isNotEmpty
@@ -577,8 +566,7 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                                   'dd \'de\' MMMM \'de\' yyyy',
                                   'es',
                                 ).format(_fechaObjetivo),
-                                style: GoogleFonts.lato(
-                                  fontSize: 14.sp,
+                                style: theme.textTheme.bodyMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
                                   color: theme.colorScheme.onSurface,
                                 ),
@@ -686,8 +674,7 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                               Expanded(
                                 child: Text(
                                   'Toca para seleccionar color',
-                                  style: GoogleFonts.lato(
-                                    fontSize: 13.sp,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
                                     color: theme.colorScheme.onSurface
                                         .withOpacity(0.7),
                                   ),
@@ -704,7 +691,78 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
                           ),
                         ),
                       ),
-                      SizedBox(height: 80.h),
+                      SizedBox(height: 24.h),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.tonal(
+                          onPressed: () {
+                            if (_formKey.currentState!.validate()) {
+                              if (_montoController.text.isEmpty ||
+                                  double.tryParse(
+                                        _montoController.text.replaceAll(
+                                          ',',
+                                          '',
+                                        ),
+                                      ) ==
+                                      0) {
+                                showErrorNotification(
+                                  context,
+                                  message:
+                                      'Por favor ingresa un monto objetivo',
+                                );
+                                return;
+                              }
+
+                              final cleanMonto = _montoController.text
+                                  .replaceAll(',', '');
+                              final meta = Meta(
+                                id:
+                                    widget.meta?.id ??
+                                    DateTime.now().millisecondsSinceEpoch
+                                        .toString(),
+                                nombre: _nombreController.text,
+                                descripcion: _descripcionController.text,
+                                montoObjetivo: double.parse(cleanMonto),
+                                montoActual: widget.meta?.montoActual ?? 0,
+                                fechaInicio:
+                                    widget.meta?.fechaInicio ??
+                                    DateTime.now().toIso8601String(),
+                                fechaObjetivo: _fechaObjetivo.toIso8601String(),
+                                icono: _iconoSeleccionado,
+                                color:
+                                    _colorSeleccionado.value
+                                        .toRadixString(16)
+                                        .substring(2)
+                                        .toUpperCase(),
+                                completada: widget.meta?.completada ?? false,
+                                cuentaId: widget.meta?.cuentaId,
+                                cuentaNombre: widget.meta?.cuentaNombre,
+                                numeroCuenta: widget.meta?.numeroCuenta,
+                              );
+                              Navigator.pop(context, meta);
+                            }
+                          },
+                          style: FilledButton.styleFrom(
+                            backgroundColor:
+                                theme.colorScheme.secondaryContainer,
+                            foregroundColor:
+                                theme.colorScheme.onSecondaryContainer,
+                            padding: EdgeInsets.symmetric(vertical: 16.h),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            'Guardar Meta',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              color: theme.colorScheme.onSecondaryContainer,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 24.h),
                     ],
                   ),
                 ),
@@ -712,70 +770,6 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
             ),
           ],
         ),
-        floatingActionButton: Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(horizontal: 20.r, vertical: 12.h),
-          child: ElevatedButton(
-            onPressed: () {
-              if (_formKey.currentState!.validate()) {
-                if (_montoController.text.isEmpty ||
-                    double.tryParse(
-                          _montoController.text.replaceAll(',', ''),
-                        ) ==
-                        0) {
-                  showErrorNotification(
-                    context,
-                    message: 'Por favor ingresa un monto objetivo',
-                  );
-                  return;
-                }
-
-                final cleanMonto = _montoController.text.replaceAll(',', '');
-                final meta = Meta(
-                  id:
-                      widget.meta?.id ??
-                      DateTime.now().millisecondsSinceEpoch.toString(),
-                  nombre: _nombreController.text,
-                  descripcion: _descripcionController.text,
-                  montoObjetivo: double.parse(cleanMonto),
-                  montoActual: widget.meta?.montoActual ?? 0,
-                  fechaInicio:
-                      widget.meta?.fechaInicio ??
-                      DateTime.now().toIso8601String(),
-                  fechaObjetivo: _fechaObjetivo.toIso8601String(),
-                  icono: _iconoSeleccionado,
-                  color:
-                      _colorSeleccionado.value
-                          .toRadixString(16)
-                          .substring(2)
-                          .toUpperCase(),
-                  completada: widget.meta?.completada ?? false,
-                  cuentaId: widget.meta?.cuentaId,
-                  cuentaNombre: widget.meta?.cuentaNombre,
-                  numeroCuenta: widget.meta?.numeroCuenta,
-                );
-                Navigator.pop(context, meta);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: colorSeleccionado,
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: 16.h),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-              elevation: 0,
-            ),
-            child: Text(
-              'Guardar Meta',
-              style: GoogleFonts.poppins(
-                fontSize: 15.sp,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
     );
   }
@@ -783,9 +777,7 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
   Widget _buildSectionTitle(String title, ThemeData theme) {
     return Text(
       title,
-      style: GoogleFonts.poppins(
-        fontSize: 13.sp,
-        fontWeight: FontWeight.w600,
+      style: theme.textTheme.labelMedium?.copyWith(
         color: theme.colorScheme.secondary.withOpacity(0.7),
       ),
     );
@@ -799,9 +791,8 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
   }) {
     return InputDecoration(
       hintText: hintText,
-      hintStyle: GoogleFonts.openSans(
+      hintStyle: theme.textTheme.bodySmall?.copyWith(
         color: theme.colorScheme.secondary.withOpacity(0.5),
-        fontSize: 12.sp,
       ),
       prefixIcon: Container(
         margin: EdgeInsets.all(10.r),
@@ -812,27 +803,10 @@ class _CrearMetaScreenState extends State<CrearMetaScreen> {
         ),
         child: Icon(prefixIcon, color: color, size: 20.sp),
       ),
-      filled: true,
-      fillColor: theme.colorScheme.surface,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide(
-          color: theme.colorScheme.secondary.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide(
-          color: theme.colorScheme.secondary.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide(color: color, width: 1.5),
+        borderSide: BorderSide(color: color, width: 2),
       ),
-      contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
     );
   }
 

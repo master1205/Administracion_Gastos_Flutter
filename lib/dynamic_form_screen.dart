@@ -1,7 +1,5 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:notificaciones/api_service.dart';
 import 'package:notificaciones/componentes/heads_up_notification.dart';
@@ -10,12 +8,11 @@ import 'package:notificaciones/models/Account.dart';
 import 'package:notificaciones/models/Categoria.dart';
 import 'package:notificaciones/models/Transaccion.dart' as models;
 import 'package:notificaciones/models/Transaccion.dart';
-import 'package:notificaciones/services/firestore_service.dart';
+
 import 'package:notificaciones/theme_provider.dart';
 import 'package:notificaciones/widgets/select_amount.dart';
 import 'package:notificaciones/widgets/discard_changes_dialog.dart';
 import 'package:provider/provider.dart';
-import 'utils/animation_utils.dart';
 
 class TrasaccionScreen extends StatefulWidget {
   final String transactionType;
@@ -51,9 +48,8 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
   Account? selectedAccountFrom;
   Account? selectedAccountTo;
 
-  // Categorías cargadas desde Firebase
+  // Categorías cargadas desde DataProvider
   List<Categoria> _categorias = [];
-  StreamSubscription<List<Map<String, dynamic>>>? _categoriasSubscription;
 
   String? amountError;
   String? descriptionError;
@@ -168,7 +164,6 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
     _animationController.dispose();
     _amountController.dispose();
     _descriptionController.dispose();
-    _categoriasSubscription?.cancel();
     super.dispose();
   }
 
@@ -244,37 +239,32 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
   }
 
   void _loadInitialData() async {
-    // Cargar categorías desde Firebase
-    final firestoreService = FirestoreService();
-    _categoriasSubscription = firestoreService.obtenerCategorias().listen((
-      categoriasData,
-    ) {
-      if (mounted) {
-        setState(() {
-          _categorias =
-              categoriasData.map((cat) => Categoria.fromJson(cat)).toList();
+    // Cargar categorías desde DataProvider
+    final dp = Provider.of<DataProvider>(context, listen: false);
+    final categoriasData = dp.categorias;
+    setState(() {
+      _categorias =
+          categoriasData.map((cat) => Categoria.fromJson(cat)).toList();
 
-          // Invalidar caché de categorías filtradas
-          _filteredCategoriesCache = null;
-          _lastFilteredType = null;
+      // Invalidar caché de categorías filtradas
+      _filteredCategoriesCache = null;
+      _lastFilteredType = null;
 
-          // ✅ Seleccionar categoría inicial DESPUÉS de cargar las categorías
-          if (widget.transaction != null &&
-              selectedCategory == null &&
-              _categorias.isNotEmpty) {
-            try {
-              selectedCategory = _categorias.firstWhere(
-                (c) => c.categoria == widget.transaction!.categoria,
-              );
-            } catch (e) {
-              selectedCategory = _categorias.first;
-            }
-          }
-
-          // Guardar estado inicial después de cargar datos
-          _saveInitialState();
-        });
+      // ✅ Seleccionar categoría inicial DESPUÉS de cargar las categorías
+      if (widget.transaction != null &&
+          selectedCategory == null &&
+          _categorias.isNotEmpty) {
+        try {
+          selectedCategory = _categorias.firstWhere(
+            (c) => c.categoria == widget.transaction!.categoria,
+          );
+        } catch (e) {
+          selectedCategory = _categorias.first;
+        }
       }
+
+      // Guardar estado inicial después de cargar datos
+      _saveInitialState();
     });
 
     if (widget.transaction != null) {
@@ -595,9 +585,8 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                   ),
                   child: Text(
                     widget.transaction != null ? 'Editar' : 'Nueva',
-                    style: GoogleFonts.poppins(
+                    style: theme.textTheme.labelMedium?.copyWith(
                       color: theme.colorScheme.primary,
-                      fontSize: 12.sp,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -624,8 +613,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
             SizedBox(height: 12.h),
             Text(
               widget.transactionType,
-              style: GoogleFonts.poppins(
-                fontSize: 20.sp,
+              style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: theme.colorScheme.primary,
               ),
@@ -633,9 +621,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
             SizedBox(height: 4.h),
             Text(
               _getTransactionSubtitle(),
-              style: GoogleFonts.poppins(
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w400,
+              style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.secondary.withOpacity(0.7),
               ),
             ),
@@ -679,8 +665,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
     final theme = Theme.of(context);
     return Text(
       title,
-      style: GoogleFonts.poppins(
-        fontSize: 13.sp,
+      style: theme.textTheme.labelMedium?.copyWith(
         fontWeight: FontWeight.w600,
         color: theme.colorScheme.onSurface,
       ),
@@ -753,8 +738,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
               Expanded(
                 child: Text(
                   displayText.isNotEmpty ? displayText : '\$0.00',
-                  style: GoogleFonts.poppins(
-                    fontSize: 15.sp,
+                  style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color:
                         displayText.isNotEmpty
@@ -784,16 +768,13 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
       child: TextFormField(
         controller: _descriptionController,
         textCapitalization: TextCapitalization.words,
-        style: GoogleFonts.poppins(
-          fontSize: 13.sp,
-          fontWeight: FontWeight.w400,
+        style: theme.textTheme.labelMedium?.copyWith(
           color: theme.colorScheme.onSurface,
         ),
         decoration: InputDecoration(
           hintText: 'Ej: Compra de supermercado',
-          hintStyle: GoogleFonts.poppins(
+          hintStyle: theme.textTheme.labelMedium?.copyWith(
             color: theme.colorScheme.secondary.withOpacity(0.4),
-            fontSize: 12.sp,
           ),
           prefixIcon: Container(
             margin: EdgeInsets.all(10.r),
@@ -853,20 +834,16 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
           Expanded(
             child: Text(
               DateFormat('EEEE, d MMMM yyyy', 'es_ES').format(selectedDate),
-              style: GoogleFonts.lato(
-                fontSize: 13.sp,
+              style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                color:
-                    themeManager.isDarkMode
-                        ? Colors.white
-                        : const Color(0xFF2D3436),
+                color: theme.colorScheme.onSurface,
               ),
             ),
           ),
           IconButton(
             icon: Icon(
               Icons.edit_calendar_rounded,
-              color: Colors.white,
+              color: theme.colorScheme.primary,
               size: 20.sp,
             ),
             onPressed: () => _selectDate(context),
@@ -890,8 +867,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
           padding: EdgeInsets.symmetric(horizontal: 4.w),
           child: Text(
             'Categoría',
-            style: GoogleFonts.poppins(
-              fontSize: 13.sp,
+            style: theme.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onSurface,
             ),
@@ -925,9 +901,8 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
             ),
             hint: Text(
               'Selecciona una categoría',
-              style: GoogleFonts.poppins(
+              style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.secondary.withOpacity(0.5),
-                fontSize: 12.sp,
               ),
             ),
             icon: Icon(
@@ -961,8 +936,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                         Flexible(
                           child: Text(
                             category.categoria,
-                            style: GoogleFonts.poppins(
-                              fontSize: 13.sp,
+                            style: theme.textTheme.labelMedium?.copyWith(
                               fontWeight: FontWeight.w500,
                               color: theme.colorScheme.onSurface,
                             ),
@@ -994,8 +968,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
           padding: EdgeInsets.symmetric(horizontal: 4.w),
           child: Text(
             label,
-            style: GoogleFonts.poppins(
-              fontSize: 13.sp,
+            style: theme.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onSurface,
             ),
@@ -1028,9 +1001,8 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
             ),
             hint: Text(
               'Selecciona una cuenta',
-              style: GoogleFonts.poppins(
+              style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.secondary.withOpacity(0.5),
-                fontSize: 12.sp,
               ),
             ),
             icon: Icon(
@@ -1075,8 +1047,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                         Flexible(
                           child: Text(
                             account.nombre,
-                            style: GoogleFonts.poppins(
-                              fontSize: 13.sp,
+                            style: theme.textTheme.labelMedium?.copyWith(
                               fontWeight: FontWeight.w500,
                               color: theme.colorScheme.onSurface,
                             ),
@@ -1095,66 +1066,46 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
 
   Widget _buildSubmitButton({bool enabled = true}) {
     final theme = Theme.of(context);
-    return BounceTapButton(
-      onTap: (isRegistering || !enabled) ? null : _registerTransaction,
-      child: Container(
-        width: double.infinity,
-        height: 46.h,
-        decoration: BoxDecoration(
-          color:
-              enabled
-                  ? theme.colorScheme.secondary.withOpacity(0.08)
-                  : theme.colorScheme.secondary.withOpacity(0.03),
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(
-            color:
-                enabled
-                    ? theme.colorScheme.secondary.withOpacity(0.2)
-                    : theme.colorScheme.secondary.withOpacity(0.1),
-            width: 1,
-          ),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: (isRegistering || !enabled) ? null : _registerTransaction,
+    final cs = theme.colorScheme;
+    return SizedBox(
+      width: double.infinity,
+      height: 48.h,
+      child: FilledButton.tonal(
+        onPressed: (isRegistering || !enabled) ? null : _registerTransaction,
+        style: FilledButton.styleFrom(
+          backgroundColor: cs.secondaryContainer,
+          foregroundColor: cs.onSecondaryContainer,
+          disabledBackgroundColor: cs.secondaryContainer.withOpacity(0.5),
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.r),
-            child: Center(
-              child:
-                  isRegistering
-                      ? SizedBox(
-                        width: 20.w,
-                        height: 20.h,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2.5.w,
-                        ),
-                      )
-                      : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.check_circle_outline,
-                            color: theme.colorScheme.secondary,
-                            size: 20.sp,
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            widget.transaction != null
-                                ? 'Actualizar'
-                                : 'Registrar',
-                            style: GoogleFonts.poppins(
-                              color: theme.colorScheme.secondary,
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-            ),
           ),
+          elevation: 0,
         ),
+        child:
+            isRegistering
+                ? SizedBox(
+                  width: 20.w,
+                  height: 20.h,
+                  child: CircularProgressIndicator(
+                    color: cs.onSecondaryContainer,
+                    strokeWidth: 2.5.w,
+                  ),
+                )
+                : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.check_circle_outline, size: 20.sp),
+                    SizedBox(width: 8.w),
+                    Text(
+                      widget.transaction != null ? 'Actualizar' : 'Registrar',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: cs.onSecondaryContainer,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
       ),
     );
   }
@@ -1222,7 +1173,7 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
         }
       },
       child: Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.background,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         body:
             isLoading
                 ? Center(
@@ -1280,21 +1231,30 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                                           'Traspasos'
                                                       ? 'Se necesitan al menos 2 cuentas'
                                                       : 'Se necesita al menos 1 cuenta',
-                                                  style: GoogleFonts.lato(
-                                                    fontSize: 14.sp,
-                                                    fontWeight: FontWeight.bold,
-                                                    color:
-                                                        Colors.orange.shade900,
-                                                  ),
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodyMedium
+                                                      ?.copyWith(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color:
+                                                            Colors
+                                                                .orange
+                                                                .shade900,
+                                                      ),
                                                 ),
                                                 SizedBox(height: 4.h),
                                                 Text(
                                                   'Crea cuentas desde el menú de Cuentas para poder registrar transacciones.',
-                                                  style: GoogleFonts.openSans(
-                                                    fontSize: 12.sp,
-                                                    color:
-                                                        Colors.orange.shade800,
-                                                  ),
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodySmall
+                                                      ?.copyWith(
+                                                        color:
+                                                            Colors
+                                                                .orange
+                                                                .shade800,
+                                                      ),
                                                 ),
                                               ],
                                             ),
@@ -1324,8 +1284,9 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                           Expanded(
                                             child: Text(
                                               amountError!,
-                                              style: GoogleFonts.openSans(
-                                                fontSize: 11.sp,
+                                              style: Theme.of(
+                                                context,
+                                              ).textTheme.bodySmall?.copyWith(
                                                 color: Colors.red.shade400,
                                                 fontWeight: FontWeight.w500,
                                               ),
@@ -1359,8 +1320,9 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                           Expanded(
                                             child: Text(
                                               descriptionError!,
-                                              style: GoogleFonts.openSans(
-                                                fontSize: 11.sp,
+                                              style: Theme.of(
+                                                context,
+                                              ).textTheme.bodySmall?.copyWith(
                                                 color: Colors.red.shade400,
                                                 fontWeight: FontWeight.w500,
                                               ),
@@ -1408,26 +1370,30 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                                 children: [
                                                   Text(
                                                     'No hay categorías disponibles',
-                                                    style: GoogleFonts.lato(
-                                                      fontSize: 14.sp,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color:
-                                                          Colors
-                                                              .orange
-                                                              .shade900,
-                                                    ),
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .bodyMedium
+                                                        ?.copyWith(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color:
+                                                              Colors
+                                                                  .orange
+                                                                  .shade900,
+                                                        ),
                                                   ),
                                                   SizedBox(height: 4.h),
                                                   Text(
                                                     'Crea categorías desde el menú de Categorías para poder registrar ${widget.transactionType.toLowerCase()}.',
-                                                    style: GoogleFonts.openSans(
-                                                      fontSize: 12.sp,
-                                                      color:
-                                                          Colors
-                                                              .orange
-                                                              .shade800,
-                                                    ),
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .bodySmall
+                                                        ?.copyWith(
+                                                          color:
+                                                              Colors
+                                                                  .orange
+                                                                  .shade800,
+                                                        ),
                                                   ),
                                                 ],
                                               ),
@@ -1458,8 +1424,9 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                             Expanded(
                                               child: Text(
                                                 categoryError!,
-                                                style: GoogleFonts.openSans(
-                                                  fontSize: 11.sp,
+                                                style: Theme.of(
+                                                  context,
+                                                ).textTheme.bodySmall?.copyWith(
                                                   color: Colors.red.shade400,
                                                   fontWeight: FontWeight.w500,
                                                 ),
@@ -1500,8 +1467,9 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                             Expanded(
                                               child: Text(
                                                 accountError!,
-                                                style: GoogleFonts.openSans(
-                                                  fontSize: 11.sp,
+                                                style: Theme.of(
+                                                  context,
+                                                ).textTheme.bodySmall?.copyWith(
                                                   color: Colors.red.shade400,
                                                   fontWeight: FontWeight.w500,
                                                 ),
@@ -1541,8 +1509,9 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                             Expanded(
                                               child: Text(
                                                 accountFromError!,
-                                                style: GoogleFonts.openSans(
-                                                  fontSize: 11.sp,
+                                                style: Theme.of(
+                                                  context,
+                                                ).textTheme.bodySmall?.copyWith(
                                                   color: Colors.red.shade400,
                                                   fontWeight: FontWeight.w500,
                                                 ),
@@ -1579,8 +1548,9 @@ class _TrasaccionScreenState extends State<TrasaccionScreen>
                                             Expanded(
                                               child: Text(
                                                 accountToError!,
-                                                style: GoogleFonts.openSans(
-                                                  fontSize: 11.sp,
+                                                style: Theme.of(
+                                                  context,
+                                                ).textTheme.bodySmall?.copyWith(
                                                   color: Colors.red.shade400,
                                                   fontWeight: FontWeight.w500,
                                                 ),

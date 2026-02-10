@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'api_service.dart';
 import 'componentes/heads_up_notification.dart';
@@ -104,7 +103,7 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
       },
       child: Scaffold(
         resizeToAvoidBottomInset: true,
-        backgroundColor: theme.colorScheme.background,
+        backgroundColor: theme.colorScheme.surface,
         appBar: AppBar(
           backgroundColor: theme.colorScheme.surface,
           elevation: 0,
@@ -119,9 +118,7 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
           ),
           title: Text(
             isEdit ? 'Editar Cuenta' : 'Nueva Cuenta',
-            style: GoogleFonts.poppins(
-              fontSize: 20.sp,
-              fontWeight: FontWeight.w600,
+            style: theme.textTheme.titleLarge?.copyWith(
               color: theme.colorScheme.onSurface,
             ),
           ),
@@ -157,8 +154,7 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
                   SizedBox(height: 12.h),
                   Text(
                     'Administra tus cuentas',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13.sp,
+                    style: theme.textTheme.labelMedium?.copyWith(
                       color: theme.colorScheme.secondary.withOpacity(0.7),
                       fontWeight: FontWeight.w500,
                     ),
@@ -297,8 +293,7 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
                                           0.0,
                                     )
                                     : '\$ 0.00',
-                                style: GoogleFonts.lato(
-                                  fontSize: 16.sp,
+                                style: theme.textTheme.bodyLarge?.copyWith(
                                   fontWeight: FontWeight.w600,
                                   color:
                                       _saldoController.text.isNotEmpty
@@ -329,88 +324,88 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
                       ),
                       style: TextStyle(color: theme.colorScheme.onSurface),
                     ),
-                    SizedBox(height: 80.h),
+                    SizedBox(height: 24.h),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.tonal(
+                        onPressed: () async {
+                          final nombre = _nombreController.text.trim();
+                          if (nombre.isEmpty) {
+                            showErrorNotification(
+                              context,
+                              message: 'El nombre es requerido',
+                            );
+                            return;
+                          }
+
+                          try {
+                            final saldo =
+                                double.tryParse(
+                                  _saldoController.text.replaceAll(',', ''),
+                                ) ??
+                                0.0;
+
+                            if (isEdit) {
+                              await _apiService.updateAccountBalance(
+                                cuentaId: widget.cuenta!.id,
+                                nuevoSaldo: saldo,
+                              );
+                            } else {
+                              await _apiService.crearCuenta(
+                                nombre: nombre,
+                                tipo: _tipoSeleccionado,
+                                saldoInicial: saldo,
+                                beneficiario:
+                                    _beneficiarioController.text.trim(),
+                              );
+                            }
+
+                            if (mounted) {
+                              showSuccessNotification(
+                                context,
+                                message:
+                                    isEdit
+                                        ? 'Cuenta actualizada'
+                                        : 'Cuenta creada',
+                              );
+                              Navigator.pop(context);
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              showErrorNotification(
+                                context,
+                                message: 'Error',
+                                subtitle: e.toString(),
+                              );
+                            }
+                          }
+                        },
+                        style: FilledButton.styleFrom(
+                          backgroundColor: theme.colorScheme.secondaryContainer,
+                          foregroundColor:
+                              theme.colorScheme.onSecondaryContainer,
+                          padding: EdgeInsets.symmetric(vertical: 16.h),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          isEdit ? 'Actualizar Cuenta' : 'Crear Cuenta',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: theme.colorScheme.onSecondaryContainer,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 24.h),
                   ],
                 ),
               ),
             ),
           ],
         ),
-        floatingActionButton: Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(horizontal: 20.r, vertical: 12.h),
-          child: ElevatedButton(
-            onPressed: () async {
-              final nombre = _nombreController.text.trim();
-              if (nombre.isEmpty) {
-                showErrorNotification(
-                  context,
-                  message: 'El nombre es requerido',
-                );
-                return;
-              }
-
-              try {
-                final saldo =
-                    double.tryParse(
-                      _saldoController.text.replaceAll(',', ''),
-                    ) ??
-                    0.0;
-
-                if (isEdit) {
-                  // Por ahora solo creamos cuentas nuevas
-                  // La edición requiere implementación adicional en el backend
-                  // Editar cuenta existente - solo actualizar saldo
-                  await _apiService.updateAccountBalance(
-                    cuentaId: widget.cuenta!.id,
-                    nuevoSaldo: saldo,
-                  );
-                } else {
-                  // Crear nueva cuenta
-                  await _apiService.crearCuenta(
-                    nombre: nombre,
-                    tipo: _tipoSeleccionado,
-                    saldoInicial: saldo,
-                    beneficiario: _beneficiarioController.text.trim(),
-                  );
-                }
-
-                if (mounted) {
-                  showSuccessNotification(
-                    context,
-                    message: isEdit ? 'Cuenta actualizada' : 'Cuenta creada',
-                  );
-                  Navigator.pop(context);
-                }
-              } catch (e) {
-                if (mounted) {
-                  showErrorNotification(
-                    context,
-                    message: 'Error',
-                    subtitle: e.toString(),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: colorTipo,
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: 16.h),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-              elevation: 0,
-            ),
-            child: Text(
-              isEdit ? 'Actualizar Cuenta' : 'Crear Cuenta',
-              style: GoogleFonts.poppins(
-                fontSize: 15.sp,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
     );
   }
@@ -418,8 +413,7 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
   Widget _buildSectionTitle(String title, ThemeData theme) {
     return Text(
       title,
-      style: GoogleFonts.poppins(
-        fontSize: 13.sp,
+      style: theme.textTheme.labelMedium?.copyWith(
         fontWeight: FontWeight.w600,
         color: theme.colorScheme.secondary.withOpacity(0.7),
       ),
@@ -452,8 +446,7 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
             SizedBox(height: 4.h),
             Text(
               tipo[0].toUpperCase() + tipo.substring(1),
-              style: GoogleFonts.poppins(
-                fontSize: 11.sp,
+              style: theme.textTheme.labelSmall?.copyWith(
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 color:
                     isSelected
@@ -475,9 +468,8 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
   }) {
     return InputDecoration(
       hintText: hintText,
-      hintStyle: GoogleFonts.openSans(
+      hintStyle: theme.textTheme.bodySmall?.copyWith(
         color: theme.colorScheme.secondary.withOpacity(0.5),
-        fontSize: 12.sp,
       ),
       prefixIcon: Container(
         margin: EdgeInsets.all(10.r),
@@ -488,25 +480,9 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
         ),
         child: Icon(prefixIcon, color: color, size: 20.sp),
       ),
-      filled: true,
-      fillColor: theme.colorScheme.surface,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide(
-          color: theme.colorScheme.secondary.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide(
-          color: theme.colorScheme.secondary.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide(color: color, width: 1.5),
+        borderSide: BorderSide(color: color, width: 2),
       ),
     );
   }

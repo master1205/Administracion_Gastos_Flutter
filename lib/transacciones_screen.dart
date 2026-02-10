@@ -4,15 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:notificaciones/widgets/confirmation_dialog.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:notificaciones/api_service.dart';
 import 'package:notificaciones/componentes/heads_up_notification.dart';
 import 'package:notificaciones/dynamic_form_screen.dart';
 import 'package:notificaciones/models/Transaccion.dart';
-import 'package:notificaciones/services/firestore_service.dart';
+import 'package:notificaciones/data_provider.dart';
 import 'package:notificaciones/theme_provider.dart';
+import 'utils/haptic_utils.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
@@ -23,8 +23,10 @@ import 'componentes/shimmer_widgets.dart';
 
 class TransaccionesScreen extends StatefulWidget {
   final String? cuentaFiltro;
+  final VoidCallback? onStateChanged;
 
-  const TransaccionesScreen({Key? key, this.cuentaFiltro}) : super(key: key);
+  const TransaccionesScreen({Key? key, this.cuentaFiltro, this.onStateChanged})
+    : super(key: key);
 
   @override
   TransaccionesScreenState createState() => TransaccionesScreenState();
@@ -37,13 +39,47 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
 
   // Services & Data
   final ApiService _apiService = ApiService();
-  final FirestoreService _firestoreService = FirestoreService();
-  StreamSubscription<List<Transaction>>? _transaccionesSubscription;
-  List<Transaction> _transacciones = [];
   List<Transaction> _transaccionesFiltradas = [];
   String? _cuentaFiltroActual;
-  bool _isLoading = true;
+  bool _isLoading = false;
   bool _isManualRefresh = false;
+
+  // ── Búsqueda y filtros avanzados ──
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String? _filtroTipo;
+  final FocusNode _searchFocusNode = FocusNode();
+  bool _showSearch = false;
+
+  // ── API pública para home_screen AppBar ──
+  bool get showSearch => _showSearch;
+  bool get hasSearchQuery => _searchQuery.isNotEmpty;
+  int get activeAdvancedFilterCount => _activeAdvancedFilterCount;
+
+  void toggleSearch() {
+    Haptics.light();
+    setState(() {
+      _showSearch = !_showSearch;
+      if (!_showSearch) {
+        _searchController.clear();
+        _searchQuery = '';
+        _searchFocusNode.unfocus();
+      }
+    });
+    widget.onStateChanged?.call();
+  }
+
+  void openAdvancedFilters() {
+    Haptics.light();
+    _showAdvancedFilters(Theme.of(context));
+  }
+
+  // Filtros avanzados
+  DateTimeRange? _filtroFechas;
+  double? _montoMin;
+  double? _montoMax;
+  Set<String> _filtroCategoriasSet = {};
+  String? _filtroCuentaAvanzada;
 
   // Formatters
   final NumberFormat _currencyFormat = NumberFormat.currency(
@@ -63,12 +99,13 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
     _cuentaFiltroActual = widget.cuentaFiltro;
     WidgetsBinding.instance.addObserver(this);
     _initializeDateFormatting();
-    _loadData();
+    _maybeShowTutorial();
   }
 
   @override
   void dispose() {
-    _transaccionesSubscription?.cancel();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -83,75 +120,133 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
     await initializeDateFormatting('es_ES', null);
   }
 
-  Future<void> _loadData() async {
-    final startTime = DateTime.now();
-    final shouldShowProgress = _isManualRefresh;
-
-    setState(() {
-      if (!_isManualRefresh) {
-        _isLoading = true;
-      }
-    });
-
-    try {
-      // Cancelar subscription anterior si existe
-      _transaccionesSubscription?.cancel();
-
-      // Escuchar cambios en tiempo real
-      _transaccionesSubscription = _firestoreService
-          .obtenerTransaccionesRecientes()
-          .listen((transacciones) {
-            if (mounted) {
-              setState(() {
-                _transacciones = transacciones;
-                _aplicarFiltro();
-                _isLoading = false;
-              });
-            }
-          });
-
-      await _maybeShowTutorial();
-
-      // Esperar mínimo 800ms para mostrar animación (solo en refresh manual)
-      if (shouldShowProgress) {
-        final elapsed = DateTime.now().difference(startTime).inMilliseconds;
-        if (elapsed < 800) {
-          await Future.delayed(Duration(milliseconds: 800 - elapsed));
-        }
-        if (mounted && _isManualRefresh) {
-          setState(() => _isManualRefresh = false);
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
   Future<void> refreshData() async {
     setState(() => _isManualRefresh = true);
-    _loadData();
+    await Future.delayed(const Duration(milliseconds: 800));
+    if (mounted) setState(() => _isManualRefresh = false);
   }
 
   void _aplicarFiltro() {
-    if (_cuentaFiltroActual == null || _cuentaFiltroActual!.isEmpty) {
-      _transaccionesFiltradas = _transacciones;
-    } else {
-      _transaccionesFiltradas =
-          _transacciones.where((t) {
+    var transacciones =
+        Provider.of<DataProvider>(context, listen: false).transacciones;
+
+    // Filtro por cuenta (desde otra pantalla)
+    if (_cuentaFiltroActual != null && _cuentaFiltroActual!.isNotEmpty) {
+      transacciones =
+          transacciones.where((t) {
             return t.cuenta == _cuentaFiltroActual ||
                 t.cuentaOrigen == _cuentaFiltroActual ||
                 t.cuentaDestino == _cuentaFiltroActual;
           }).toList();
     }
+
+    // Filtro por tipo de transacción
+    if (_filtroTipo != null) {
+      transacciones =
+          transacciones.where((t) => t.tipoTransaccion == _filtroTipo).toList();
+    }
+
+    // Búsqueda por texto (descripción, categoría o cuenta)
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      transacciones =
+          transacciones.where((t) {
+            return t.descripcion.toLowerCase().contains(query) ||
+                t.categoria.toLowerCase().contains(query) ||
+                t.cuenta.toLowerCase().contains(query);
+          }).toList();
+    }
+
+    // Filtro por rango de fechas
+    if (_filtroFechas != null) {
+      final inicioFiltro = DateTime(
+        _filtroFechas!.start.year,
+        _filtroFechas!.start.month,
+        _filtroFechas!.start.day,
+      );
+      final finFiltro = DateTime(
+        _filtroFechas!.end.year,
+        _filtroFechas!.end.month,
+        _filtroFechas!.end.day,
+        23,
+        59,
+        59,
+      );
+      transacciones =
+          transacciones.where((t) {
+            final fecha = DateTime.tryParse(t.fecha);
+            if (fecha == null) return false;
+            return !fecha.isBefore(inicioFiltro) && !fecha.isAfter(finFiltro);
+          }).toList();
+    }
+
+    // Filtro por rango de montos
+    if (_montoMin != null) {
+      transacciones =
+          transacciones.where((t) => t.monto >= _montoMin!).toList();
+    }
+    if (_montoMax != null) {
+      transacciones =
+          transacciones.where((t) => t.monto <= _montoMax!).toList();
+    }
+
+    // Filtro por categorías seleccionadas
+    if (_filtroCategoriasSet.isNotEmpty) {
+      transacciones =
+          transacciones
+              .where((t) => _filtroCategoriasSet.contains(t.categoria))
+              .toList();
+    }
+
+    // Filtro por cuenta avanzada
+    if (_filtroCuentaAvanzada != null) {
+      transacciones =
+          transacciones.where((t) {
+            return t.cuenta == _filtroCuentaAvanzada ||
+                t.cuentaOrigen == _filtroCuentaAvanzada ||
+                t.cuentaDestino == _filtroCuentaAvanzada;
+          }).toList();
+    }
+
+    _transaccionesFiltradas = transacciones;
+  }
+
+  int get _activeAdvancedFilterCount {
+    int count = 0;
+    if (_filtroTipo != null) count++;
+    if (_filtroFechas != null) count++;
+    if (_montoMin != null || _montoMax != null) count++;
+    if (_filtroCategoriasSet.isNotEmpty) count++;
+    if (_filtroCuentaAvanzada != null) count++;
+    return count;
+  }
+
+  bool get _hasAnyFilter {
+    return _searchQuery.isNotEmpty ||
+        _filtroTipo != null ||
+        _cuentaFiltroActual != null ||
+        _filtroFechas != null ||
+        _montoMin != null ||
+        _montoMax != null ||
+        _filtroCategoriasSet.isNotEmpty ||
+        _filtroCuentaAvanzada != null;
   }
 
   void _limpiarFiltro() {
     setState(() {
       _cuentaFiltroActual = null;
+      _filtroTipo = null;
+      _searchQuery = '';
+      _searchController.clear();
+      _searchFocusNode.unfocus();
+      _filtroFechas = null;
+      _montoMin = null;
+      _montoMax = null;
+      _filtroCategoriasSet = {};
+      _filtroCuentaAvanzada = null;
       _aplicarFiltro();
     });
+    widget.onStateChanged?.call();
     // Si se abrió con filtro desde otra pantalla, regresar
     if (widget.cuentaFiltro != null) {
       Navigator.of(context).pop();
@@ -179,7 +274,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
     _initTargets();
     _tutorialCoachMark = TutorialCoachMark(
       targets: _targets,
-      colorShadow: Colors.black,
+      colorShadow: Theme.of(context).colorScheme.shadow,
       textSkip: "",
       paddingFocus: 10,
       opacityShadow: 0.8,
@@ -220,7 +315,10 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
                 description:
                     "Toca el encabezado de fecha para ver el resumen total de transacciones del día agrupadas por tipo.",
                 icon: Icons.calendar_today_rounded,
-                gradientColors: const [Color(0xFF667eea), Color(0xFF764ba2)],
+                gradientColors: [
+                  Theme.of(context).colorScheme.primary,
+                  Theme.of(context).colorScheme.secondary,
+                ],
                 currentStep: 1,
                 totalSteps: 2,
                 onNext: controller.next,
@@ -342,7 +440,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
                   style: TextStyle(
                     fontSize: 12.sp, // ✅ REDUCIDO de 14
                     height: 1.3,
-                    color: Colors.grey.shade700,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 3,
@@ -371,7 +469,8 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
                         child: Text(
                           'Omitir',
                           style: TextStyle(
-                            color: Colors.grey.shade600,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 12.sp, // ✅ REDUCIDO de 14
                             fontWeight: FontWeight.w600,
                           ),
@@ -385,13 +484,17 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
                           Container(
                             margin: EdgeInsets.only(right: 6.w),
                             decoration: BoxDecoration(
-                              color: Colors.grey.shade200,
+                              color:
+                                  Theme.of(context).colorScheme.outlineVariant,
                               shape: BoxShape.circle,
                             ),
                             child: IconButton(
                               onPressed: onBack,
                               icon: Icon(Icons.arrow_back_rounded, size: 16.sp),
-                              color: Colors.grey.shade700,
+                              color:
+                                  Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                               padding: EdgeInsets.all(6.r),
                               constraints: BoxConstraints(
                                 minWidth: 30.w,
@@ -482,7 +585,10 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
                 isActive || isCurrent
                     ? LinearGradient(colors: gradientColors)
                     : null,
-            color: !isActive && !isCurrent ? Colors.grey.shade300 : null,
+            color:
+                !isActive && !isCurrent
+                    ? Theme.of(context).colorScheme.outlineVariant
+                    : null,
             borderRadius: BorderRadius.circular(2.5.r),
           ),
         );
@@ -613,8 +719,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
                       SizedBox(height: 10.h),
                       Text(
                         'Resumen del Día',
-                        style: GoogleFonts.lato(
-                          fontSize: 17.sp,
+                        style: theme.textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: theme.colorScheme.onSurface,
                         ),
@@ -622,8 +727,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
                       SizedBox(height: 4.h),
                       Text(
                         capitalizedDate,
-                        style: GoogleFonts.openSans(
-                          fontSize: 11.sp,
+                        style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.secondary,
                         ),
                         textAlign: TextAlign.center,
@@ -664,8 +768,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
                                 Expanded(
                                   child: Text(
                                     entry.key,
-                                    style: GoogleFonts.lato(
-                                      fontSize: 13.sp,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
                                       fontWeight: FontWeight.w600,
                                       color: theme.colorScheme.onSurface,
                                     ),
@@ -673,8 +776,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
                                 ),
                                 Text(
                                   _currencyFormat.format(entry.value.abs()),
-                                  style: GoogleFonts.lato(
-                                    fontSize: 13.sp,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
                                     color: color,
                                   ),
@@ -707,10 +809,9 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
                           child: Center(
                             child: Text(
                               'Cerrar',
-                              style: GoogleFonts.lato(
-                                color: theme.colorScheme.secondary,
-                                fontSize: 13.sp,
+                              style: theme.textTheme.bodyMedium?.copyWith(
                                 fontWeight: FontWeight.w600,
+                                color: theme.colorScheme.secondary,
                               ),
                             ),
                           ),
@@ -748,6 +849,84 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
   }
 
   Widget _buildEmptyState() {
+    final theme = Theme.of(context);
+
+    if (_hasAnyFilter) {
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 40.w),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: EdgeInsets.all(20.r),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withOpacity(0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.search_off_rounded,
+                  size: 48.sp,
+                  color: theme.colorScheme.primary.withOpacity(0.4),
+                ),
+              ),
+              SizedBox(height: 20.h),
+              Text(
+                'Sin resultados',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                ),
+              ),
+              SizedBox(height: 8.h),
+              Text(
+                _searchQuery.isNotEmpty
+                    ? 'No se encontraron transacciones para "$_searchQuery"'
+                    : _activeAdvancedFilterCount > 0
+                    ? 'Ninguna transacción coincide con los filtros aplicados'
+                    : 'No hay transacciones con estos filtros',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withOpacity(0.45),
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 24.h),
+              TextButton(
+                onPressed: _limpiarFiltro,
+                style: TextButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 24.w,
+                    vertical: 10.h,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.filter_alt_off_rounded,
+                      size: 16.sp,
+                      color: theme.colorScheme.primary,
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Limpiar filtros',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return EmptyTransactionsState(
       onAddTransaction: () {
         showSuccessNotification(
@@ -800,10 +979,9 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
             Expanded(
               child: Text(
                 formattedDate,
-                style: GoogleFonts.lato(
-                  fontSize: 13.sp,
+                style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onBackground,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
             ),
@@ -832,9 +1010,12 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
         extentRatio: 0.25,
         children: [
           SlidableAction(
-            onPressed: (context) => _showEditConfirmation(transaction),
+            onPressed: (context) {
+              Haptics.light();
+              _showEditConfirmation(transaction);
+            },
             backgroundColor: Colors.blue.shade400,
-            foregroundColor: Colors.white,
+            foregroundColor: Theme.of(context).colorScheme.onPrimary,
             icon: Icons.edit_rounded,
             label: 'Editar',
             borderRadius: BorderRadius.only(
@@ -849,9 +1030,12 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
         extentRatio: 0.25,
         children: [
           SlidableAction(
-            onPressed: (context) => _showDeleteConfirmation(transaction),
-            backgroundColor: Colors.red.shade400,
-            foregroundColor: Colors.white,
+            onPressed: (context) {
+              Haptics.heavy();
+              _showDeleteConfirmation(transaction);
+            },
+            backgroundColor: Theme.of(context).colorScheme.error,
+            foregroundColor: Theme.of(context).colorScheme.onError,
             icon: Icons.delete_rounded,
             label: 'Eliminar',
             borderRadius: BorderRadius.only(
@@ -871,7 +1055,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
             border: Border.all(color: color.withOpacity(0.25), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: Theme.of(context).colorScheme.shadow.withOpacity(0.03),
                 blurRadius: 8.r,
                 offset: Offset(0, 2.h),
               ),
@@ -892,9 +1076,8 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
             ),
             title: Text(
               transaction.descripcion,
-              style: GoogleFonts.lato(
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                fontSize: 14.sp,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
               maxLines: 1,
@@ -910,8 +1093,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
             ),
             trailing: Text(
               _currencyFormat.format(transaction.monto.abs()),
-              style: GoogleFonts.lato(
-                fontSize: 15.sp,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: color,
               ),
@@ -1014,7 +1196,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
       message:
           '¿Estás seguro de eliminar esta transacción? Esta acción no se puede deshacer.',
       confirmText: 'Eliminar',
-      confirmColor: Colors.red.shade400,
+      confirmColor: Theme.of(context).colorScheme.error,
       icon: Icons.delete_rounded,
     );
 
@@ -1047,10 +1229,9 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
           SizedBox(width: 6.w),
           Text(
             'Cuenta: $_cuentaFiltroActual',
-            style: GoogleFonts.poppins(
-              color: theme.colorScheme.secondary,
-              fontSize: 12.sp,
+            style: theme.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.w600,
+              color: theme.colorScheme.secondary,
             ),
           ),
           SizedBox(width: 8.w),
@@ -1101,7 +1282,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
       margin: EdgeInsets.symmetric(horizontal: 16.w),
       padding: EdgeInsets.all(12.r),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withOpacity(0.5),
+        color: theme.colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12.r),
         border: Border.all(
           color: theme.colorScheme.onSurface.withOpacity(0.08),
@@ -1154,8 +1335,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
             SizedBox(width: 4.w),
             Text(
               label,
-              style: GoogleFonts.lato(
-                fontSize: 10.sp,
+              style: theme.textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: theme.colorScheme.onSurface.withOpacity(0.6),
               ),
@@ -1165,8 +1345,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
         SizedBox(height: 2.h),
         Text(
           _currencyFormat.format(amount),
-          style: GoogleFonts.lato(
-            fontSize: 13.sp,
+          style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.bold,
             color: color,
           ),
@@ -1175,18 +1354,1051 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
     );
   }
 
+  // ── Barra de búsqueda animada ──
+  Widget _buildSearchBar(ThemeData theme) {
+    final bool hasText = _searchQuery.isNotEmpty;
+
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+      child:
+          _showSearch
+              ? Padding(
+                padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 4.h),
+                child: Container(
+                  height: 44.h,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest
+                        .withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(22.r),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    autofocus: true,
+                    textAlignVertical: TextAlignVertical.center,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Buscar transacciones...',
+                      hintStyle: theme.textTheme.titleSmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.4),
+                      ),
+                      prefixIcon: Padding(
+                        padding: EdgeInsets.only(left: 12.w, right: 8.w),
+                        child: Icon(
+                          Icons.search_rounded,
+                          size: 20.sp,
+                          color:
+                              hasText
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.onSurface.withOpacity(
+                                    0.4,
+                                  ),
+                        ),
+                      ),
+                      prefixIconConstraints: BoxConstraints(
+                        minWidth: 40.w,
+                        minHeight: 20.h,
+                      ),
+                      suffixIcon: GestureDetector(
+                        onTap: () {
+                          Haptics.light();
+                          setState(() {
+                            _searchController.clear();
+                            _searchQuery = '';
+                            _showSearch = false;
+                            _searchFocusNode.unfocus();
+                          });
+                          widget.onStateChanged?.call();
+                        },
+                        child: Padding(
+                          padding: EdgeInsets.only(right: 8.w),
+                          child: Container(
+                            width: 28.w,
+                            height: 28.h,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.onSurface.withOpacity(
+                                0.1,
+                              ),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.close_rounded,
+                              size: 16.sp,
+                              color: theme.colorScheme.onSurface.withOpacity(
+                                0.6,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      suffixIconConstraints: BoxConstraints(
+                        minWidth: 36.w,
+                        minHeight: 28.h,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 0,
+                        vertical: 12.h,
+                      ),
+                    ),
+                    onChanged: (value) {
+                      final hadQuery = _searchQuery.isNotEmpty;
+                      setState(() => _searchQuery = value);
+                      if (hadQuery != value.isNotEmpty) {
+                        widget.onStateChanged?.call();
+                      }
+                    },
+                  ),
+                ),
+              )
+              : const SizedBox.shrink(),
+    );
+  }
+
+  // ── Chips de filtros activos ──
+  Widget _buildActiveFilterChips(ThemeData theme) {
+    final chips = <Widget>[];
+
+    if (_filtroTipo != null) {
+      const tipoColores = {
+        'Gastos': Colors.red,
+        'Ingresos': Colors.green,
+        'Pagos': Colors.orange,
+        'Traspasos': Colors.blue,
+        'Reembolsos': Colors.purple,
+      };
+      chips.add(
+        _buildFilterChipTag(
+          theme,
+          Icons.label_rounded,
+          _filtroTipo!,
+          tipoColores[_filtroTipo] ?? theme.colorScheme.primary,
+          () => setState(() {
+            _filtroTipo = null;
+          }),
+        ),
+      );
+    }
+
+    if (_filtroFechas != null) {
+      final fmt = DateFormat('d MMM', 'es_ES');
+      chips.add(
+        _buildFilterChipTag(
+          theme,
+          Icons.date_range_rounded,
+          '${fmt.format(_filtroFechas!.start)} – ${fmt.format(_filtroFechas!.end)}',
+          theme.colorScheme.primary,
+          () => setState(() {
+            _filtroFechas = null;
+          }),
+        ),
+      );
+    }
+
+    if (_montoMin != null || _montoMax != null) {
+      String label;
+      if (_montoMin != null && _montoMax != null) {
+        label =
+            '\$${_montoMin!.toStringAsFixed(0)} – \$${_montoMax!.toStringAsFixed(0)}';
+      } else if (_montoMin != null) {
+        label = '≥ \$${_montoMin!.toStringAsFixed(0)}';
+      } else {
+        label = '≤ \$${_montoMax!.toStringAsFixed(0)}';
+      }
+      chips.add(
+        _buildFilterChipTag(
+          theme,
+          Icons.attach_money_rounded,
+          label,
+          Colors.teal,
+          () => setState(() {
+            _montoMin = null;
+            _montoMax = null;
+          }),
+        ),
+      );
+    }
+
+    if (_filtroCategoriasSet.isNotEmpty) {
+      final label =
+          _filtroCategoriasSet.length == 1
+              ? _filtroCategoriasSet.first
+              : '${_filtroCategoriasSet.length} categorías';
+      chips.add(
+        _buildFilterChipTag(
+          theme,
+          Icons.category_rounded,
+          label,
+          Colors.deepPurple,
+          () => setState(() {
+            _filtroCategoriasSet = {};
+          }),
+        ),
+      );
+    }
+
+    if (_filtroCuentaAvanzada != null) {
+      chips.add(
+        _buildFilterChipTag(
+          theme,
+          Icons.account_balance_wallet_rounded,
+          _filtroCuentaAvanzada!,
+          Colors.indigo,
+          () => setState(() {
+            _filtroCuentaAvanzada = null;
+          }),
+        ),
+      );
+    }
+
+    if (chips.isEmpty) return const SizedBox.shrink();
+
+    return SizedBox(
+      height: 36.h,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        itemCount: chips.length + 1, // +1 for "clear all"
+        separatorBuilder: (_, __) => SizedBox(width: 6.w),
+        itemBuilder: (context, i) {
+          if (i == chips.length) {
+            // Botón limpiar todo
+            return GestureDetector(
+              onTap: () {
+                Haptics.medium();
+                setState(() {
+                  _filtroTipo = null;
+                  _filtroFechas = null;
+                  _montoMin = null;
+                  _montoMax = null;
+                  _filtroCategoriasSet = {};
+                  _filtroCuentaAvanzada = null;
+                });
+                widget.onStateChanged?.call();
+              },
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16.r),
+                  border: Border.all(
+                    color: theme.colorScheme.error.withOpacity(0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.clear_all_rounded,
+                      size: 14.sp,
+                      color: theme.colorScheme.error.withOpacity(0.7),
+                    ),
+                    SizedBox(width: 4.w),
+                    Text(
+                      'Limpiar',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.error.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+          return chips[i];
+        },
+      ),
+    );
+  }
+
+  Widget _buildFilterChipTag(
+    ThemeData theme,
+    IconData icon,
+    String label,
+    Color color,
+    VoidCallback onRemove,
+  ) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13.sp, color: color),
+          SizedBox(width: 5.w),
+          ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: 130.w),
+            child: Text(
+              label,
+              style: theme.textTheme.labelSmall?.copyWith(color: color),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          SizedBox(width: 4.w),
+          GestureDetector(
+            onTap: () {
+              Haptics.light();
+              onRemove();
+              widget.onStateChanged?.call();
+            },
+            child: Icon(
+              Icons.close_rounded,
+              size: 14.sp,
+              color: color.withOpacity(0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Bottom Sheet de filtros avanzados ──
+  void _showAdvancedFilters(ThemeData theme) {
+    // Controladores temporales para el bottom sheet
+    final minController = TextEditingController(
+      text: _montoMin?.toStringAsFixed(0) ?? '',
+    );
+    final maxController = TextEditingController(
+      text: _montoMax?.toStringAsFixed(0) ?? '',
+    );
+    DateTimeRange? tempFechas = _filtroFechas;
+    Set<String> tempCategorias = Set.from(_filtroCategoriasSet);
+    String? tempCuenta = _filtroCuentaAvanzada;
+    String? tempTipo = _filtroTipo;
+
+    final dp = Provider.of<DataProvider>(context, listen: false);
+    // Obtener categorías y cuentas únicas de las transacciones
+    final allCategorias =
+        dp.transacciones
+            .map((t) => t.categoria)
+            .where((c) => c.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+    final allCuentas = dp.cuentas.map((c) => c.nombre).toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            final theme = Theme.of(ctx);
+            final fmtFull = DateFormat('d MMM yyyy', 'es_ES');
+
+            return Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+              ),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Handle
+                  Container(
+                    margin: EdgeInsets.only(top: 12.h),
+                    width: 40.w,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.onSurface.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(2.r),
+                    ),
+                  ),
+                  // Header
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(20.w, 16.h, 12.w, 8.h),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.tune_rounded,
+                          size: 22.sp,
+                          color: theme.colorScheme.primary,
+                        ),
+                        SizedBox(width: 10.w),
+                        Text(
+                          'Filtros avanzados',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () {
+                            setModalState(() {
+                              tempTipo = null;
+                              tempFechas = null;
+                              minController.clear();
+                              maxController.clear();
+                              tempCategorias.clear();
+                              tempCuenta = null;
+                            });
+                          },
+                          child: Text(
+                            'Limpiar',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: theme.colorScheme.error,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(
+                    height: 1,
+                    color: theme.colorScheme.onSurface.withOpacity(0.08),
+                  ),
+                  // Scrollable filters
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 8.h),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // ─── TIPO DE TRANSACCIÓN ───
+                          _buildFilterSectionHeader(
+                            theme,
+                            Icons.label_rounded,
+                            'Tipo de transacción',
+                            Colors.blueGrey,
+                          ),
+                          SizedBox(height: 8.h),
+                          Wrap(
+                            spacing: 8.w,
+                            runSpacing: 8.h,
+                            children:
+                                [
+                                  (
+                                    'Gastos',
+                                    Icons.trending_down_rounded,
+                                    Colors.red,
+                                  ),
+                                  (
+                                    'Ingresos',
+                                    Icons.trending_up_rounded,
+                                    Colors.green,
+                                  ),
+                                  (
+                                    'Pagos',
+                                    Icons.monetization_on_rounded,
+                                    Colors.orange,
+                                  ),
+                                  (
+                                    'Traspasos',
+                                    Icons.swap_horiz_rounded,
+                                    Colors.blue,
+                                  ),
+                                  (
+                                    'Reembolsos',
+                                    Icons.restore_rounded,
+                                    Colors.purple,
+                                  ),
+                                ].map((item) {
+                                  final (label, icon, color) = item;
+                                  final selected = tempTipo == label;
+                                  return GestureDetector(
+                                    onTap: () {
+                                      Haptics.light();
+                                      setModalState(() {
+                                        tempTipo = selected ? null : label;
+                                      });
+                                    },
+                                    child: AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 200,
+                                      ),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 14.w,
+                                        vertical: 8.h,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            selected
+                                                ? (color as Color).withOpacity(
+                                                  0.12,
+                                                )
+                                                : theme
+                                                    .colorScheme
+                                                    .surfaceVariant
+                                                    .withOpacity(0.4),
+                                        borderRadius: BorderRadius.circular(
+                                          20.r,
+                                        ),
+                                        border: Border.all(
+                                          color:
+                                              selected
+                                                  ? (color as Color)
+                                                      .withOpacity(0.4)
+                                                  : Colors.transparent,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (selected)
+                                            Padding(
+                                              padding: EdgeInsets.only(
+                                                right: 5.w,
+                                              ),
+                                              child: Icon(
+                                                Icons.check_rounded,
+                                                size: 14.sp,
+                                                color: color as Color,
+                                              ),
+                                            ),
+                                          Icon(
+                                            icon,
+                                            size: 15.sp,
+                                            color:
+                                                selected
+                                                    ? color as Color
+                                                    : theme
+                                                        .colorScheme
+                                                        .onSurface
+                                                        .withOpacity(0.5),
+                                          ),
+                                          SizedBox(width: 5.w),
+                                          Text(
+                                            label,
+                                            style: theme.textTheme.labelMedium
+                                                ?.copyWith(
+                                                  fontWeight:
+                                                      selected
+                                                          ? FontWeight.w600
+                                                          : FontWeight.w400,
+                                                  color:
+                                                      selected
+                                                          ? color as Color
+                                                          : theme
+                                                              .colorScheme
+                                                              .onSurface
+                                                              .withOpacity(0.7),
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                          ),
+                          SizedBox(height: 20.h),
+                          // ─── RANGO DE FECHAS ───
+                          _buildFilterSectionHeader(
+                            theme,
+                            Icons.date_range_rounded,
+                            'Rango de fechas',
+                            theme.colorScheme.primary,
+                          ),
+                          SizedBox(height: 8.h),
+                          GestureDetector(
+                            onTap: () async {
+                              final picked = await showDateRangePicker(
+                                context: ctx,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime.now(),
+                                initialDateRange: tempFechas,
+                                locale: const Locale('es', 'ES'),
+                                builder: (context, child) {
+                                  return Theme(
+                                    data: theme.copyWith(
+                                      colorScheme: theme.colorScheme.copyWith(
+                                        primary: theme.colorScheme.primary,
+                                      ),
+                                    ),
+                                    child: child!,
+                                  );
+                                },
+                              );
+                              if (picked != null) {
+                                setModalState(() => tempFechas = picked);
+                              }
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 14.w,
+                                vertical: 12.h,
+                              ),
+                              decoration: BoxDecoration(
+                                color:
+                                    tempFechas != null
+                                        ? theme.colorScheme.primary.withOpacity(
+                                          0.08,
+                                        )
+                                        : theme
+                                            .colorScheme
+                                            .surfaceContainerHighest
+                                            .withOpacity(0.4),
+                                borderRadius: BorderRadius.circular(12.r),
+                                border: Border.all(
+                                  color:
+                                      tempFechas != null
+                                          ? theme.colorScheme.primary
+                                              .withOpacity(0.3)
+                                          : theme.colorScheme.onSurface
+                                              .withOpacity(0.1),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today_rounded,
+                                    size: 16.sp,
+                                    color:
+                                        tempFechas != null
+                                            ? theme.colorScheme.primary
+                                            : theme.colorScheme.onSurface
+                                                .withOpacity(0.4),
+                                  ),
+                                  SizedBox(width: 10.w),
+                                  Expanded(
+                                    child: Text(
+                                      tempFechas != null
+                                          ? '${fmtFull.format(tempFechas!.start)}  →  ${fmtFull.format(tempFechas!.end)}'
+                                          : 'Seleccionar rango de fechas',
+                                      style: theme.textTheme.labelMedium
+                                          ?.copyWith(
+                                            color:
+                                                tempFechas != null
+                                                    ? theme.colorScheme.primary
+                                                    : theme
+                                                        .colorScheme
+                                                        .onSurface
+                                                        .withOpacity(0.45),
+                                            fontWeight:
+                                                tempFechas != null
+                                                    ? FontWeight.w500
+                                                    : FontWeight.w400,
+                                          ),
+                                    ),
+                                  ),
+                                  if (tempFechas != null)
+                                    GestureDetector(
+                                      onTap:
+                                          () => setModalState(
+                                            () => tempFechas = null,
+                                          ),
+                                      child: Icon(
+                                        Icons.close_rounded,
+                                        size: 18.sp,
+                                        color: theme.colorScheme.primary
+                                            .withOpacity(0.6),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 20.h),
+
+                          // ─── RANGO DE MONTOS ───
+                          _buildFilterSectionHeader(
+                            theme,
+                            Icons.attach_money_rounded,
+                            'Rango de montos',
+                            Colors.teal,
+                          ),
+                          SizedBox(height: 8.h),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildAmountField(
+                                  theme,
+                                  minController,
+                                  'Mínimo',
+                                  '\$0',
+                                ),
+                              ),
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 10.w),
+                                child: Text(
+                                  '–',
+                                  style: TextStyle(
+                                    fontSize: 20.sp,
+                                    color: theme.colorScheme.onSurface
+                                        .withOpacity(0.3),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: _buildAmountField(
+                                  theme,
+                                  maxController,
+                                  'Máximo',
+                                  '\$∞',
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 20.h),
+
+                          // ─── CUENTA ───
+                          if (allCuentas.isNotEmpty) ...[
+                            _buildFilterSectionHeader(
+                              theme,
+                              Icons.account_balance_wallet_rounded,
+                              'Cuenta',
+                              Colors.indigo,
+                            ),
+                            SizedBox(height: 8.h),
+                            Wrap(
+                              spacing: 8.w,
+                              runSpacing: 8.h,
+                              children:
+                                  allCuentas.map((cuenta) {
+                                    final selected = tempCuenta == cuenta;
+                                    return GestureDetector(
+                                      onTap: () {
+                                        Haptics.light();
+                                        setModalState(() {
+                                          tempCuenta = selected ? null : cuenta;
+                                        });
+                                      },
+                                      child: AnimatedContainer(
+                                        duration: const Duration(
+                                          milliseconds: 200,
+                                        ),
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 14.w,
+                                          vertical: 8.h,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              selected
+                                                  ? Colors.indigo.withOpacity(
+                                                    0.12,
+                                                  )
+                                                  : theme
+                                                      .colorScheme
+                                                      .surfaceVariant
+                                                      .withOpacity(0.4),
+                                          borderRadius: BorderRadius.circular(
+                                            20.r,
+                                          ),
+                                          border: Border.all(
+                                            color:
+                                                selected
+                                                    ? Colors.indigo.withOpacity(
+                                                      0.4,
+                                                    )
+                                                    : Colors.transparent,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            if (selected)
+                                              Padding(
+                                                padding: EdgeInsets.only(
+                                                  right: 5.w,
+                                                ),
+                                                child: Icon(
+                                                  Icons.check_rounded,
+                                                  size: 14.sp,
+                                                  color: Colors.indigo,
+                                                ),
+                                              ),
+                                            Text(
+                                              cuenta,
+                                              style: theme.textTheme.labelMedium
+                                                  ?.copyWith(
+                                                    fontWeight:
+                                                        selected
+                                                            ? FontWeight.w600
+                                                            : FontWeight.w400,
+                                                    color:
+                                                        selected
+                                                            ? Colors.indigo
+                                                            : theme
+                                                                .colorScheme
+                                                                .onSurface
+                                                                .withOpacity(
+                                                                  0.7,
+                                                                ),
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                            ),
+                            SizedBox(height: 20.h),
+                          ],
+
+                          // ─── CATEGORÍAS ───
+                          if (allCategorias.isNotEmpty) ...[
+                            _buildFilterSectionHeader(
+                              theme,
+                              Icons.category_rounded,
+                              'Categorías ${tempCategorias.isNotEmpty ? '(${tempCategorias.length})' : ''}',
+                              Colors.deepPurple,
+                            ),
+                            SizedBox(height: 8.h),
+                            Wrap(
+                              spacing: 8.w,
+                              runSpacing: 8.h,
+                              children:
+                                  allCategorias.map((cat) {
+                                    final selected = tempCategorias.contains(
+                                      cat,
+                                    );
+                                    return GestureDetector(
+                                      onTap: () {
+                                        Haptics.light();
+                                        setModalState(() {
+                                          if (selected) {
+                                            tempCategorias.remove(cat);
+                                          } else {
+                                            tempCategorias.add(cat);
+                                          }
+                                        });
+                                      },
+                                      child: AnimatedContainer(
+                                        duration: const Duration(
+                                          milliseconds: 200,
+                                        ),
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 14.w,
+                                          vertical: 8.h,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              selected
+                                                  ? Colors.deepPurple
+                                                      .withOpacity(0.12)
+                                                  : theme
+                                                      .colorScheme
+                                                      .surfaceVariant
+                                                      .withOpacity(0.4),
+                                          borderRadius: BorderRadius.circular(
+                                            20.r,
+                                          ),
+                                          border: Border.all(
+                                            color:
+                                                selected
+                                                    ? Colors.deepPurple
+                                                        .withOpacity(0.4)
+                                                    : Colors.transparent,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            if (selected)
+                                              Padding(
+                                                padding: EdgeInsets.only(
+                                                  right: 5.w,
+                                                ),
+                                                child: Icon(
+                                                  Icons.check_rounded,
+                                                  size: 14.sp,
+                                                  color: Colors.deepPurple,
+                                                ),
+                                              ),
+                                            Text(
+                                              cat,
+                                              style: theme.textTheme.labelMedium
+                                                  ?.copyWith(
+                                                    fontWeight:
+                                                        selected
+                                                            ? FontWeight.w600
+                                                            : FontWeight.w400,
+                                                    color:
+                                                        selected
+                                                            ? Colors.deepPurple
+                                                            : theme
+                                                                .colorScheme
+                                                                .onSurface
+                                                                .withOpacity(
+                                                                  0.7,
+                                                                ),
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                            ),
+                          ],
+                          SizedBox(height: 16.h),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Apply button
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      20.w,
+                      8.h,
+                      20.w,
+                      MediaQuery.of(ctx).padding.bottom + 16.h,
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 48.h,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Haptics.medium();
+                          setState(() {
+                            _filtroTipo = tempTipo;
+                            _filtroFechas = tempFechas;
+                            _montoMin = double.tryParse(minController.text);
+                            _montoMax = double.tryParse(maxController.text);
+                            _filtroCategoriasSet = tempCategorias;
+                            _filtroCuentaAvanzada = tempCuenta;
+                          });
+                          Navigator.pop(ctx);
+                          widget.onStateChanged?.call();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: theme.colorScheme.onPrimary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16.r),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Aplicar filtros',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildFilterSectionHeader(
+    ThemeData theme,
+    IconData icon,
+    String title,
+    Color color,
+  ) {
+    return Row(
+      children: [
+        Container(
+          padding: EdgeInsets.all(6.r),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8.r),
+          ),
+          child: Icon(icon, size: 16.sp, color: color),
+        ),
+        SizedBox(width: 8.w),
+        Text(
+          title,
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onSurface.withOpacity(0.8),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAmountField(
+    ThemeData theme,
+    TextEditingController controller,
+    String label,
+    String hint,
+  ) {
+    return TextField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      style: theme.textTheme.titleSmall?.copyWith(
+        color: theme.colorScheme.onSurface,
+      ),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: theme.textTheme.labelMedium?.copyWith(
+          color: theme.colorScheme.onSurface.withOpacity(0.5),
+        ),
+        hintText: hint,
+        hintStyle: theme.textTheme.labelMedium?.copyWith(
+          color: theme.colorScheme.onSurface.withOpacity(0.3),
+        ),
+        filled: true,
+        fillColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.4),
+        contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide(
+            color: Colors.teal.withOpacity(0.5),
+            width: 1.5,
+          ),
+        ),
+        prefixText: '\$ ',
+        prefixStyle: theme.textTheme.titleSmall?.copyWith(
+          color: theme.colorScheme.onSurface.withOpacity(0.5),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Escuchar cambios del DataProvider
+    Provider.of<DataProvider>(context);
+    // Aplicar filtro con datos frescos
+    _aplicarFiltro();
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
+        top: false,
         child: Stack(
           children: [
             Column(
               children: [
-                // Chip de filtro activo
+                // ── Barra de búsqueda (aparece con animación) ──
+                _buildSearchBar(theme),
+                // ── Chips de filtros avanzados activos ──
+                if (_activeAdvancedFilterCount > 0) ...[
+                  SizedBox(height: 4.h),
+                  _buildActiveFilterChips(theme),
+                ],
+                // Contador de resultados cuando hay filtros activos
+                if (_hasAnyFilter && _transaccionesFiltradas.isNotEmpty)
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(20.w, 6.h, 20.w, 2.h),
+                    child: Row(
+                      children: [
+                        Text(
+                          '${_transaccionesFiltradas.length} resultado${_transaccionesFiltradas.length == 1 ? '' : 's'}',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onSurface.withOpacity(
+                              0.45,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                // Chip de filtro por cuenta (desde otra pantalla)
                 if (_cuentaFiltroActual != null) _buildFiltroCuentaChip(),
                 // Resumen de totales
                 if (_cuentaFiltroActual != null &&
@@ -1222,10 +2434,10 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              const Color(0xFF667eea).withOpacity(0.0),
-                              const Color(0xFF667eea),
-                              const Color(0xFF764ba2),
-                              const Color(0xFF764ba2).withOpacity(0.0),
+                              theme.colorScheme.primary.withOpacity(0.0),
+                              theme.colorScheme.primary,
+                              theme.colorScheme.secondary,
+                              theme.colorScheme.secondary.withOpacity(0.0),
                             ],
                           ),
                         ),
@@ -1242,7 +2454,7 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
               ),
             if (_isLoading)
               Container(
-                color: theme.colorScheme.background.withOpacity(0.8),
+                color: theme.colorScheme.surfaceContainer,
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -1256,10 +2468,9 @@ class TransaccionesScreenState extends State<TransaccionesScreen>
                       SizedBox(height: 12.h),
                       Text(
                         'Actualizando...',
-                        style: GoogleFonts.lato(
-                          fontSize: 13.sp,
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.onBackground,
+                          color: theme.colorScheme.onSurface,
                         ),
                       ),
                     ],

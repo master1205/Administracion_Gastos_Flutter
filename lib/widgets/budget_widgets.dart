@@ -1,6 +1,5 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:notificaciones/models/Budget.dart';
 import 'package:notificaciones/widgets/animations.dart';
@@ -34,12 +33,14 @@ class BudgetCardWidget extends StatelessWidget {
     Widget? statusBadge;
     if (budget.excedido) {
       statusBadge = _buildStatusBadge(
+        context,
         Icons.warning_rounded,
         'Excedido',
         Colors.red.withOpacity(0.3),
       );
     } else if (budget.enAlerta) {
       statusBadge = _buildStatusBadge(
+        context,
         Icons.notifications_active_rounded,
         'Alerta',
         Colors.white.withOpacity(0.25),
@@ -82,8 +83,7 @@ class BudgetCardWidget extends StatelessWidget {
                     Flexible(
                       child: Text(
                         budget.nombre,
-                        style: GoogleFonts.lato(
-                          fontSize: 15.sp,
+                        style: theme.textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -104,8 +104,7 @@ class BudgetCardWidget extends StatelessWidget {
                 SizedBox(height: 1.h),
                 Text(
                   budget.periodo == 'semanal' ? 'Semanal' : 'Mensual',
-                  style: GoogleFonts.lato(
-                    fontSize: 11.sp,
+                  style: theme.textTheme.bodySmall?.copyWith(
                     color: Colors.white.withOpacity(0.75),
                   ),
                 ),
@@ -133,8 +132,7 @@ class BudgetCardWidget extends StatelessWidget {
                 SizedBox(width: 10.w),
                 Text(
                   '${budget.progreso.toStringAsFixed(0)}%',
-                  style: GoogleFonts.lato(
-                    fontSize: 12.sp,
+                  style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w800,
                     color: theme.colorScheme.onSurface.withOpacity(0.7),
                   ),
@@ -152,16 +150,14 @@ class BudgetCardWidget extends StatelessWidget {
                     children: [
                       Text(
                         'Gastado',
-                        style: GoogleFonts.lato(
-                          fontSize: 10.sp,
+                        style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.5),
                         ),
                       ),
                       SizedBox(height: 1.h),
                       Text(
                         currencyFormat.format(budget.montoGastado),
-                        style: GoogleFonts.lato(
-                          fontSize: 14.sp,
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: theme.colorScheme.primary,
                         ),
@@ -176,16 +172,14 @@ class BudgetCardWidget extends StatelessWidget {
                     children: [
                       Text(
                         'Límite',
-                        style: GoogleFonts.lato(
-                          fontSize: 10.sp,
+                        style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.5),
                         ),
                       ),
                       SizedBox(height: 1.h),
                       Text(
                         currencyFormat.format(budget.montoLimite),
-                        style: GoogleFonts.lato(
-                          fontSize: 14.sp,
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: theme.colorScheme.onSurface.withOpacity(0.7),
                         ),
@@ -211,8 +205,7 @@ class BudgetCardWidget extends StatelessWidget {
                           SizedBox(width: 3.w),
                           Text(
                             _formatPeriodo(),
-                            style: GoogleFonts.lato(
-                              fontSize: 11.sp,
+                            style: theme.textTheme.bodySmall?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: theme.colorScheme.onSurface.withOpacity(
                                 0.55,
@@ -235,8 +228,7 @@ class BudgetCardWidget extends StatelessWidget {
                             budget.diasRestantes > 0
                                 ? '${budget.diasRestantes} días'
                                 : 'Vencido',
-                            style: GoogleFonts.lato(
-                              fontSize: 10.sp,
+                            style: theme.textTheme.labelSmall?.copyWith(
                               fontWeight: FontWeight.w500,
                               color: theme.colorScheme.onSurface.withOpacity(
                                 0.5,
@@ -269,8 +261,7 @@ class BudgetCardWidget extends StatelessWidget {
                       ),
                       child: Text(
                         categoria,
-                        style: GoogleFonts.lato(
-                          fontSize: 10.sp,
+                        style: theme.textTheme.labelSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: theme.colorScheme.primary,
                         ),
@@ -280,8 +271,7 @@ class BudgetCardWidget extends StatelessWidget {
                   if (budget.categorias.length > 3)
                     Text(
                       '+${budget.categorias.length - 3}',
-                      style: GoogleFonts.lato(
-                        fontSize: 10.sp,
+                      style: theme.textTheme.labelSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: theme.colorScheme.onSurface.withOpacity(0.5),
                       ),
@@ -295,7 +285,13 @@ class BudgetCardWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusBadge(IconData icon, String label, Color bgColor) {
+  Widget _buildStatusBadge(
+    BuildContext context,
+    IconData icon,
+    String label,
+    Color bgColor,
+  ) {
+    final theme = Theme.of(context);
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
       decoration: BoxDecoration(
@@ -309,8 +305,7 @@ class BudgetCardWidget extends StatelessWidget {
           SizedBox(width: 3.w),
           Text(
             label,
-            style: GoogleFonts.lato(
-              fontSize: 10.sp,
+            style: theme.textTheme.labelSmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: Colors.white,
             ),

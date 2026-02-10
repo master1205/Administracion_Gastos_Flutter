@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 import 'package:flutter_iconpicker/Models/configuration.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'componentes/heads_up_notification.dart';
 import 'services/firestore_service.dart';
@@ -89,7 +88,7 @@ class _CrearCategoriaScreenState extends State<CrearCategoriaScreen> {
       case 'Pago':
         return const Color(0xFFFF9800);
       default:
-        return const Color(0xFF667eea);
+        return Theme.of(context).colorScheme.primary;
     }
   }
 
@@ -112,7 +111,7 @@ class _CrearCategoriaScreenState extends State<CrearCategoriaScreen> {
       },
       child: Scaffold(
         resizeToAvoidBottomInset: true,
-        backgroundColor: theme.colorScheme.background,
+        backgroundColor: theme.colorScheme.surface,
         appBar: AppBar(
           backgroundColor: theme.colorScheme.surface,
           elevation: 0,
@@ -127,9 +126,7 @@ class _CrearCategoriaScreenState extends State<CrearCategoriaScreen> {
           ),
           title: Text(
             isEdit ? 'Editar Categoría' : 'Nueva Categoría',
-            style: GoogleFonts.poppins(
-              fontSize: 20.sp,
-              fontWeight: FontWeight.w600,
+            style: theme.textTheme.titleLarge?.copyWith(
               color: theme.colorScheme.onSurface,
             ),
           ),
@@ -166,8 +163,7 @@ class _CrearCategoriaScreenState extends State<CrearCategoriaScreen> {
                   SizedBox(height: 12.h),
                   Text(
                     'Personaliza tu categoría',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13.sp,
+                    style: theme.textTheme.labelMedium?.copyWith(
                       color: theme.colorScheme.secondary.withOpacity(0.7),
                       fontWeight: FontWeight.w500,
                     ),
@@ -248,8 +244,8 @@ class _CrearCategoriaScreenState extends State<CrearCategoriaScreen> {
                             iconPackModes: [IconPack.material],
                             iconColor:
                                 isDark
-                                    ? Colors.grey.shade300
-                                    : Colors.grey.shade700,
+                                    ? theme.colorScheme.outlineVariant
+                                    : theme.colorScheme.onSurfaceVariant,
                             searchHintText: 'Buscar ícono...',
                           ),
                         );
@@ -285,8 +281,7 @@ class _CrearCategoriaScreenState extends State<CrearCategoriaScreen> {
                             Expanded(
                               child: Text(
                                 'Toca para cambiar el ícono',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14.sp,
+                                style: theme.textTheme.titleSmall?.copyWith(
                                   color: theme.colorScheme.secondary
                                       .withOpacity(0.7),
                                   fontWeight: FontWeight.w500,
@@ -304,93 +299,97 @@ class _CrearCategoriaScreenState extends State<CrearCategoriaScreen> {
                         ),
                       ),
                     ),
-                    SizedBox(height: 80.h),
+                    SizedBox(height: 24.h),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.tonal(
+                        onPressed: () async {
+                          final nombre = _nombreController.text.trim();
+                          if (nombre.isEmpty) {
+                            showErrorNotification(
+                              context,
+                              message: 'El nombre es requerido',
+                            );
+                            return;
+                          }
+
+                          try {
+                            final iconString = _getIconStringFromData(
+                              _iconoSeleccionado,
+                            );
+
+                            if (isEdit) {
+                              await _firestoreService.actualizarCategoria(
+                                categoriaId: widget.categoria!['id'],
+                                nombre: nombre,
+                                imagen: iconString,
+                                tipoTransaccion: _tipoSeleccionado,
+                              );
+                            } else {
+                              await _firestoreService.crearCategoria(
+                                nombre: nombre,
+                                imagen: iconString,
+                                tipoTransaccion: _tipoSeleccionado,
+                              );
+                            }
+
+                            if (mounted) {
+                              showSuccessNotification(
+                                context,
+                                message:
+                                    isEdit
+                                        ? 'Categoría actualizada'
+                                        : 'Categoría creada',
+                              );
+                              Navigator.pop(context);
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              showErrorNotification(
+                                context,
+                                message: 'Error',
+                                subtitle: e.toString(),
+                              );
+                            }
+                          }
+                        },
+                        style: FilledButton.styleFrom(
+                          backgroundColor: theme.colorScheme.secondaryContainer,
+                          foregroundColor:
+                              theme.colorScheme.onSecondaryContainer,
+                          padding: EdgeInsets.symmetric(vertical: 16.h),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          isEdit ? 'Actualizar Categoría' : 'Crear Categoría',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: theme.colorScheme.onSecondaryContainer,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 24.h),
                   ],
                 ),
               ),
             ),
           ],
         ),
-        floatingActionButton: Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(horizontal: 20.r, vertical: 12.h),
-          child: ElevatedButton(
-            onPressed: () async {
-              final nombre = _nombreController.text.trim();
-              if (nombre.isEmpty) {
-                showErrorNotification(
-                  context,
-                  message: 'El nombre es requerido',
-                );
-                return;
-              }
-
-              try {
-                final iconString = _getIconStringFromData(_iconoSeleccionado);
-
-                if (isEdit) {
-                  await _firestoreService.actualizarCategoria(
-                    categoriaId: widget.categoria!['id'],
-                    nombre: nombre,
-                    imagen: iconString,
-                    tipoTransaccion: _tipoSeleccionado,
-                  );
-                } else {
-                  await _firestoreService.crearCategoria(
-                    nombre: nombre,
-                    imagen: iconString,
-                    tipoTransaccion: _tipoSeleccionado,
-                  );
-                }
-
-                if (mounted) {
-                  showSuccessNotification(
-                    context,
-                    message:
-                        isEdit ? 'Categoría actualizada' : 'Categoría creada',
-                  );
-                  Navigator.pop(context);
-                }
-              } catch (e) {
-                if (mounted) {
-                  showErrorNotification(
-                    context,
-                    message: 'Error',
-                    subtitle: e.toString(),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: colorTipo,
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: 15.h),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14.r),
-              ),
-              elevation: 0,
-            ),
-            child: Text(
-              isEdit ? 'Actualizar Categoría' : 'Crear Categoría',
-              style: GoogleFonts.poppins(
-                fontSize: 15.sp,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
     );
   }
 
   Widget _buildSectionTitle(String title, bool isDark) {
+    final theme = Theme.of(context);
     return Text(
       title,
-      style: GoogleFonts.poppins(
-        fontSize: 13.sp,
+      style: theme.textTheme.labelMedium?.copyWith(
         fontWeight: FontWeight.w600,
-        color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+        color: theme.colorScheme.onSurfaceVariant,
       ),
     );
   }
@@ -431,8 +430,7 @@ class _CrearCategoriaScreenState extends State<CrearCategoriaScreen> {
             SizedBox(height: 6.h),
             Text(
               tipo,
-              style: GoogleFonts.poppins(
-                fontSize: 12.sp,
+              style: theme.textTheme.labelMedium?.copyWith(
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 color:
                     isSelected
@@ -455,9 +453,8 @@ class _CrearCategoriaScreenState extends State<CrearCategoriaScreen> {
   }) {
     return InputDecoration(
       hintText: hintText,
-      hintStyle: GoogleFonts.poppins(
+      hintStyle: theme.textTheme.titleSmall?.copyWith(
         color: theme.colorScheme.secondary.withOpacity(0.5),
-        fontSize: 14.sp,
       ),
       prefixIcon: Container(
         margin: EdgeInsets.all(10.r),
@@ -468,27 +465,10 @@ class _CrearCategoriaScreenState extends State<CrearCategoriaScreen> {
         ),
         child: Icon(prefixIcon, color: color, size: 20.sp),
       ),
-      filled: true,
-      fillColor: theme.colorScheme.surface,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide(
-          color: theme.colorScheme.secondary.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide(
-          color: theme.colorScheme.secondary.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide(color: color, width: 1.5),
+        borderSide: BorderSide(color: color, width: 2),
       ),
-      contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
     );
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/haptic_utils.dart';
 
 /// Muestra una notificación heads-up desde la parte superior de la pantalla
 void showHeadsUpNotification(
@@ -38,6 +38,7 @@ void showSuccessNotification(
   String? subtitle,
   int durationSeconds = 3,
 }) {
+  Haptics.medium();
   showHeadsUpNotification(
     context,
     message: message,
@@ -56,6 +57,7 @@ void showErrorNotification(
   String? subtitle,
   int durationSeconds = 3,
 }) {
+  Haptics.heavy();
   showHeadsUpNotification(
     context,
     message: message,
@@ -171,6 +173,7 @@ class _HeadsUpNotificationState extends State<_HeadsUpNotification>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Positioned(
       top: MediaQuery.of(context).padding.top + 45.h,
       left: 0,
@@ -207,9 +210,8 @@ class _HeadsUpNotificationState extends State<_HeadsUpNotification>
                         children: [
                           Text(
                             widget.message,
-                            style: GoogleFonts.lato(
+                            style: theme.textTheme.bodyMedium?.copyWith(
                               color: Colors.white,
-                              fontSize: 14.sp,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -217,9 +219,8 @@ class _HeadsUpNotificationState extends State<_HeadsUpNotification>
                             SizedBox(height: 2.h),
                             Text(
                               widget.subtitle!,
-                              style: GoogleFonts.openSans(
+                              style: theme.textTheme.bodySmall?.copyWith(
                                 color: Colors.white.withOpacity(0.9),
-                                fontSize: 12.sp,
                               ),
                             ),
                           ],

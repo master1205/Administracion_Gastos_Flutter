@@ -1,7 +1,6 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:notificaciones/data_provider.dart';
 import 'package:notificaciones/models/Budget.dart';
 import 'package:notificaciones/models/Categoria.dart';
 import 'package:notificaciones/services/firestore_service.dart';
@@ -10,6 +9,8 @@ import 'package:notificaciones/widgets/discard_changes_dialog.dart';
 import 'package:notificaciones/widgets/select_amount.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:notificaciones/componentes/heads_up_notification.dart';
+import 'package:provider/provider.dart';
+import 'utils/haptic_utils.dart';
 
 class CrearPresupuestoScreen extends StatefulWidget {
   final Budget? presupuesto;
@@ -47,9 +48,8 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
     const Color(0xFFF44336), // Rojo
   ];
 
-  // Categorías dinámicas desde Firestore
+  // Categorías dinámicas desde DataProvider
   List<String> _categoriasDisponibles = [];
-  StreamSubscription<List<Map<String, dynamic>>>? _categoriasSubscription;
 
   // Variables para detectar cambios
   late String _initialNombre;
@@ -129,25 +129,22 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
   }
 
   Future<void> _cargarCategorias() async {
-    _categoriasSubscription = _firestoreService.obtenerCategorias().listen((
-      categoriasData,
-    ) {
-      if (mounted) {
-        setState(() {
-          _categoriasDisponibles =
-              categoriasData
-                  .map((cat) => Categoria.fromJson(cat))
-                  .where((categoria) {
-                    final tipo = categoria.tipoTransaccion.toLowerCase();
-                    return tipo == 'gastos' ||
-                        tipo == 'gasto' ||
-                        tipo == 'pagos' ||
-                        tipo == 'pago';
-                  })
-                  .map((cat) => cat.categoria)
-                  .toList();
-        });
-      }
+    final dp = Provider.of<DataProvider>(context, listen: false);
+    final categoriasData = dp.categorias;
+
+    setState(() {
+      _categoriasDisponibles =
+          categoriasData
+              .map((cat) => Categoria.fromJson(cat))
+              .where((categoria) {
+                final tipo = categoria.tipoTransaccion.toLowerCase();
+                return tipo == 'gastos' ||
+                    tipo == 'gasto' ||
+                    tipo == 'pagos' ||
+                    tipo == 'pago';
+              })
+              .map((cat) => cat.categoria)
+              .toList();
     });
   }
 
@@ -155,7 +152,6 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
   void dispose() {
     _nombreController.dispose();
     _montoController.dispose();
-    _categoriasSubscription?.cancel();
     super.dispose();
   }
 
@@ -174,9 +170,8 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                   ),
                   title: Text(
                     'Seleccionar color',
-                    style: GoogleFonts.lato(
+                    style: theme.textTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.bold,
-                      fontSize: 18.sp,
                       color: theme.colorScheme.onSurface,
                     ),
                   ),
@@ -200,16 +195,14 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                           wheelDiameter: 200.w,
                           heading: Text(
                             'Selector de color',
-                            style: GoogleFonts.lato(
-                              fontSize: 14.sp,
+                            style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: theme.colorScheme.onSurface,
                             ),
                           ),
                           subheading: Text(
                             'Toca para seleccionar',
-                            style: GoogleFonts.openSans(
-                              fontSize: 11.sp,
+                            style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurface.withOpacity(
                                 0.6,
                               ),
@@ -239,8 +232,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                         // Colores rápidos
                         Text(
                           'Colores rápidos',
-                          style: GoogleFonts.lato(
-                            fontSize: 13.sp,
+                          style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: theme.colorScheme.onSurface,
                           ),
@@ -312,10 +304,9 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                       onPressed: () => Navigator.pop(context),
                       child: Text(
                         'Cancelar',
-                        style: GoogleFonts.lato(
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.6),
                           fontWeight: FontWeight.w600,
-                          fontSize: 14.sp,
                         ),
                       ),
                     ),
@@ -328,7 +319,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: tempColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: theme.colorScheme.onPrimary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8.r),
@@ -340,9 +331,8 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                       ),
                       child: Text(
                         'Aplicar',
-                        style: GoogleFonts.lato(
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          fontSize: 14.sp,
                         ),
                       ),
                     ),
@@ -368,7 +358,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
       },
       child: Scaffold(
         resizeToAvoidBottomInset: true,
-        backgroundColor: theme.colorScheme.background,
+        backgroundColor: theme.colorScheme.surface,
         appBar: AppBar(
           backgroundColor: theme.colorScheme.surface,
           elevation: 0,
@@ -383,9 +373,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
           ),
           title: Text(
             isEditing ? 'Editar Presupuesto' : 'Nuevo Presupuesto',
-            style: GoogleFonts.poppins(
-              fontSize: 20.sp,
-              fontWeight: FontWeight.w600,
+            style: theme.textTheme.titleLarge?.copyWith(
               color: theme.colorScheme.onSurface,
             ),
           ),
@@ -422,9 +410,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                   SizedBox(height: 12.h),
                   Text(
                     'Controla tus gastos estableciendo límites',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w500,
+                    style: theme.textTheme.labelMedium?.copyWith(
                       color: theme.colorScheme.secondary.withOpacity(0.7),
                     ),
                   ),
@@ -547,8 +533,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                     children: [
                       Text(
                         'Monto límite',
-                        style: GoogleFonts.lato(
-                          fontSize: 11.sp,
+                        style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.secondary.withOpacity(0.6),
                         ),
                       ),
@@ -558,8 +543,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                                 _montoController.text == '0.00'
                             ? '\$0.00'
                             : '\$${double.parse(_montoController.text).toStringAsFixed(2)}',
-                        style: GoogleFonts.lato(
-                          fontSize: 16.sp,
+                        style: theme.textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: theme.colorScheme.onSurface,
                         ),
@@ -581,8 +565,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
         // Período
         Text(
           'Período',
-          style: GoogleFonts.lato(
-            fontSize: 14.sp,
+          style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w600,
             color: theme.colorScheme.onSurface.withOpacity(0.7),
           ),
@@ -617,8 +600,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
         // Categorías
         Text(
           'Categorías',
-          style: GoogleFonts.lato(
-            fontSize: 14.sp,
+          style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w600,
             color: theme.colorScheme.onSurface.withOpacity(0.7),
           ),
@@ -641,8 +623,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
               Expanded(
                 child: Text(
                   'Aplicar a todas las categorías',
-                  style: GoogleFonts.lato(
-                    fontSize: 14.sp,
+                  style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -675,8 +656,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
               children: [
                 Text(
                   'Selecciona categorías',
-                  style: GoogleFonts.lato(
-                    fontSize: 12.sp,
+                  style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
@@ -709,8 +689,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                     padding: EdgeInsets.only(top: 8.h),
                     child: Text(
                       'Selecciona al menos una categoría',
-                      style: GoogleFonts.lato(
-                        fontSize: 11.sp,
+                      style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.error,
                       ),
                     ),
@@ -746,16 +725,14 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
             ),
             title: Text(
               'Color del presupuesto',
-              style: GoogleFonts.lato(
-                fontSize: 14.sp,
+              style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: theme.colorScheme.onSurface,
               ),
             ),
             subtitle: Text(
               'Toca para seleccionar',
-              style: GoogleFonts.openSans(
-                fontSize: 11.sp,
+              style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurface.withOpacity(0.6),
               ),
             ),
@@ -773,8 +750,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
         // Configuración avanzada
         Text(
           'Configuración',
-          style: GoogleFonts.lato(
-            fontSize: 14.sp,
+          style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w600,
             color: theme.colorScheme.onSurface.withOpacity(0.7),
           ),
@@ -816,8 +792,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                   children: [
                     Text(
                       'Alertar al alcanzar',
-                      style: GoogleFonts.lato(
-                        fontSize: 13.sp,
+                      style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -832,8 +807,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
                       ),
                       child: Text(
                         '${_porcentajeAlerta.toInt()}%',
-                        style: GoogleFonts.lato(
-                          fontSize: 14.sp,
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: theme.colorScheme.primary,
                         ),
@@ -861,12 +835,14 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
         // Botón guardar
         SizedBox(
           width: double.infinity,
-          child: ElevatedButton(
+          height: 48.h,
+          child: FilledButton.tonal(
             onPressed: _isLoading ? null : _guardarPresupuesto,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.colorScheme.primary,
-              foregroundColor: theme.colorScheme.onPrimary,
-              padding: EdgeInsets.symmetric(vertical: 16.h),
+            style: FilledButton.styleFrom(
+              backgroundColor: theme.colorScheme.secondaryContainer,
+              foregroundColor: theme.colorScheme.onSecondaryContainer,
+              disabledBackgroundColor: theme.colorScheme.secondaryContainer
+                  .withOpacity(0.5),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12.r),
               ),
@@ -875,23 +851,29 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
             child:
                 _isLoading
                     ? SizedBox(
-                      height: 24.h,
-                      width: 24.h,
+                      height: 20.h,
+                      width: 20.w,
                       child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          theme.colorScheme.onPrimary,
-                        ),
+                        strokeWidth: 2.5.w,
+                        color: theme.colorScheme.onSecondaryContainer,
                       ),
                     )
-                    : Text(
-                      isEditing
-                          ? 'Actualizar Presupuesto'
-                          : 'Crear Presupuesto',
-                      style: GoogleFonts.poppins(
-                        fontSize: 15.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.check_circle_outline, size: 20.sp),
+                        SizedBox(width: 8.w),
+                        Text(
+                          isEditing
+                              ? 'Actualizar Presupuesto'
+                              : 'Crear Presupuesto',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: theme.colorScheme.onSecondaryContainer,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
                     ),
           ),
         ),
@@ -902,8 +884,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
   Widget _buildSectionTitle(String title, ThemeData theme) {
     return Text(
       title,
-      style: GoogleFonts.lato(
-        fontSize: 14.sp,
+      style: theme.textTheme.bodyMedium?.copyWith(
         fontWeight: FontWeight.w600,
         color: theme.colorScheme.onSurface.withOpacity(0.7),
       ),
@@ -927,33 +908,6 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
         ),
         child: Icon(prefixIcon, color: theme.colorScheme.primary, size: 20.sp),
       ),
-      filled: true,
-      fillColor: theme.colorScheme.surface,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide(
-          color: theme.colorScheme.secondary.withOpacity(0.2),
-        ),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide(
-          color: theme.colorScheme.secondary.withOpacity(0.2),
-        ),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide(color: theme.colorScheme.error),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        borderSide: BorderSide(color: theme.colorScheme.error, width: 2),
-      ),
-      contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
     );
   }
 
@@ -986,8 +940,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
             SizedBox(height: 8.h),
             Text(
               title,
-              style: GoogleFonts.lato(
-                fontSize: 14.sp,
+              style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
@@ -995,8 +948,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
             SizedBox(height: 4.h),
             Text(
               subtitle,
-              style: GoogleFonts.lato(
-                fontSize: 10.sp,
+              style: theme.textTheme.labelSmall?.copyWith(
                 color: theme.colorScheme.onSurface.withOpacity(0.5),
               ),
               textAlign: TextAlign.center,
@@ -1036,16 +988,14 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.lato(
-                    fontSize: 14.sp,
+                  style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 SizedBox(height: 2.h),
                 Text(
                   subtitle,
-                  style: GoogleFonts.lato(
-                    fontSize: 11.sp,
+                  style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
@@ -1066,6 +1016,7 @@ class _CrearPresupuestoScreenState extends State<CrearPresupuestoScreen> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
+    Haptics.medium();
 
     // Validar monto manualmente
     if (_montoController.text.isEmpty || _montoController.text == '0.00') {

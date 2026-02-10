@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' show Timestamp;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:notificaciones/models/Budget.dart';
@@ -128,7 +127,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       body: CustomScrollView(
         slivers: [
           // Header animado
@@ -319,10 +318,12 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
                                         _budget.periodo == 'semanal'
                                             ? 'Presupuesto Semanal'
                                             : 'Presupuesto Mensual',
-                                        style: GoogleFonts.lato(
-                                          fontSize: 13.sp,
-                                          color: Colors.white.withOpacity(0.85),
-                                        ),
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                              color: Colors.white.withOpacity(
+                                                0.85,
+                                              ),
+                                            ),
                                       ),
                                     ],
                                   ),
@@ -346,8 +347,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
                                     'd MMM',
                                     'es_MX',
                                   ).format(_budget.fechaInicio),
-                                  style: GoogleFonts.lato(
-                                    fontSize: 12.sp,
+                                  style: theme.textTheme.bodySmall?.copyWith(
                                     color: Colors.white.withOpacity(0.8),
                                   ),
                                 ),
@@ -365,11 +365,11 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
                                       _budget.excedido
                                           ? '⚠ Excedido'
                                           : '⚠ Alerta',
-                                      style: GoogleFonts.lato(
-                                        fontSize: 11.sp,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
                                     ),
                                   ),
                                 Text(
@@ -377,8 +377,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
                                     'd MMM',
                                     'es_MX',
                                   ).format(_budget.fechaFin),
-                                  style: GoogleFonts.lato(
-                                    fontSize: 12.sp,
+                                  style: theme.textTheme.bodySmall?.copyWith(
                                     color: Colors.white.withOpacity(0.8),
                                   ),
                                 ),
@@ -405,7 +404,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
                       )!,
                   child: Text(
                     _budget.nombre,
-                    style: GoogleFonts.poppins(
+                    style: theme.textTheme.titleLarge?.copyWith(
                       fontSize: titleFontSize.sp,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -474,8 +473,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
                 ),
                 child: Text(
                   '${_budget.progreso.toStringAsFixed(0)}%',
-                  style: GoogleFonts.poppins(
-                    fontSize: 20.sp,
+                  style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: _budgetColor,
                   ),
@@ -566,16 +564,14 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
       children: [
         Text(
           label,
-          style: GoogleFonts.lato(
-            fontSize: 11.sp,
+          style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurface.withOpacity(0.6),
           ),
         ),
         SizedBox(height: 4.h),
         Text(
           _currencyFormat.format(amount),
-          style: GoogleFonts.lato(
-            fontSize: 18.sp,
+          style: theme.textTheme.bodyLarge?.copyWith(
             fontWeight: FontWeight.bold,
             color: color,
           ),
@@ -607,15 +603,13 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
               children: [
                 Text(
                   label,
-                  style: GoogleFonts.lato(
-                    fontSize: 10.sp,
+                  style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.onSurface.withOpacity(0.5),
                   ),
                 ),
                 Text(
                   value,
-                  style: GoogleFonts.lato(
-                    fontSize: 13.sp,
+                  style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: theme.colorScheme.onSurface,
                   ),
@@ -691,8 +685,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
               children: [
                 Text(
                   'Gastas ${_currencyFormat.format(promedioDiario)}/día',
-                  style: GoogleFonts.lato(
-                    fontSize: 14.sp,
+                  style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: theme.colorScheme.onSurface,
                   ),
@@ -702,8 +695,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
                   excederaLimite
                       ? 'A este ritmo excederás el límite por ${_currencyFormat.format(proyeccion - _budget.montoLimite)}'
                       : 'Vas bien, ${_budget.diasRestantes} días más',
-                  style: GoogleFonts.lato(
-                    fontSize: 11.sp,
+                  style: theme.textTheme.bodySmall?.copyWith(
                     color:
                         excederaLimite
                             ? theme.colorScheme.error
@@ -763,8 +755,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
             children: [
               Text(
                 'Por Categoría',
-                style: GoogleFonts.poppins(
-                  fontSize: 16.sp,
+                style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: theme.colorScheme.onSurface,
                 ),
@@ -783,8 +774,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
                     ),
                     child: Text(
                       'Ver todas',
-                      style: GoogleFonts.lato(
-                        fontSize: 11.sp,
+                      style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: theme.colorScheme.primary,
                       ),
@@ -838,7 +828,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
                     width: 110.w,
                     height: 110.h,
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.surface.withOpacity(0.4),
+                      color: theme.colorScheme.surfaceContainerLow,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -855,16 +845,14 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
                       children: [
                         Text(
                           _currencyFormat.format(_budget.montoGastado),
-                          style: GoogleFonts.poppins(
-                            fontSize: 12.sp,
+                          style: theme.textTheme.labelMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                             color: theme.colorScheme.onSurface,
                           ),
                         ),
                         Text(
                           'gastado',
-                          style: GoogleFonts.lato(
-                            fontSize: 10.sp,
+                          style: theme.textTheme.labelSmall?.copyWith(
                             color: theme.colorScheme.onSurface.withOpacity(0.5),
                           ),
                         ),
@@ -921,8 +909,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
                     Expanded(
                       child: Text(
                         cat,
-                        style: GoogleFonts.lato(
-                          fontSize: 13.sp,
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight:
                               isSelected ? FontWeight.w700 : FontWeight.w500,
                           color: theme.colorScheme.onSurface,
@@ -931,8 +918,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
                     ),
                     Text(
                       _currencyFormat.format(monto),
-                      style: GoogleFonts.lato(
-                        fontSize: 13.sp,
+                      style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: theme.colorScheme.onSurface,
                       ),
@@ -949,8 +935,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
                       ),
                       child: Text(
                         '${porcentaje.toStringAsFixed(0)}%',
-                        style: GoogleFonts.lato(
-                          fontSize: 11.sp,
+                        style: theme.textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: color,
                         ),
@@ -1073,8 +1058,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
             children: [
               Text(
                 'Historial',
-                style: GoogleFonts.poppins(
-                  fontSize: 16.sp,
+                style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: theme.colorScheme.onSurface,
                 ),
@@ -1087,8 +1071,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
                 ),
                 child: Text(
                   'Prom. ${promedio.toStringAsFixed(0)}%',
-                  style: GoogleFonts.lato(
-                    fontSize: 11.sp,
+                  style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: theme.colorScheme.secondary,
                   ),
@@ -1164,8 +1147,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
                       children: [
                         Text(
                           rangoFechas,
-                          style: GoogleFonts.lato(
-                            fontSize: 13.sp,
+                          style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: theme.colorScheme.onSurface,
                           ),
@@ -1173,8 +1155,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
                         SizedBox(height: 2.h),
                         Text(
                           '${_currencyFormat.format(montoGastado)} de ${_currencyFormat.format(montoLimite)}',
-                          style: GoogleFonts.lato(
-                            fontSize: 11.sp,
+                          style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurface.withOpacity(0.6),
                           ),
                         ),
@@ -1193,8 +1174,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
                     ),
                     child: Text(
                       '${porcentaje.toStringAsFixed(0)}%',
-                      style: GoogleFonts.poppins(
-                        fontSize: 13.sp,
+                      style: theme.textTheme.labelMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: statusColor,
                       ),
@@ -1230,8 +1210,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
             _categoriaSeleccionada != null
                 ? 'Transacciones: $_categoriaSeleccionada'
                 : 'Todas las Transacciones',
-            style: GoogleFonts.poppins(
-              fontSize: 16.sp,
+            style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onSurface,
             ),
@@ -1244,8 +1223,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
             ),
             child: Text(
               '$count',
-              style: GoogleFonts.lato(
-                fontSize: 12.sp,
+              style: theme.textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: theme.colorScheme.primary,
               ),
@@ -1269,8 +1247,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
           SizedBox(height: 12.h),
           Text(
             'Sin transacciones',
-            style: GoogleFonts.lato(
-              fontSize: 14.sp,
+            style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurface.withOpacity(0.5),
             ),
           ),
@@ -1279,8 +1256,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
             _categoriaSeleccionada != null
                 ? 'No hay transacciones en "$_categoriaSeleccionada"'
                 : 'No hay transacciones en este período',
-            style: GoogleFonts.lato(
-              fontSize: 12.sp,
+            style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurface.withOpacity(0.4),
             ),
             textAlign: TextAlign.center,
@@ -1374,8 +1350,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
           Expanded(
             child: Text(
               formattedDate,
-              style: GoogleFonts.lato(
-                fontSize: 13.sp,
+              style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: theme.colorScheme.onSurface,
               ),
@@ -1385,8 +1360,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
             _currencyFormat.format(
               dailyTransactions.fold<double>(0.0, (s, t) => s + t.monto.abs()),
             ),
-            style: GoogleFonts.lato(
-              fontSize: 13.sp,
+            style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w700,
               color: theme.colorScheme.primary,
             ),
@@ -1440,9 +1414,8 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
             transaction.descripcion.isNotEmpty
                 ? transaction.descripcion
                 : transaction.categoria,
-            style: GoogleFonts.lato(
+            style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w600,
-              fontSize: 14.sp,
               color: theme.colorScheme.onSurface,
             ),
             maxLines: 1,
@@ -1462,8 +1435,7 @@ class _PresupuestoDetalleScreenState extends State<PresupuestoDetalleScreen> {
           ),
           trailing: Text(
             _currencyFormat.format(transaction.monto.abs()),
-            style: GoogleFonts.lato(
-              fontSize: 15.sp,
+            style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w700,
               color: color,
             ),

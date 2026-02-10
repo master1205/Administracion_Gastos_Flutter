@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -85,11 +84,14 @@ class _AjustesScreenState extends State<AjustesScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         title: Text(
           'Ajustes',
-          style: GoogleFonts.lato(fontWeight: FontWeight.bold, fontSize: 20.sp),
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+            fontSize: 20.sp,
+          ),
         ),
         backgroundColor: theme.colorScheme.surface,
         elevation: 0,
@@ -117,6 +119,14 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 Icons.dark_mode_outlined,
                 themeManager.isDarkMode,
                 (value) => themeManager.toggleTheme(),
+                themeManager,
+              ),
+              _buildSwitchTile(
+                'Material You',
+                'Fondos y superficies tintadas con tu accent',
+                Icons.palette_outlined,
+                themeManager.materialYou,
+                (value) => themeManager.toggleMaterialYou(),
                 themeManager,
               ),
               const ColorPickerTile(),
@@ -311,8 +321,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
           SizedBox(width: 8.w),
           Text(
             titulo,
-            style: GoogleFonts.lato(
-              fontSize: 13.sp,
+            style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w700,
               letterSpacing: 0.5,
               color: theme.colorScheme.secondary.withOpacity(0.7),
@@ -348,7 +357,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
           width: 1.5,
         ),
         borderRadius: BorderRadius.circular(12.r),
-        color: theme.colorScheme.background,
+        color: theme.colorScheme.surface,
       ),
       child: ListTile(
         contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 2.h),
@@ -362,19 +371,17 @@ class _AjustesScreenState extends State<AjustesScreen> {
         ),
         title: Text(
           titulo,
-          style: GoogleFonts.lato(
-            fontSize: 14.sp,
+          style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w600,
             color:
                 enabled
-                    ? theme.colorScheme.onBackground
-                    : theme.colorScheme.onBackground.withOpacity(0.4),
+                    ? theme.colorScheme.onSurface
+                    : theme.colorScheme.onSurface.withOpacity(0.4),
           ),
         ),
         subtitle: Text(
           subtitulo,
-          style: GoogleFonts.openSans(
-            fontSize: 11.sp,
+          style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.secondary.withOpacity(enabled ? 0.6 : 0.3),
           ),
         ),
@@ -405,17 +412,16 @@ class _AjustesScreenState extends State<AjustesScreen> {
           width: 1.5,
         ),
         borderRadius: BorderRadius.circular(12.r),
-        color: theme.colorScheme.background,
+        color: theme.colorScheme.surface,
       ),
       child: ListTile(
         contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 2.h),
         leading: Icon(icono, color: theme.colorScheme.secondary, size: 22.sp),
         title: Text(
           titulo,
-          style: GoogleFonts.lato(
-            fontSize: 14.sp,
+          style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w600,
-            color: theme.colorScheme.onBackground,
+            color: theme.colorScheme.onSurface,
           ),
         ),
         trailing: Row(
@@ -430,8 +436,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 ),
                 child: Text(
                   trailing,
-                  style: GoogleFonts.openSans(
-                    fontSize: 12.sp,
+                  style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: theme.colorScheme.secondary,
                   ),
@@ -464,11 +469,13 @@ class _AjustesScreenState extends State<AjustesScreen> {
         icon: Icon(icono, size: 20.sp),
         label: Text(
           texto,
-          style: GoogleFonts.lato(fontSize: 14.sp, fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.red.shade600,
-          foregroundColor: Colors.white,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
           padding: EdgeInsets.symmetric(vertical: 14.h),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.r),
@@ -491,7 +498,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
             ),
             title: Text(
               'Seleccionar moneda',
-              style: GoogleFonts.lato(
+              style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.onSurface,
               ),
@@ -503,7 +510,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
                     return RadioListTile<String>(
                       title: Text(
                         m,
-                        style: GoogleFonts.openSans(
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurface,
                         ),
                       ),
@@ -534,7 +541,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
             ),
             title: Text(
               'Seleccionar idioma',
-              style: GoogleFonts.lato(
+              style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.onSurface,
               ),
@@ -546,7 +553,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
                     return RadioListTile<String>(
                       title: Text(
                         i,
-                        style: GoogleFonts.openSans(
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurface,
                         ),
                       ),
@@ -621,7 +628,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
           ),
           title: Text(
             'Exportar datos',
-            style: GoogleFonts.lato(
+            style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.onSurface,
             ),
@@ -633,7 +640,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 leading: Icon(Icons.table_chart, color: Colors.green),
                 title: Text(
                   'Excel',
-                  style: GoogleFonts.openSans(
+                  style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurface,
                   ),
                 ),
@@ -649,7 +656,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 leading: Icon(Icons.description, color: Colors.blue),
                 title: Text(
                   'CSV',
-                  style: GoogleFonts.openSans(
+                  style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurface,
                   ),
                 ),
@@ -665,7 +672,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 leading: Icon(Icons.picture_as_pdf, color: Colors.red),
                 title: Text(
                   'PDF',
-                  style: GoogleFonts.openSans(
+                  style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurface,
                   ),
                 ),
@@ -696,28 +703,28 @@ class _AjustesScreenState extends State<AjustesScreen> {
           ),
           title: Text(
             '¿Limpiar caché?',
-            style: GoogleFonts.lato(
+            style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.onSurface,
             ),
           ),
           content: Text(
             'Se eliminarán datos temporales para liberar espacio',
-            style: GoogleFonts.openSans(
+            style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: Text('Cancelar', style: GoogleFonts.openSans()),
+              child: Text('Cancelar', style: theme.textTheme.bodyMedium),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colorScheme.primary,
               ),
-              child: Text('Limpiar', style: GoogleFonts.lato()),
+              child: Text('Limpiar', style: theme.textTheme.bodyMedium),
             ),
           ],
         );
@@ -741,7 +748,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
           ),
           title: Text(
             'Términos y condiciones',
-            style: GoogleFonts.lato(
+            style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.onSurface,
             ),
@@ -749,7 +756,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
           content: SingleChildScrollView(
             child: Text(
               'Aquí irían los términos y condiciones de la aplicación...',
-              style: GoogleFonts.openSans(
+              style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
@@ -757,7 +764,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cerrar', style: GoogleFonts.lato()),
+              child: Text('Cerrar', style: theme.textTheme.bodyMedium),
             ),
           ],
         );
@@ -777,7 +784,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
           ),
           title: Text(
             'Política de privacidad',
-            style: GoogleFonts.lato(
+            style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.onSurface,
             ),
@@ -785,7 +792,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
           content: SingleChildScrollView(
             child: Text(
               'Aquí iría la política de privacidad de la aplicación...',
-              style: GoogleFonts.openSans(
+              style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
@@ -793,7 +800,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cerrar', style: GoogleFonts.lato()),
+              child: Text('Cerrar', style: theme.textTheme.bodyMedium),
             ),
           ],
         );
@@ -817,28 +824,28 @@ class _AjustesScreenState extends State<AjustesScreen> {
           ),
           title: Text(
             '¿Cerrar sesión?',
-            style: GoogleFonts.lato(
+            style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.onSurface,
             ),
           ),
           content: Text(
             'Se perderán los datos no sincronizados',
-            style: GoogleFonts.openSans(
+            style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: Text('Cancelar', style: GoogleFonts.openSans()),
+              child: Text('Cancelar', style: theme.textTheme.bodyMedium),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade600,
               ),
-              child: Text('Cerrar sesión', style: GoogleFonts.lato()),
+              child: Text('Cerrar sesión', style: theme.textTheme.bodyMedium),
             ),
           ],
         );

@@ -12,6 +12,7 @@ import 'package:notificaciones/models/Transaccion.dart';
 import 'package:notificaciones/models/Budget.dart';
 import 'package:notificaciones/models/Apartado.dart';
 import 'package:notificaciones/theme_provider.dart';
+import 'package:notificaciones/data_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
@@ -22,7 +23,6 @@ import 'componentes/heads_up_notification.dart';
 import 'metas_screen.dart';
 import 'transacciones_screen.dart';
 import 'budgets_screen.dart';
-import 'services/firestore_service.dart';
 import 'widgets/budget_widgets.dart';
 import 'presupuesto_detalle_screen.dart';
 import 'meta_detalle_screen.dart';
@@ -59,27 +59,14 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
   );
 
   // State
-  List<Account> _accounts = [];
   Map<String, dynamic>? _balanceData;
 
-  List<Transaction> _transactions = [];
-  List<Meta> _metas = [];
-  List<Budget> _presupuestos = [];
-  List<Apartado> _apartados = [];
   bool _isLoading = false;
   bool _isManualRefresh = false;
   bool _metasExpanded = false;
   bool _presupuestosExpanded = false;
   bool _apartadosExpanded = false;
   bool _hasInitialData = false;
-
-  // Firebase streams
-  final FirestoreService _firestoreService = FirestoreService();
-  StreamSubscription<List<Account>>? _cuentasSubscription;
-  StreamSubscription<List<Transaction>>? _transaccionesSubscription;
-  StreamSubscription<List<Meta>>? _metasSubscription;
-  StreamSubscription<List<Budget>>? _presupuestosSubscription;
-  StreamSubscription<List<Apartado>>? _apartadosSubscription;
 
   // Tutorial
   late TutorialCoachMark _tutorialCoachMark;
@@ -95,19 +82,14 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Reactivar streams cuando el widget vuelve a estar activo
+    // Recalcular balances cuando DataProvider notifica cambios
     if (mounted && _hasInitialData) {
-      _setupStreams();
+      _calculateBalanceData();
     }
   }
 
   @override
   void dispose() {
-    _cuentasSubscription?.cancel();
-    _transaccionesSubscription?.cancel();
-    _metasSubscription?.cancel();
-    _presupuestosSubscription?.cancel();
-    _apartadosSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -121,125 +103,23 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
   Future<void> _initializeData() async {
     setState(() => _isLoading = true);
     try {
-      // Suscribirse a streams en tiempo real
-      _setupStreams();
+      // Los datos vienen de DataProvider — solo calcular balances
+      _hasInitialData = true;
+      _calculateBalanceData();
       await _maybeShowDashboardTutorial();
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _setupStreams() {
-    debugPrint('🔄 Configurando streams de Firebase...');
-    final startTime = DateTime.now();
-    final shouldShowProgress = _isManualRefresh;
-
-    // Stream de cuentas
-    _cuentasSubscription?.cancel();
-    _cuentasSubscription = _firestoreService.obtenerCuentas().listen((
-      cuentas,
-    ) async {
-      debugPrint('🔄 Stream de cuentas recibió: ${cuentas.length} cuentas');
-      if (mounted) {
-        setState(() {
-          _accounts = cuentas;
-          _hasInitialData = true;
-        });
-        _calculateBalanceData();
-
-        // Esperar mínimo 800ms para mostrar animación (solo en refresh manual)
-        if (shouldShowProgress) {
-          final elapsed = DateTime.now().difference(startTime).inMilliseconds;
-          if (elapsed < 800) {
-            await Future.delayed(Duration(milliseconds: 800 - elapsed));
-          }
-          if (mounted && _isManualRefresh) {
-            setState(() => _isManualRefresh = false);
-          }
-        }
-      }
-    });
-
-    // Stream de transacciones
-    _transaccionesSubscription?.cancel();
-    _transaccionesSubscription = _firestoreService
-        .obtenerTransaccionesRecientes()
-        .listen((transacciones) async {
-          debugPrint(
-            '🔄 Stream de transacciones recibió: ${transacciones.length} transacciones',
-          );
-          if (mounted) {
-            setState(() {
-              _transactions = transacciones;
-              _hasInitialData = true;
-            });
-            _calculateBalanceData();
-
-            // Esperar mínimo 800ms para mostrar animación (solo en refresh manual)
-            if (shouldShowProgress) {
-              final elapsed =
-                  DateTime.now().difference(startTime).inMilliseconds;
-              if (elapsed < 800) {
-                await Future.delayed(Duration(milliseconds: 800 - elapsed));
-              }
-              if (mounted && _isManualRefresh) {
-                setState(() => _isManualRefresh = false);
-              }
-            }
-          }
-        });
-
-    // Stream de metas
-    _metasSubscription?.cancel();
-    _metasSubscription = _firestoreService.obtenerMetas().listen((metas) {
-      debugPrint('🔄 Stream de metas recibió: ${metas.length} metas');
-      if (mounted) {
-        setState(() => _metas = metas);
-      }
-    });
-
-    // Stream de presupuestos activos
-    _presupuestosSubscription?.cancel();
-    _presupuestosSubscription = _firestoreService
-        .obtenerPresupuestosActivos()
-        .listen((presupuestos) {
-          debugPrint(
-            '🔄 Stream de presupuestos recibió: ${presupuestos.length} presupuestos',
-          );
-          if (mounted) {
-            setState(() => _presupuestos = presupuestos);
-          }
-        });
-
-    // Stream de apartados activos
-    _apartadosSubscription?.cancel();
-    _apartadosSubscription = _firestoreService.obtenerApartadosActivos().listen(
-      (apartados) {
-        debugPrint(
-          '🔄 Stream de apartados recibió: ${apartados.length} apartados',
-        );
-        if (mounted) {
-          setState(() => _apartados = apartados);
-        }
-      },
-    );
-  }
-
   void _calculateBalanceData() {
-    // Solo calcular si ya tenemos datos iniciales Y hay cuentas o transacciones
-    if (!_hasInitialData) {
-      debugPrint('❌ No hay datos iniciales aún');
-      return;
-    }
+    if (!_hasInitialData) return;
 
-    debugPrint(
-      '✅ Calculando balances: ${_accounts.length} cuentas, ${_transactions.length} transacciones',
-    );
+    final dp = Provider.of<DataProvider>(context, listen: false);
+    final accounts = dp.cuentas;
+    final transactions = dp.transacciones;
 
-    double totalSaldo = _accounts.fold(
-      0.0,
-      (sum, cuenta) => sum + cuenta.saldo,
-    );
+    double totalSaldo = accounts.fold(0.0, (sum, cuenta) => sum + cuenta.saldo);
 
     // Calcular ingresos y gastos del mes actual
     final now = DateTime.now();
@@ -248,7 +128,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
     double ingresos = 0.0;
     double gastos = 0.0;
 
-    for (var transaccion in _transactions) {
+    for (var transaccion in transactions) {
       final fecha =
           transaccion.fechaTimestamp ?? DateTime.parse(transaccion.fecha);
       final mesTrans =
@@ -304,7 +184,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
     _initTargets();
     _tutorialCoachMark = TutorialCoachMark(
       targets: _targets,
-      colorShadow: Colors.black,
+      colorShadow: Theme.of(context).colorScheme.shadow,
       textSkip: "",
       paddingFocus: 10,
       opacityShadow: 0.8,
@@ -519,7 +399,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                   style: TextStyle(
                     fontSize: 12.sp, // ✅ REDUCIDO de 14
                     height: 1.3,
-                    color: Colors.grey.shade700,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 2,
@@ -548,7 +428,8 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                         child: Text(
                           'Omitir',
                           style: TextStyle(
-                            color: Colors.grey.shade600,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 12.sp, // ✅ REDUCIDO de 14
                             fontWeight: FontWeight.w600,
                           ),
@@ -562,13 +443,17 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                           Container(
                             margin: EdgeInsets.only(right: 6.w),
                             decoration: BoxDecoration(
-                              color: Colors.grey.shade200,
+                              color:
+                                  Theme.of(context).colorScheme.outlineVariant,
                               shape: BoxShape.circle,
                             ),
                             child: IconButton(
                               onPressed: onBack,
                               icon: Icon(Icons.arrow_back_rounded, size: 16.sp),
-                              color: Colors.grey.shade700,
+                              color:
+                                  Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                               padding: EdgeInsets.all(6.r),
                               constraints: BoxConstraints(
                                 minWidth: 30.w,
@@ -659,7 +544,10 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                 isActive || isCurrent
                     ? LinearGradient(colors: gradientColors)
                     : null,
-            color: !isActive && !isCurrent ? Colors.grey.shade300 : null,
+            color:
+                !isActive && !isCurrent
+                    ? Theme.of(context).colorScheme.outlineVariant
+                    : null,
             borderRadius: BorderRadius.circular(2.5.r),
           ),
         );
@@ -668,9 +556,12 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
   }
 
   Future<void> refreshData() async {
-    debugPrint('🔄 RefreshData llamado (manual) - reactivando streams');
+    debugPrint('🔄 RefreshData llamado (manual)');
     setState(() => _isManualRefresh = true);
-    _setupStreams();
+    // DataProvider streams se actualizan automáticamente
+    _calculateBalanceData();
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted) setState(() => _isManualRefresh = false);
   }
 
   // UI Builders - Balance Card
@@ -703,7 +594,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: theme.colorScheme.shadow.withOpacity(0.03),
                 blurRadius: 10.r,
                 offset: Offset(0, 2.h),
               ),
@@ -734,7 +625,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                       children: [
                         Text(
                           'Balance Total',
-                          style: GoogleFonts.lato(
+                          style: theme.textTheme.bodySmall?.copyWith(
                             fontSize: 13.sp,
                             color: theme.colorScheme.onSurface.withOpacity(0.6),
                             fontWeight: FontWeight.w500,
@@ -784,7 +675,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
       builder: (context, animatedValue, _) {
         return Text(
           _currencyFormat.format(animatedValue),
-          style: GoogleFonts.lato(
+          style: theme.textTheme.headlineLarge?.copyWith(
             fontSize: 32.sp,
             fontWeight: FontWeight.w800,
             color: theme.colorScheme.onSurface,
@@ -818,8 +709,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
               SizedBox(width: 6.w),
               Text(
                 title,
-                style: GoogleFonts.lato(
-                  fontSize: 12.sp,
+                style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurface.withOpacity(0.6),
                   fontWeight: FontWeight.w500,
                 ),
@@ -833,7 +723,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
             builder: (context, animatedValue, _) {
               return Text(
                 _currencyFormat.format(animatedValue),
-                style: GoogleFonts.lato(
+                style: theme.textTheme.titleLarge?.copyWith(
                   fontSize: 18.sp,
                   fontWeight: FontWeight.w700,
                   color: color,
@@ -894,7 +784,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: theme.colorScheme.shadow.withOpacity(0.03),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -921,23 +811,26 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                   children: [
                     Text(
                       '¿Tienes una meta de ahorro?',
-                      style: GoogleFonts.lato(
-                        fontSize: 14.sp,
+                      style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     SizedBox(height: 2.h),
                     Text(
                       'Crea tu primera meta y haz seguimiento',
-                      style: GoogleFonts.openSans(
+                      style: theme.textTheme.bodySmall?.copyWith(
                         fontSize: 11.sp,
-                        color: Colors.grey,
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios, size: 16.sp, color: Colors.grey),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16.sp,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ],
           ),
         ),
@@ -1004,7 +897,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
               children: [
                 Text(
                   meta.nombre,
-                  style: GoogleFonts.lato(
+                  style: theme.textTheme.bodyLarge?.copyWith(
                     fontSize: 15.sp,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -1016,7 +909,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                   SizedBox(height: 1.h),
                   Text(
                     meta.descripcion,
-                    style: GoogleFonts.lato(
+                    style: theme.textTheme.labelSmall?.copyWith(
                       fontSize: 11.sp,
                       color: Colors.white.withValues(alpha: 0.75),
                     ),
@@ -1028,7 +921,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                   SizedBox(height: 1.h),
                   Text(
                     meta.cuentaNombre!,
-                    style: GoogleFonts.lato(
+                    style: theme.textTheme.labelSmall?.copyWith(
                       fontSize: 11.sp,
                       color: Colors.white.withOpacity(0.75),
                     ),
@@ -1055,7 +948,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                   ],
                   Text(
                     estadoLabel,
-                    style: GoogleFonts.lato(
+                    style: theme.textTheme.labelSmall?.copyWith(
                       fontSize: 10.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
@@ -1082,7 +975,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                   SizedBox(width: 3.w),
                   Text(
                     '$diasRestantes d',
-                    style: GoogleFonts.lato(
+                    style: theme.textTheme.labelSmall?.copyWith(
                       fontSize: 10.sp,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -1111,8 +1004,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                 SizedBox(width: 10.w),
                 Text(
                   '${meta.progreso.toStringAsFixed(0)}%',
-                  style: GoogleFonts.lato(
-                    fontSize: 12.sp,
+                  style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w800,
                     color: theme.colorScheme.onSurface.withOpacity(0.7),
                   ),
@@ -1130,16 +1022,14 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                     children: [
                       Text(
                         'Ahorrado',
-                        style: GoogleFonts.lato(
-                          fontSize: 10.sp,
+                        style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.5),
                         ),
                       ),
                       SizedBox(height: 1.h),
                       Text(
                         _currencyFormat.format(meta.montoActual),
-                        style: GoogleFonts.lato(
-                          fontSize: 14.sp,
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: theme.colorScheme.primary,
                         ),
@@ -1154,16 +1044,14 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                     children: [
                       Text(
                         'Objetivo',
-                        style: GoogleFonts.lato(
-                          fontSize: 10.sp,
+                        style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.5),
                         ),
                       ),
                       SizedBox(height: 1.h),
                       Text(
                         _currencyFormat.format(meta.montoObjetivo),
-                        style: GoogleFonts.lato(
-                          fontSize: 14.sp,
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: theme.colorScheme.onSurface.withOpacity(0.7),
                         ),
@@ -1189,8 +1077,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                           SizedBox(width: 3.w),
                           Text(
                             _formatDate(meta.fechaObjetivo),
-                            style: GoogleFonts.lato(
-                              fontSize: 11.sp,
+                            style: theme.textTheme.bodySmall?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: theme.colorScheme.onSurface.withOpacity(
                                 0.55,
@@ -1213,8 +1100,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                             meta.diasRestantes > 0
                                 ? '${meta.diasRestantes} días'
                                 : 'Vencida',
-                            style: GoogleFonts.lato(
-                              fontSize: 10.sp,
+                            style: theme.textTheme.labelSmall?.copyWith(
                               fontWeight: FontWeight.w500,
                               color: theme.colorScheme.onSurface.withOpacity(
                                 0.5,
@@ -1283,22 +1169,18 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: 4.w,
-            vertical: 5.h,
-          ), // ✅ REDUCIDO de 6
+          padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 5.h),
           child: Text(
             'Mis Cuentas',
-            style: GoogleFonts.lato(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.bold,
-            ), // ✅ REDUCIDO de 18
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
         ),
-        SizedBox(height: 30.h),
+        SizedBox(height: 12.h),
         SizedBox(
           key: _accountsCarouselKey,
-          height: 180.h, // ✅ REDUCIDO de 200
+          height: 195.h,
           child: Swiper(
             itemBuilder:
                 (BuildContext context, int index) =>
@@ -1320,7 +1202,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
       height: 180.h,
       margin: EdgeInsets.symmetric(vertical: 8.h),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withOpacity(0.5),
+        color: theme.colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(18.r),
         border: Border.all(
           color: theme.colorScheme.onSurface.withOpacity(0.1),
@@ -1334,14 +1216,14 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
             Icon(
               Icons.account_balance_wallet_outlined,
               size: 50.sp,
-              color: Colors.grey.shade400,
+              color: theme.colorScheme.onSurface.withOpacity(0.4),
             ),
             SizedBox(height: 10.h),
             Text(
               'No hay cuentas disponibles',
               style: TextStyle(
                 fontSize: 14.sp,
-                color: Colors.grey.shade600,
+                color: theme.colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -1353,10 +1235,12 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
 
   Widget _buildAccountCard(Account account) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final primary = colorScheme.primary;
+    final hasRetenido = account.saldoRetenido > 0;
 
     return GestureDetector(
       onDoubleTap: () {
-        // Filtrar transacciones de esta cuenta
         final transaccionesCuenta =
             _transactions.where((t) {
               return t.cuenta == account.nombre ||
@@ -1400,166 +1284,209 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
           );
         }
       },
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 250),
-        curve: Curves.easeOut,
+      child: Container(
         margin: EdgeInsets.symmetric(horizontal: 6.w),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(
-            color: theme.colorScheme.primary.withOpacity(0.15),
-            width: 1,
-          ),
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(20.r),
+          border: Border.all(color: primary.withOpacity(0.15), width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8.r,
-              offset: Offset(0, 2.h),
+              color: colorScheme.shadow.withOpacity(0.08),
+              blurRadius: 12.r,
+              offset: Offset(0, 4.h),
             ),
           ],
         ),
-        padding: EdgeInsets.all(16.r),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(8.r),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                  child: Icon(
-                    Icons.credit_card_rounded,
-                    color: theme.colorScheme.primary,
-                    size: 20.sp,
-                  ),
-                ),
-                SizedBox(width: 10.w),
-                Expanded(
-                  child: Text(
-                    account.nombre,
-                    style: GoogleFonts.lato(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 12.h),
-            // Saldo principal
-            Text(
-              account.saldoRetenido > 0 ? 'Saldo total' : 'Saldo disponible',
-              style: GoogleFonts.lato(
-                fontSize: 10.sp,
-                color: theme.colorScheme.onSurface.withOpacity(0.5),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            SizedBox(height: 2.h),
-            TweenAnimationBuilder<double>(
-              tween: Tween<double>(begin: 0, end: account.saldo),
-              duration: _animationDuration,
-              builder: (context, animatedValue, _) {
-                return Text(
-                  _currencyFormat.format(animatedValue),
-                  style: GoogleFonts.lato(
-                    fontSize: 24.sp,
-                    fontWeight: FontWeight.w800,
-                    color:
-                        account.saldo >= 0
-                            ? theme.colorScheme.primary
-                            : const Color(0xFFEF4444),
-                    letterSpacing: -0.5,
-                  ),
-                );
-              },
-            ),
-            if (account.saldoRetenido > 0) ...[
-              SizedBox(height: 8.h),
-              Divider(
-                height: 1,
-                thickness: 1,
-                color: theme.colorScheme.onSurface.withOpacity(0.08),
-              ),
-              SizedBox(height: 19.h),
+        child: Padding(
+          padding: EdgeInsets.all(18.r),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header row: image + name + type badge
               Row(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 7.w,
-                        height: 7.w,
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary,
-                          shape: BoxShape.circle,
-                        ),
+                  // Account image
+                  Container(
+                    width: 42.w,
+                    height: 42.w,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12.r),
+                      color: primary.withOpacity(0.1),
+                      border: Border.all(
+                        color: primary.withOpacity(0.2),
+                        width: 1.5,
                       ),
-                      SizedBox(width: 5.w),
-                      Text(
-                        'Disponible ',
-                        style: GoogleFonts.lato(
-                          fontSize: 12.sp,
-                          color: theme.colorScheme.onSurface.withOpacity(0.5),
-                          fontWeight: FontWeight.w500,
-                        ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10.5.r),
+                      child: Image.asset(
+                        'assets/images/${account.imagen}.png',
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            Icons.account_balance_wallet_rounded,
+                            color: primary,
+                            size: 22.sp,
+                          );
+                        },
                       ),
-                      Text(
-                        _currencyFormat.format(account.saldoDisponible),
-                        style: GoogleFonts.lato(
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w700,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                  SizedBox(width: 20.w),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 7.w,
-                        height: 7.w,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFF9800),
-                          shape: BoxShape.circle,
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          account.nombre,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurface,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      SizedBox(width: 5.w),
-                      Text(
-                        'Apartado ',
-                        style: GoogleFonts.lato(
-                          fontSize: 12.sp,
-                          color: theme.colorScheme.onSurface.withOpacity(0.5),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      Text(
-                        _currencyFormat.format(account.saldoRetenido),
-                        style: GoogleFonts.lato(
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFFFF9800),
-                        ),
-                      ),
-                    ],
+                        if (account.numeroTarjeta != null &&
+                            account.numeroTarjeta!.isNotEmpty)
+                          Text(
+                            '•••• •••• •••• ${account.numeroTarjeta!.substring(account.numeroTarjeta!.length - 4)}',
+                            style: GoogleFonts.robotoMono(
+                              fontSize: 11.sp,
+                              color: colorScheme.onSurfaceVariant,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                        if (account.beneficiario != null &&
+                            account.beneficiario!.isNotEmpty)
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 8.w,
+                              vertical: 4.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: primary.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(8.r),
+                            ),
+                            child: Text(
+                              account.beneficiario!,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontWeight: FontWeight.w500,
+                                color: primary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ],
               ),
+              const Spacer(),
+              // Balance section
+              Text(
+                hasRetenido ? 'Saldo total' : 'Saldo disponible',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: 2.h),
+              TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: 0, end: account.saldo),
+                duration: _animationDuration,
+                builder: (context, animatedValue, _) {
+                  return Text(
+                    _currencyFormat.format(animatedValue),
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: colorScheme.onSurface,
+                      letterSpacing: -0.5,
+                    ),
+                  );
+                },
+              ),
+              if (hasRetenido) ...[
+                SizedBox(height: 10.h),
+                // Distribution bar
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(3.r),
+                  child: SizedBox(
+                    height: 4.h,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: (account.saldoDisponible *
+                                  100 /
+                                  (account.saldo == 0 ? 1 : account.saldo))
+                              .round()
+                              .clamp(0, 100),
+                          child: Container(color: primary),
+                        ),
+                        Expanded(
+                          flex: (account.saldoRetenido *
+                                  100 /
+                                  (account.saldo == 0 ? 1 : account.saldo))
+                              .round()
+                              .clamp(0, 100),
+                          child: Container(color: primary.withOpacity(0.25)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                Row(
+                  children: [
+                    _buildCardBalanceLabel(
+                      'Disponible',
+                      account.saldoDisponible,
+                      primary,
+                    ),
+                    const Spacer(),
+                    _buildCardBalanceLabel(
+                      'Apartado',
+                      account.saldoRetenido,
+                      colorScheme.onSurfaceVariant,
+                    ),
+                  ],
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildCardBalanceLabel(String label, double amount, Color color) {
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 6.w,
+          height: 6.w,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        SizedBox(width: 5.w),
+        Text(
+          '$label ',
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Text(
+          _currencyFormat.format(amount),
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
+      ],
     );
   }
 
@@ -1660,8 +1587,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                     Flexible(
                       child: Text(
                         presupuesto.nombre,
-                        style: GoogleFonts.lato(
-                          fontSize: 15.sp,
+                        style: theme.textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -1682,8 +1608,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                 SizedBox(height: 1.h),
                 Text(
                   presupuesto.periodo == 'semanal' ? 'Semanal' : 'Mensual',
-                  style: GoogleFonts.lato(
-                    fontSize: 11.sp,
+                  style: theme.textTheme.bodySmall?.copyWith(
                     color: Colors.white.withOpacity(0.75),
                   ),
                 ),
@@ -1711,8 +1636,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                 SizedBox(width: 10.w),
                 Text(
                   '${presupuesto.progreso.toStringAsFixed(0)}%',
-                  style: GoogleFonts.lato(
-                    fontSize: 12.sp,
+                  style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w800,
                     color: theme.colorScheme.onSurface.withOpacity(0.7),
                   ),
@@ -1730,16 +1654,14 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                     children: [
                       Text(
                         'Gastado',
-                        style: GoogleFonts.lato(
-                          fontSize: 10.sp,
+                        style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.5),
                         ),
                       ),
                       SizedBox(height: 1.h),
                       Text(
                         _currencyFormat.format(presupuesto.montoGastado),
-                        style: GoogleFonts.lato(
-                          fontSize: 14.sp,
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: theme.colorScheme.primary,
                         ),
@@ -1754,16 +1676,14 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                     children: [
                       Text(
                         'Límite',
-                        style: GoogleFonts.lato(
-                          fontSize: 10.sp,
+                        style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.5),
                         ),
                       ),
                       SizedBox(height: 1.h),
                       Text(
                         _currencyFormat.format(presupuesto.montoLimite),
-                        style: GoogleFonts.lato(
-                          fontSize: 14.sp,
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: theme.colorScheme.onSurface.withOpacity(0.7),
                         ),
@@ -1789,8 +1709,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                           SizedBox(width: 3.w),
                           Text(
                             _formatBudgetPeriodo(presupuesto),
-                            style: GoogleFonts.lato(
-                              fontSize: 11.sp,
+                            style: theme.textTheme.bodySmall?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: theme.colorScheme.onSurface.withOpacity(
                                 0.55,
@@ -1813,8 +1732,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                             presupuesto.diasRestantes > 0
                                 ? '${presupuesto.diasRestantes} días'
                                 : 'Vencido',
-                            style: GoogleFonts.lato(
-                              fontSize: 10.sp,
+                            style: theme.textTheme.labelSmall?.copyWith(
                               fontWeight: FontWeight.w500,
                               color: theme.colorScheme.onSurface.withOpacity(
                                 0.5,
@@ -1860,8 +1778,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
           SizedBox(width: 3.w),
           Text(
             label,
-            style: GoogleFonts.lato(
-              fontSize: 10.sp,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: Colors.white,
             ),
@@ -1979,8 +1896,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                     Flexible(
                       child: Text(
                         apartado.nombre,
-                        style: GoogleFonts.lato(
-                          fontSize: 15.sp,
+                        style: theme.textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -2002,7 +1918,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                   SizedBox(height: 1.h),
                   Text(
                     apartado.descripcion,
-                    style: GoogleFonts.lato(
+                    style: theme.textTheme.labelSmall?.copyWith(
                       fontSize: 11.sp,
                       color: Colors.white.withOpacity(0.75),
                     ),
@@ -2029,7 +1945,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                   ],
                   Text(
                     estadoLabel,
-                    style: GoogleFonts.lato(
+                    style: theme.textTheme.labelSmall?.copyWith(
                       fontSize: 10.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
@@ -2056,7 +1972,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                   SizedBox(width: 3.w),
                   Text(
                     '$diasRestantes d',
-                    style: GoogleFonts.lato(
+                    style: theme.textTheme.labelSmall?.copyWith(
                       fontSize: 10.sp,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -2085,8 +2001,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                 SizedBox(width: 10.w),
                 Text(
                   '${apartado.progreso.toStringAsFixed(0)}%',
-                  style: GoogleFonts.lato(
-                    fontSize: 12.sp,
+                  style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w800,
                     color: theme.colorScheme.onSurface.withOpacity(0.7),
                   ),
@@ -2104,16 +2019,14 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                     children: [
                       Text(
                         'Apartado',
-                        style: GoogleFonts.lato(
-                          fontSize: 10.sp,
+                        style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.5),
                         ),
                       ),
                       SizedBox(height: 1.h),
                       Text(
                         _currencyFormat.format(apartado.montoApartado),
-                        style: GoogleFonts.lato(
-                          fontSize: 14.sp,
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: theme.colorScheme.primary,
                         ),
@@ -2128,16 +2041,14 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                     children: [
                       Text(
                         'Total',
-                        style: GoogleFonts.lato(
-                          fontSize: 10.sp,
+                        style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.5),
                         ),
                       ),
                       SizedBox(height: 1.h),
                       Text(
                         _currencyFormat.format(apartado.montoTotal),
-                        style: GoogleFonts.lato(
-                          fontSize: 14.sp,
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: theme.colorScheme.onSurface.withOpacity(0.7),
                         ),
@@ -2163,8 +2074,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                           SizedBox(width: 3.w),
                           Text(
                             '${apartado.pagosRealizados}/${apartado.numeroPagos}',
-                            style: GoogleFonts.lato(
-                              fontSize: 11.sp,
+                            style: theme.textTheme.bodySmall?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: theme.colorScheme.onSurface.withOpacity(
                                 0.55,
@@ -2188,8 +2098,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                               'dd MMM',
                               'es',
                             ).format(apartado.fechaLimite),
-                            style: GoogleFonts.lato(
-                              fontSize: 10.sp,
+                            style: theme.textTheme.labelSmall?.copyWith(
                               fontWeight: FontWeight.w500,
                               color: theme.colorScheme.onSurface.withOpacity(
                                 0.5,
@@ -2216,8 +2125,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                   SizedBox(width: 4.w),
                   Text(
                     'Próximo pago: ',
-                    style: GoogleFonts.lato(
-                      fontSize: 10.sp,
+                    style: theme.textTheme.labelSmall?.copyWith(
                       color: theme.colorScheme.onSurface.withOpacity(0.5),
                     ),
                   ),
@@ -2226,8 +2134,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                       'dd MMM',
                       'es',
                     ).format(apartado.fechaProximoPago!),
-                    style: GoogleFonts.lato(
-                      fontSize: 10.sp,
+                    style: theme.textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: theme.colorScheme.primary,
                     ),
@@ -2305,8 +2212,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
         children: [
           Text(
             'Transacciones Recientes',
-            style: GoogleFonts.lato(
-              fontSize: 16.sp,
+            style: theme.textTheme.bodyLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -2315,8 +2221,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
             onPressed: () => widget.onTabChange?.call(1),
             child: Text(
               'Ver todos',
-              style: GoogleFonts.lato(
-                fontSize: 12.sp,
+              style: theme.textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -2362,7 +2267,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
         style: theme.textTheme.bodyMedium?.copyWith(
           fontWeight: FontWeight.w600,
           fontSize: 12.sp, // ✅ REDUCIDO de 13
-          color: Colors.grey.shade600,
+          color: theme.colorScheme.onSurfaceVariant,
         ),
       ),
     );
@@ -2414,8 +2319,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
         ),
         trailing: Text(
           _currencyFormat.format(transaction.monto.abs()),
-          style: GoogleFonts.lato(
-            fontSize: 14.sp,
+          style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.bold,
             color: color,
           ),
@@ -2431,7 +2335,11 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
       case 'Traspasos':
         badges.addAll([
           _buildBadge(transaction.cuentaOrigen, color),
-          Icon(Icons.arrow_forward, size: 10.sp, color: Colors.grey),
+          Icon(
+            Icons.arrow_forward,
+            size: 10.sp,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           _buildBadge(transaction.cuentaDestino, color),
         ]);
         break;
@@ -2481,14 +2389,24 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
     };
   }
 
+  // ── Datos centralizados desde DataProvider ──
+  DataProvider get _dp => Provider.of<DataProvider>(context, listen: false);
+  List<Account> get _accounts => _dp.cuentas;
+  List<Transaction> get _transactions => _dp.transacciones;
+  List<Meta> get _metas => _dp.metas;
+  List<Budget> get _presupuestos => _dp.presupuestosActivos;
+  List<Apartado> get _apartados => _dp.apartadosActivos;
+
   @override
   Widget build(BuildContext context) {
     final themeManager = Provider.of<ThemeManager>(context);
+    // Escuchar cambios de DataProvider para rebuild automático
+    Provider.of<DataProvider>(context);
     final theme = Theme.of(context);
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       body:
           _isLoading
               ? Center(
@@ -2508,7 +2426,7 @@ class NewDashboardScreenState extends State<NewDashboardScreen>
                         color:
                             themeManager.isDarkMode
                                 ? Colors.white70
-                                : Colors.grey.shade600,
+                                : theme.colorScheme.onSurfaceVariant,
                         fontSize: 12.sp,
                       ),
                     ),
