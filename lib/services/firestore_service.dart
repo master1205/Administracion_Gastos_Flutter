@@ -1220,7 +1220,46 @@ class FirestoreService {
     // Calcular próximo pago
     DateTime? proximoPago;
     if (!estaCompleto) {
-      proximoPago = _calcularProximoPago(DateTime.now(), apartado.frecuencia);
+      // Si hay fechas programadas, usar la siguiente fecha disponible
+      if (apartado.fechasPago.isNotEmpty) {
+        final ahora = DateTime.now();
+        final fechasPendientes =
+            apartado.fechasPago
+                .where((f) => f.isAfter(ahora) || _esMismoDia(f, ahora))
+                .toList()
+              ..sort((a, b) => a.compareTo(b));
+
+        // Remover la fecha del pago que se acaba de hacer (la más cercana pasada o de hoy)
+        final fechasRestantes = List<DateTime>.from(apartado.fechasPago);
+        // Buscar la fecha más cercana al día actual para removerla
+        DateTime? fechaARemover;
+        for (final f in fechasRestantes) {
+          if (_esMismoDia(f, ahora) || f.isBefore(ahora)) {
+            fechaARemover = f;
+          }
+        }
+        if (fechaARemover != null) {
+          fechasRestantes.remove(fechaARemover);
+        }
+
+        if (fechasPendientes.isNotEmpty) {
+          // Si la fecha de hoy está en la lista, tomar la siguiente
+          if (_esMismoDia(fechasPendientes.first, ahora) &&
+              fechasPendientes.length > 1) {
+            proximoPago = fechasPendientes[1];
+          } else if (!_esMismoDia(fechasPendientes.first, ahora)) {
+            proximoPago = fechasPendientes.first;
+          }
+        }
+
+        // Actualizar fechasPago removiendo la fecha cumplida
+        await _db.collection('apartados').doc(apartadoId).update({
+          'fechasPago':
+              fechasRestantes.map((f) => Timestamp.fromDate(f)).toList(),
+        });
+      } else {
+        proximoPago = _calcularProximoPago(DateTime.now(), apartado.frecuencia);
+      }
     }
 
     await _db.collection('apartados').doc(apartadoId).update({
@@ -1252,8 +1291,10 @@ class FirestoreService {
         );
   }
 
-  /// Marca un apartado como pagado y registra la transacción
-  Future<void> marcarApartadoComoPagado({
+  /// Marca un apartado como pagado y registra la transacción.
+  /// Si es recurrente, retorna un Apartado propuesto con fechas preservadas
+  /// para que la UI lo confirme antes de crearlo.
+  Future<Apartado?> marcarApartadoComoPagado({
     required Apartado apartado,
     required Account cuenta,
   }) async {
@@ -1287,45 +1328,19 @@ class FirestoreService {
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
-    // 3. Si es recurrente, crear un nuevo apartado con las mismas propiedades
+    // 3. Si es recurrente, generar propuesta preservando días originales
     if (apartado.esRecurrente) {
-      final now = DateTime.now();
-      DateTime proximoPago;
-      switch (apartado.frecuencia) {
-        case 'semanal':
-          proximoPago = now.add(const Duration(days: 7));
-          break;
-        case 'quincenal':
-          proximoPago = now.add(const Duration(days: 15));
-          break;
-        case 'mensual':
-          proximoPago = DateTime(now.year, now.month + 1, now.day);
-          break;
-        default:
-          proximoPago = now.add(const Duration(days: 7));
-      }
+      final nuevasFechasPago = _generarFechasPreservandoDias(apartado);
+      final proximoPago =
+          nuevasFechasPago.isNotEmpty ? nuevasFechasPago.first : null;
 
-      // Calcular nueva fecha límite según la frecuencia y número de pagos
-      DateTime nuevaFechaLimite;
-      switch (apartado.frecuencia) {
-        case 'semanal':
-          nuevaFechaLimite = now.add(Duration(days: 7 * apartado.numeroPagos));
-          break;
-        case 'quincenal':
-          nuevaFechaLimite = now.add(Duration(days: 15 * apartado.numeroPagos));
-          break;
-        case 'mensual':
-          nuevaFechaLimite = DateTime(
-            now.year,
-            now.month + apartado.numeroPagos,
-            now.day,
-          );
-          break;
-        default:
-          nuevaFechaLimite = now.add(Duration(days: 7 * apartado.numeroPagos));
-      }
+      // Calcular nueva fecha límite basada en la última fecha de pago
+      final nuevaFechaLimite =
+          nuevasFechasPago.isNotEmpty
+              ? nuevasFechasPago.last.add(const Duration(days: 7))
+              : DateTime.now().add(const Duration(days: 90));
 
-      final nuevoApartado = Apartado(
+      return Apartado(
         id: '',
         nombre: apartado.nombre,
         descripcion: apartado.descripcion,
@@ -1339,15 +1354,98 @@ class FirestoreService {
         fechaProximoPago: proximoPago,
         frecuencia: apartado.frecuencia,
         estado: 'activo',
+        fechasPago: nuevasFechasPago,
+        notificacionesActivas: apartado.notificacionesActivas,
         categoria: apartado.categoria,
         cuentaId: apartado.cuentaId,
         cuentaNombre: apartado.cuentaNombre,
         esRecurrente: true,
         usuarioId: apartado.usuarioId,
       );
-
-      await crearApartado(nuevoApartado);
     }
+
+    return null;
+  }
+
+  /// Genera nuevas fechas de pago preservando los días del mes originales.
+  /// Si el apartado tenía pagos los días 14 y 28, el nuevo ciclo será
+  /// 14 y 28 del mes siguiente (o próximos meses futuros).
+  List<DateTime> _generarFechasPreservandoDias(Apartado apartado) {
+    final List<DateTime> nuevasFechas = [];
+    final ahora = DateTime.now();
+
+    if (apartado.fechasPago.isEmpty) {
+      // Sin fechas originales, calcular de forma estándar
+      DateTime fecha = ahora;
+      for (int i = 0; i < apartado.numeroPagos; i++) {
+        switch (apartado.frecuencia) {
+          case 'semanal':
+            fecha = fecha.add(const Duration(days: 7));
+            break;
+          case 'quincenal':
+            fecha = fecha.add(const Duration(days: 15));
+            break;
+          case 'mensual':
+            fecha = DateTime(fecha.year, fecha.month + 1, fecha.day);
+            break;
+        }
+        nuevasFechas.add(DateTime(fecha.year, fecha.month, fecha.day));
+      }
+      return nuevasFechas;
+    }
+
+    // Extraer los días del mes de las fechas originales
+    final diasOriginales = apartado.fechasPago.map((f) => f.day).toList();
+
+    // Determinar el mes base: siguiente mes después de la última fecha original
+    final ultimaFechaOriginal = apartado.fechasPago.last;
+    int mesBase = ultimaFechaOriginal.month + 1;
+    int anioBase = ultimaFechaOriginal.year;
+    if (mesBase > 12) {
+      mesBase = 1;
+      anioBase++;
+    }
+
+    // Si alguna fecha generada ya pasó, avanzar al siguiente ciclo
+    // Para semanal, usar lógica diferente (preservar día de la semana)
+    if (apartado.frecuencia == 'semanal') {
+      // Para semanal, calcular avanzando semanas desde las fechas originales
+      for (final fechaOriginal in apartado.fechasPago) {
+        DateTime nueva = fechaOriginal;
+        // Avanzar semanas hasta que sea futura
+        while (!nueva.isAfter(ahora)) {
+          nueva = nueva.add(const Duration(days: 7));
+        }
+        nuevasFechas.add(DateTime(nueva.year, nueva.month, nueva.day));
+      }
+    } else {
+      // Quincenal y mensual: preservar días del mes
+      // Generar fechas en el mes base con los días originales
+      for (final dia in diasOriginales) {
+        // Ajustar si el día no existe en el mes (ej: 31 en febrero -> 28)
+        final diasEnMes = DateTime(anioBase, mesBase + 1, 0).day;
+        final diaAjustado = dia > diasEnMes ? diasEnMes : dia;
+        DateTime nueva = DateTime(anioBase, mesBase, diaAjustado);
+
+        // Si ya pasó, avanzar un ciclo
+        if (!nueva.isAfter(ahora)) {
+          if (apartado.frecuencia == 'quincenal') {
+            nueva = DateTime(nueva.year, nueva.month, nueva.day + 15);
+          } else {
+            nueva = DateTime(nueva.year, nueva.month + 1, diaAjustado);
+          }
+        }
+
+        nuevasFechas.add(DateTime(nueva.year, nueva.month, nueva.day));
+      }
+    }
+
+    nuevasFechas.sort((a, b) => a.compareTo(b));
+    return nuevasFechas;
+  }
+
+  bool _esMismoDia(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   DateTime _calcularProximoPago(DateTime desde, String frecuencia) {

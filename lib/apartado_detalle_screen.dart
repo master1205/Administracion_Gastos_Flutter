@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
@@ -16,6 +18,11 @@ import 'widgets/select_amount.dart';
 import 'widgets/confirmation_dialog.dart';
 import 'componentes/heads_up_notification.dart';
 import 'crear_apartado_screen.dart';
+
+/// URL del Web App de Google Apps Script para enviar push notifications.
+/// Actualizar después de cada nuevo deploy del script.
+const String _gasWebAppUrl =
+    'https://script.google.com/macros/s/AKfycbyZnjDeqvBlXNWhy6Ww3lzEt6lqXWIa4GAcDmVSXuQwp4Gvt03EXnvyDQVIrT0_Yj3p/exec';
 
 class ApartadoDetalleScreen extends StatefulWidget {
   final Apartado apartado;
@@ -40,6 +47,30 @@ class _ApartadoDetalleScreenState extends State<ApartadoDetalleScreen> {
   bool _isLoading = true;
   StreamSubscription<List<Abono>>? _abonosSubscription;
   StreamSubscription? _apartadoSubscription;
+
+  /// Envía push a todos los dispositivos via GAS Web App.
+  /// Fire & forget: no bloquea la UI.
+  void _enviarPushCompletado(Apartado apartado) {
+    http
+        .post(
+          Uri.parse(_gasWebAppUrl),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'titulo': '🎉 ¡Apartado completado!',
+            'mensaje':
+                '"${apartado.nombre}" alcanzó el 100%. Ya puedes registrar el pago.',
+            'data': {
+              'screen': 'apartados',
+              'apartadoId': apartado.id,
+              'tipo': 'apartado_completado',
+              'timestamp': DateTime.now().toIso8601String(),
+            },
+          }),
+        )
+        .catchError(
+          (_) => http.Response('', 500),
+        ); // Silenciar errores: el push es complementario
+  }
 
   @override
   void initState() {
@@ -142,6 +173,10 @@ class _ApartadoDetalleScreenState extends State<ApartadoDetalleScreen> {
     }
 
     try {
+      // Guardar montos previos para detectar cambios
+      final montoAnterior = _apartado.montoApartado;
+      final montoPorPagoAnterior = _apartado.montoPorPago;
+
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -157,10 +192,42 @@ class _ApartadoDetalleScreenState extends State<ApartadoDetalleScreen> {
 
       if (mounted) Navigator.pop(context);
 
+      // Verificar si el apartado se completó con este abono
+      final nuevoMonto = montoAnterior + monto;
+      final seCompleto = nuevoMonto >= _apartado.montoTotal;
+
+      if (seCompleto) {
+        // Push a todos los dispositivos (fire & forget, no await)
+        _enviarPushCompletado(_apartado);
+      } else {
+        // Verificar si el montoPorPago cambió (redistribución)
+        final pagosRestantesNuevo =
+            _apartado.numeroPagos - (_apartado.pagosRealizados + 1);
+        if (pagosRestantesNuevo > 0) {
+          final nuevoMontoPorPago =
+              (_apartado.montoTotal - nuevoMonto) / pagosRestantesNuevo;
+          final diferencia = (nuevoMontoPorPago - montoPorPagoAnterior).abs();
+          if (diferencia > 0.01 && monto != montoPorPagoAnterior) {
+            if (mounted) {
+              showSuccessNotification(
+                context,
+                message: 'Monto por abono ajustado',
+                subtitle:
+                    'Nuevo monto: ${_currencyFormat.format(nuevoMontoPorPago)} '
+                    '(antes ${_currencyFormat.format(montoPorPagoAnterior)})',
+              );
+            }
+            // Esperar un momento antes de mostrar otra notificación
+            await Future.delayed(const Duration(milliseconds: 500));
+          }
+        }
+      }
+
       if (mounted) {
         showSuccessNotification(
           context,
-          message: 'Abono registrado',
+          message:
+              seCompleto ? '¡Último abono registrado!' : 'Abono registrado',
           subtitle: _currencyFormat.format(monto),
         );
       }
@@ -199,14 +266,16 @@ class _ApartadoDetalleScreenState extends State<ApartadoDetalleScreen> {
       return;
     }
 
+    final cuentaSeleccionada = cuenta;
+
     // Verificar fondos suficientes (usar saldo real, no disponible,
     // porque el monto retenido del propio apartado ya está incluido)
-    if (cuenta.saldo < _apartado.montoTotal) {
+    if (cuentaSeleccionada.saldo < _apartado.montoTotal) {
       showErrorNotification(
         context,
         message: 'Fondos insuficientes',
         subtitle:
-            'La cuenta "${cuenta.nombre}" tiene ${_currencyFormat.format(cuenta.saldo)} '
+            'La cuenta "${cuentaSeleccionada.nombre}" tiene ${_currencyFormat.format(cuentaSeleccionada.saldo)} '
             'y se necesitan ${_currencyFormat.format(_apartado.montoTotal)}',
       );
       return;
@@ -222,7 +291,7 @@ class _ApartadoDetalleScreenState extends State<ApartadoDetalleScreen> {
       title: '¿Ya realizaste este pago?',
       message:
           'Se registrará un pago por ${_currencyFormat.format(_apartado.montoTotal)} '
-          'en la categoría "${_apartado.categoria}" desde la cuenta "${cuenta.nombre}".$mensajeRecurrente',
+          'en la categoría "${_apartado.categoria}" desde la cuenta "${cuentaSeleccionada.nombre}".$mensajeRecurrente',
       confirmText: 'Sí, registrar pago',
       icon: Icons.check_circle_rounded,
     );
@@ -230,29 +299,58 @@ class _ApartadoDetalleScreenState extends State<ApartadoDetalleScreen> {
     if (confirmed != true) return;
 
     try {
+      if (!mounted) return;
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (_) => const Center(child: CircularProgressIndicator()),
       );
 
-      await _firestoreService.marcarApartadoComoPagado(
-        apartado: _apartado,
-        cuenta: cuenta,
-      );
+      await _firestoreService
+          .marcarApartadoComoPagado(
+            apartado: _apartado,
+            cuenta: cuentaSeleccionada,
+          )
+          .then((apartadoPropuesto) async {
+            if (mounted) Navigator.pop(context); // dismiss loading
 
-      if (mounted) Navigator.pop(context);
+            if (apartadoPropuesto != null && mounted) {
+              // Mostrar diálogo de confirmación de fechas
+              final apartadoFinal = await _mostrarDialogoFechasRecurrente(
+                apartadoPropuesto,
+              );
 
-      if (mounted) {
-        showSuccessNotification(
-          context,
-          message: 'Pago registrado',
-          subtitle:
-              _apartado.esRecurrente
-                  ? '${_currencyFormat.format(_apartado.montoTotal)} desde ${cuenta.nombre} — nuevo apartado creado'
-                  : '${_currencyFormat.format(_apartado.montoTotal)} desde ${cuenta.nombre}',
-        );
-      }
+              if (apartadoFinal != null) {
+                await _firestoreService.crearApartado(apartadoFinal);
+                if (mounted) {
+                  showSuccessNotification(
+                    context,
+                    message: 'Pago registrado',
+                    subtitle:
+                        '${_currencyFormat.format(_apartado.montoTotal)} desde ${cuentaSeleccionada.nombre} — nuevo apartado creado',
+                  );
+                }
+              } else {
+                if (mounted) {
+                  showSuccessNotification(
+                    context,
+                    message: 'Pago registrado',
+                    subtitle:
+                        '${_currencyFormat.format(_apartado.montoTotal)} desde ${cuentaSeleccionada.nombre} — apartado recurrente cancelado',
+                  );
+                }
+              }
+            } else {
+              if (mounted) {
+                showSuccessNotification(
+                  context,
+                  message: 'Pago registrado',
+                  subtitle:
+                      '${_currencyFormat.format(_apartado.montoTotal)} desde ${cuentaSeleccionada.nombre}',
+                );
+              }
+            }
+          });
     } catch (e) {
       if (mounted) Navigator.pop(context);
       if (mounted) {
@@ -263,6 +361,221 @@ class _ApartadoDetalleScreenState extends State<ApartadoDetalleScreen> {
         );
       }
     }
+  }
+
+  /// Muestra un diálogo con las fechas propuestas para el nuevo apartado
+  /// recurrente. Permite editarlas antes de confirmar.
+  Future<Apartado?> _mostrarDialogoFechasRecurrente(Apartado propuesto) async {
+    final fechasEditables = List<DateTime>.from(propuesto.fechasPago);
+    final theme = Theme.of(context);
+    final color = Color(int.parse('FF${propuesto.color}', radix: 16));
+
+    return await showDialog<Apartado?>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: theme.colorScheme.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16.r),
+              ),
+              title: Row(
+                children: [
+                  Icon(Icons.event_repeat_rounded, color: color, size: 24.sp),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: Text(
+                      'Nuevo ciclo de pagos',
+                      style: GoogleFonts.poppins(
+                        fontSize: 17.sp,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Se creará un nuevo "${propuesto.nombre}" con estas fechas de pago:',
+                      style: GoogleFonts.lato(
+                        fontSize: 13.sp,
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+                    Container(
+                      constraints: BoxConstraints(maxHeight: 250.h),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest
+                            .withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: fechasEditables.length,
+                        separatorBuilder:
+                            (_, __) => Divider(
+                              height: 1,
+                              indent: 40.w,
+                              color: theme.colorScheme.secondary.withOpacity(
+                                0.08,
+                              ),
+                            ),
+                        itemBuilder: (context, index) {
+                          final fecha = fechasEditables[index];
+                          return InkWell(
+                            onTap: () async {
+                              final nueva = await showDatePicker(
+                                context: context,
+                                initialDate: fecha,
+                                firstDate: DateTime.now(),
+                                lastDate: DateTime.now().add(
+                                  const Duration(days: 3650),
+                                ),
+                                builder: (ctx, child) {
+                                  return Theme(
+                                    data: Theme.of(ctx).copyWith(
+                                      dialogBackgroundColor:
+                                          theme.colorScheme.surface,
+                                    ),
+                                    child: child!,
+                                  );
+                                },
+                              );
+                              if (nueva != null) {
+                                setDialogState(() {
+                                  fechasEditables[index] = DateTime(
+                                    nueva.year,
+                                    nueva.month,
+                                    nueva.day,
+                                  );
+                                  fechasEditables.sort(
+                                    (a, b) => a.compareTo(b),
+                                  );
+                                });
+                              }
+                            },
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 12.w,
+                                vertical: 10.h,
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 26.w,
+                                    height: 26.h,
+                                    decoration: BoxDecoration(
+                                      color: color.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(7.r),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      '${index + 1}',
+                                      style: GoogleFonts.lato(
+                                        fontSize: 12.sp,
+                                        fontWeight: FontWeight.bold,
+                                        color: color,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 10.w),
+                                  Expanded(
+                                    child: Text(
+                                      DateFormat(
+                                        "EEEE d 'de' MMMM, yyyy",
+                                        'es',
+                                      ).format(fecha),
+                                      style: GoogleFonts.lato(
+                                        fontSize: 13.sp,
+                                        fontWeight: FontWeight.w500,
+                                        color: theme.colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.edit_calendar_rounded,
+                                    size: 16.sp,
+                                    color: theme.colorScheme.secondary
+                                        .withOpacity(0.5),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      'Toca una fecha para editarla',
+                      style: GoogleFonts.lato(
+                        fontSize: 11.sp,
+                        fontStyle: FontStyle.italic,
+                        color: theme.colorScheme.onSurface.withOpacity(0.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, null),
+                  child: Text(
+                    'No crear',
+                    style: GoogleFonts.lato(
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13.sp,
+                    ),
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    final actualizado = propuesto.copyWith(
+                      fechasPago: fechasEditables,
+                      fechaProximoPago:
+                          fechasEditables.isNotEmpty
+                              ? fechasEditables.first
+                              : null,
+                    );
+                    Navigator.pop(dialogContext, actualizado);
+                  },
+                  icon: Icon(Icons.check_rounded, size: 18.sp),
+                  label: Text(
+                    'Crear apartado',
+                    style: GoogleFonts.lato(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13.sp,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: color,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 10.h,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _eliminarApartado() async {
@@ -335,6 +648,10 @@ class _ApartadoDetalleScreenState extends State<ApartadoDetalleScreen> {
           _buildSliverAppBar(theme),
           SliverToBoxAdapter(child: _buildSummarySection(theme)),
           SliverToBoxAdapter(child: _buildPaymentPlanSection(theme)),
+          if (_apartado.fechasPago.isNotEmpty)
+            SliverToBoxAdapter(child: _buildFechasPagoSection(theme)),
+          if (_apartado.estado == 'activo')
+            SliverToBoxAdapter(child: _buildNotificacionesToggle(theme)),
           if (_apartado.estado == 'completado')
             SliverToBoxAdapter(child: _buildConfirmPaymentCard(theme)),
           if (_apartado.descripcion.isNotEmpty)
@@ -559,7 +876,6 @@ class _ApartadoDetalleScreenState extends State<ApartadoDetalleScreen> {
                             ),
                             SizedBox(height: 8.h),
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
                                   '${_apartado.progreso.toStringAsFixed(1)}%',
@@ -569,8 +885,10 @@ class _ApartadoDetalleScreenState extends State<ApartadoDetalleScreen> {
                                     color: Colors.white.withOpacity(0.9),
                                   ),
                                 ),
+                                const Spacer(),
                                 _buildStatusBadge(),
-                                if (_apartado.esRecurrente)
+                                if (_apartado.esRecurrente) ...[
+                                  SizedBox(width: 6.w),
                                   Container(
                                     padding: EdgeInsets.symmetric(
                                       horizontal: 8.w,
@@ -600,6 +918,8 @@ class _ApartadoDetalleScreenState extends State<ApartadoDetalleScreen> {
                                       ],
                                     ),
                                   ),
+                                ],
+                                const Spacer(),
                                 Text(
                                   _apartado.diasRestantes > 0
                                       ? '${_apartado.diasRestantes} días'
@@ -904,6 +1224,237 @@ class _ApartadoDetalleScreenState extends State<ApartadoDetalleScreen> {
               highlight: true,
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  // ── Fechas de pago programadas ──
+  Widget _buildFechasPagoSection(ThemeData theme) {
+    final ahora = DateTime.now();
+    final fechasOrdenadas = List<DateTime>.from(_apartado.fechasPago)
+      ..sort((a, b) => a.compareTo(b));
+
+    // Determinar cuál es la próxima fecha (la primera futura o de hoy)
+    DateTime? proximaFecha;
+    for (final f in fechasOrdenadas) {
+      if (f.isAfter(ahora) || _esMismoDiaLocal(f, ahora)) {
+        proximaFecha = f;
+        break;
+      }
+    }
+
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      padding: EdgeInsets.all(16.r),
+      decoration: _cardDecoration(theme),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(10.r),
+                decoration: BoxDecoration(
+                  color: _baseColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Icon(
+                  Icons.date_range_rounded,
+                  color: _baseColor,
+                  size: 22.sp,
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Text(
+                  'Fechas de pago',
+                  style: GoogleFonts.lato(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                decoration: BoxDecoration(
+                  color: _baseColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Text(
+                  '${fechasOrdenadas.length} fecha${fechasOrdenadas.length != 1 ? 's' : ''}',
+                  style: GoogleFonts.lato(
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w600,
+                    color: _baseColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          ...fechasOrdenadas.map((fecha) {
+            final esPasada =
+                fecha.isBefore(ahora) && !_esMismoDiaLocal(fecha, ahora);
+            final esProxima =
+                proximaFecha != null && _esMismoDiaLocal(fecha, proximaFecha);
+            final esHoy = _esMismoDiaLocal(fecha, ahora);
+
+            return Padding(
+              padding: EdgeInsets.only(bottom: 6.h),
+              child: Row(
+                children: [
+                  Container(
+                    width: 28.w,
+                    height: 28.w,
+                    decoration: BoxDecoration(
+                      color:
+                          esPasada
+                              ? Colors.green.withOpacity(0.15)
+                              : esProxima
+                              ? _baseColor.withOpacity(0.15)
+                              : theme.colorScheme.onSurface.withOpacity(0.06),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      esPasada
+                          ? Icons.check_rounded
+                          : esHoy
+                          ? Icons.today_rounded
+                          : Icons.circle_outlined,
+                      size: 14.sp,
+                      color:
+                          esPasada
+                              ? Colors.green
+                              : esProxima
+                              ? _baseColor
+                              : theme.colorScheme.onSurface.withOpacity(0.35),
+                    ),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: Text(
+                      DateFormat('EEEE d \'de\' MMMM yyyy', 'es').format(fecha),
+                      style: GoogleFonts.lato(
+                        fontSize: 13.sp,
+                        fontWeight:
+                            esProxima ? FontWeight.w700 : FontWeight.w400,
+                        color:
+                            esPasada
+                                ? theme.colorScheme.onSurface.withOpacity(0.4)
+                                : esProxima
+                                ? _baseColor
+                                : theme.colorScheme.onSurface.withOpacity(0.75),
+                        decoration:
+                            esPasada ? TextDecoration.lineThrough : null,
+                      ),
+                    ),
+                  ),
+                  if (esHoy)
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 6.w,
+                        vertical: 2.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _baseColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(6.r),
+                      ),
+                      child: Text(
+                        'Hoy',
+                        style: GoogleFonts.lato(
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w700,
+                          color: _baseColor,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  bool _esMismoDiaLocal(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  // ── Toggle notificaciones ──
+  Widget _buildNotificacionesToggle(ThemeData theme) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+      decoration: _cardDecoration(theme),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(10.r),
+            decoration: BoxDecoration(
+              color: (_apartado.notificacionesActivas
+                      ? _baseColor
+                      : theme.colorScheme.onSurface.withOpacity(0.3))
+                  .withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            child: Icon(
+              _apartado.notificacionesActivas
+                  ? Icons.notifications_active_rounded
+                  : Icons.notifications_off_rounded,
+              color:
+                  _apartado.notificacionesActivas
+                      ? _baseColor
+                      : theme.colorScheme.onSurface.withOpacity(0.35),
+              size: 22.sp,
+            ),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Notificaciones',
+                  style: GoogleFonts.lato(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  _apartado.notificacionesActivas
+                      ? 'Recordatorios de pago activados'
+                      : 'Sin recordatorios',
+                  style: GoogleFonts.lato(
+                    fontSize: 11.sp,
+                    color: theme.colorScheme.onSurface.withOpacity(0.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch.adaptive(
+            value: _apartado.notificacionesActivas,
+            activeColor: _baseColor,
+            onChanged: (value) async {
+              final updated = _apartado.copyWith(notificacionesActivas: value);
+              await _firestoreService.actualizarApartado(updated);
+              if (mounted) {
+                showSuccessNotification(
+                  context,
+                  message:
+                      value
+                          ? 'Notificaciones activadas'
+                          : 'Notificaciones desactivadas',
+                  subtitle: _apartado.nombre,
+                );
+              }
+            },
+          ),
         ],
       ),
     );

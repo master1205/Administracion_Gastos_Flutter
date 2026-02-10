@@ -533,11 +533,10 @@ class _ApartadosScreenState extends State<ApartadosScreen>
                     ],
                   ],
                 ),
-                if (apartado.cuentaNombre != null &&
-                    apartado.cuentaNombre!.isNotEmpty) ...[
+                if (apartado.descripcion.isNotEmpty) ...[
                   SizedBox(height: 1.h),
                   Text(
-                    apartado.cuentaNombre!,
+                    apartado.descripcion,
                     style: GoogleFonts.lato(
                       fontSize: 11.sp,
                       color: Colors.white.withOpacity(0.75),
@@ -739,6 +738,38 @@ class _ApartadosScreenState extends State<ApartadosScreen>
                 ),
               ],
             ),
+            if (apartado.fechaProximoPago != null &&
+                apartado.estado == 'activo') ...[
+              SizedBox(height: 8.h),
+              Row(
+                children: [
+                  Icon(
+                    Icons.event_rounded,
+                    size: 12.sp,
+                    color: theme.colorScheme.primary.withOpacity(0.6),
+                  ),
+                  SizedBox(width: 4.w),
+                  Text(
+                    'Próximo pago: ',
+                    style: GoogleFonts.lato(
+                      fontSize: 10.sp,
+                      color: theme.colorScheme.onSurface.withOpacity(0.5),
+                    ),
+                  ),
+                  Text(
+                    DateFormat(
+                      'dd MMM',
+                      'es',
+                    ).format(apartado.fechaProximoPago!),
+                    style: GoogleFonts.lato(
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

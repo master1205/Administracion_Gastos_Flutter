@@ -1,6 +1,11 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:notificaciones/main.dart' show navigatorKey;
+import 'package:notificaciones/models/Apartado.dart';
+import 'package:notificaciones/apartado_detalle_screen.dart';
+import 'package:notificaciones/apartados_screen.dart';
 
 /// Handler de mensajes en background (debe estar en top-level)
 @pragma('vm:entry-point')
@@ -142,7 +147,12 @@ class FirebaseMessagingService {
     final android = message.notification?.android;
 
     if (notification != null) {
-      // Mostrar notificación local
+      // Mostrar notificación local con el apartadoId como payload para navegación
+      final payload =
+          message.data['apartadoId'] != null
+              ? 'apartado_${message.data['apartadoId']}'
+              : message.data.toString();
+
       await _localNotifications.show(
         notification.hashCode,
         notification.title,
@@ -161,21 +171,58 @@ class FirebaseMessagingService {
             ),
           ),
         ),
-        payload: message.data.toString(),
+        payload: payload,
       );
 
       print('✅ Notificación mostrada localmente');
     }
   }
 
-  /// Manejar cuando el usuario toca una notificación
+  /// Manejar cuando el usuario toca una notificación push (FCM)
   static void _handleMessageOpenedApp(RemoteMessage message) {
     print('👆 Usuario tocó notificación: ${message.messageId}');
     print('📊 Data: ${message.data}');
 
-    // Aquí puedes navegar a una pantalla específica según el payload
-    // Por ejemplo, si viene data['screen'] = 'reportes'
-    // Navegar a ReportesScreen
+    final screen = message.data['screen'];
+    final apartadoId = message.data['apartadoId'];
+
+    if (screen == 'apartados') {
+      if (apartadoId != null) {
+        navegarAApartado(apartadoId);
+      } else {
+        // Sin ID específico → ir a la lista de apartados
+        final navigator = navigatorKey.currentState;
+        if (navigator != null) {
+          navigator.push(
+            MaterialPageRoute(builder: (_) => const ApartadosScreen()),
+          );
+        }
+      }
+    }
+  }
+
+  /// Navega a la pantalla de detalle de un apartado por su ID.
+  /// Público para ser reutilizado desde LocalNotifications.
+  static Future<void> navegarAApartado(String apartadoId) async {
+    try {
+      final doc = await _db.collection('apartados').doc(apartadoId).get();
+      if (!doc.exists) {
+        print('⚠️ Apartado $apartadoId no encontrado');
+        return;
+      }
+
+      final apartado = Apartado.fromFirestore(doc);
+      final navigator = navigatorKey.currentState;
+      if (navigator != null) {
+        navigator.push(
+          MaterialPageRoute(
+            builder: (_) => ApartadoDetalleScreen(apartado: apartado),
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ Error navegando a apartado: $e');
+    }
   }
 
   /// Obtener el token actual del dispositivo

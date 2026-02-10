@@ -45,6 +45,11 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
 
   bool _isLoading = false;
 
+  // Fechas de pago programadas
+  List<DateTime> _fechasPago = [];
+  bool _notificacionesActivas = true;
+  bool _fechasGeneradas = false;
+
   // Variables para detectar cambios
   late String _initialNombre;
   late String _initialDescripcion;
@@ -92,6 +97,9 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
       _fechaLimite = widget.apartado!.fechaLimite;
       _frecuencia = widget.apartado!.frecuencia;
       _esRecurrente = widget.apartado!.esRecurrente;
+      _fechasPago = List<DateTime>.from(widget.apartado!.fechasPago);
+      _notificacionesActivas = widget.apartado!.notificacionesActivas;
+      _fechasGeneradas = _fechasPago.isNotEmpty;
     }
 
     _loadCategorias();
@@ -193,6 +201,61 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
       return IconData(codePoint, fontFamily: 'MaterialIcons');
     }
     return Icons.category;
+  }
+
+  /// Genera fechas de pago sugeridas basado en frecuencia y número de pagos
+  void _generarFechasPago() {
+    final pagos = int.tryParse(_numeroPagosController.text) ?? 0;
+    if (pagos <= 0) return;
+
+    final List<DateTime> fechas = [];
+    DateTime fecha = DateTime.now();
+
+    for (int i = 0; i < pagos; i++) {
+      switch (_frecuencia) {
+        case 'semanal':
+          fecha = fecha.add(const Duration(days: 7));
+          break;
+        case 'quincenal':
+          fecha = fecha.add(const Duration(days: 15));
+          break;
+        case 'mensual':
+          fecha = DateTime(fecha.year, fecha.month + 1, fecha.day);
+          break;
+      }
+      fechas.add(DateTime(fecha.year, fecha.month, fecha.day));
+    }
+
+    setState(() {
+      _fechasPago = fechas;
+      _fechasGeneradas = true;
+    });
+  }
+
+  /// Permite editar una fecha de pago individual
+  Future<void> _editarFechaPago(int index) async {
+    final fecha = await showDatePicker(
+      context: context,
+      initialDate: _fechasPago[index],
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 3650)),
+      builder: (context, child) {
+        final theme = Theme.of(context);
+        return Theme(
+          data: theme.copyWith(
+            dialogBackgroundColor: theme.colorScheme.surface,
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (fecha != null) {
+      setState(() {
+        _fechasPago[index] = DateTime(fecha.year, fecha.month, fecha.day);
+        // Reordenar por fecha
+        _fechasPago.sort((a, b) => a.compareTo(b));
+      });
+    }
   }
 
   double get _montoPorPago {
@@ -442,6 +505,11 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
         }
       }
 
+      // Si hay fechas de pago programadas, usar la primera como proximoPago
+      if (widget.apartado == null && _fechasPago.isNotEmpty) {
+        proximoPago = _fechasPago.first;
+      }
+
       final apartado = Apartado(
         id: widget.apartado?.id ?? '',
         nombre: _nombreController.text.trim(),
@@ -460,6 +528,8 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
         fechaProximoPago: widget.apartado?.fechaProximoPago ?? proximoPago,
         frecuencia: _frecuencia,
         estado: widget.apartado?.estado ?? 'activo',
+        fechasPago: _fechasPago,
+        notificacionesActivas: _notificacionesActivas,
         categoria: _categoriaSeleccionada!.categoria,
         cuentaId: _cuentaSeleccionada!.id,
         cuentaNombre: _cuentaSeleccionada!.nombre,
@@ -924,6 +994,268 @@ class _CrearApartadoScreenState extends State<CrearApartadoScreen> {
                               activeColor: colorSeleccionado,
                               onChanged:
                                   (v) => setState(() => _esRecurrente = v),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 16.h),
+
+                      // ── Fechas de pago programadas ──
+                      _buildSectionTitle('Fechas de pago', theme),
+                      SizedBox(height: 8.h),
+                      if (!_fechasGeneradas || _fechasPago.isEmpty) ...[
+                        // Botón para generar fechas
+                        InkWell(
+                          onTap: () {
+                            final pagos =
+                                int.tryParse(_numeroPagosController.text) ?? 0;
+                            if (pagos <= 0) {
+                              showErrorNotification(
+                                context,
+                                message: 'Ingresa el número de pagos primero',
+                              );
+                              return;
+                            }
+                            _generarFechasPago();
+                          },
+                          borderRadius: BorderRadius.circular(12.r),
+                          child: Container(
+                            padding: EdgeInsets.all(16.r),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surface,
+                              borderRadius: BorderRadius.circular(12.r),
+                              border: Border.all(
+                                color: colorSeleccionado.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.auto_fix_high_rounded,
+                                  color: colorSeleccionado,
+                                  size: 20.sp,
+                                ),
+                                SizedBox(width: 8.w),
+                                Text(
+                                  'Generar fechas automáticamente',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: colorSeleccionado,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        // Lista de fechas generadas
+                        Container(
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(
+                              color: theme.colorScheme.secondary.withOpacity(
+                                0.15,
+                              ),
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              // Header con botón regenerar
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 12.w,
+                                  vertical: 8.h,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.event_note_rounded,
+                                      color: colorSeleccionado,
+                                      size: 18.sp,
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    Expanded(
+                                      child: Text(
+                                        '${_fechasPago.length} pagos programados',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12.sp,
+                                          fontWeight: FontWeight.w600,
+                                          color: theme.colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ),
+                                    TextButton.icon(
+                                      onPressed: _generarFechasPago,
+                                      icon: Icon(
+                                        Icons.refresh_rounded,
+                                        size: 16.sp,
+                                      ),
+                                      label: Text(
+                                        'Regenerar',
+                                        style: GoogleFonts.lato(
+                                          fontSize: 11.sp,
+                                        ),
+                                      ),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: colorSeleccionado,
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 8.w,
+                                        ),
+                                        minimumSize: Size.zero,
+                                        tapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Divider(
+                                height: 1,
+                                color: theme.colorScheme.secondary.withOpacity(
+                                  0.1,
+                                ),
+                              ),
+                              // Lista de fechas
+                              ListView.separated(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: _fechasPago.length,
+                                separatorBuilder:
+                                    (_, __) => Divider(
+                                      height: 1,
+                                      indent: 48.w,
+                                      color: theme.colorScheme.secondary
+                                          .withOpacity(0.08),
+                                    ),
+                                itemBuilder: (context, index) {
+                                  final fecha = _fechasPago[index];
+                                  final esPasada = fecha.isBefore(
+                                    DateTime.now(),
+                                  );
+                                  return InkWell(
+                                    onTap: () => _editarFechaPago(index),
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 12.w,
+                                        vertical: 10.h,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 28.w,
+                                            height: 28.h,
+                                            decoration: BoxDecoration(
+                                              color: (esPasada
+                                                      ? Colors.orange
+                                                      : colorSeleccionado)
+                                                  .withOpacity(0.12),
+                                              borderRadius:
+                                                  BorderRadius.circular(8.r),
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: Text(
+                                              '${index + 1}',
+                                              style: GoogleFonts.lato(
+                                                fontSize: 12.sp,
+                                                fontWeight: FontWeight.bold,
+                                                color:
+                                                    esPasada
+                                                        ? Colors.orange
+                                                        : colorSeleccionado,
+                                              ),
+                                            ),
+                                          ),
+                                          SizedBox(width: 12.w),
+                                          Expanded(
+                                            child: Text(
+                                              DateFormat(
+                                                "EEEE d 'de' MMMM, yyyy",
+                                                'es',
+                                              ).format(fecha),
+                                              style: GoogleFonts.lato(
+                                                fontSize: 13.sp,
+                                                fontWeight: FontWeight.w500,
+                                                color:
+                                                    theme.colorScheme.onSurface,
+                                              ),
+                                            ),
+                                          ),
+                                          Icon(
+                                            Icons.edit_calendar_rounded,
+                                            size: 18.sp,
+                                            color: theme.colorScheme.secondary
+                                                .withOpacity(0.5),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      SizedBox(height: 12.h),
+
+                      // ── Toggle notificaciones ──
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16.w,
+                          vertical: 4.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest
+                              .withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.notifications_active_rounded,
+                              size: 20.sp,
+                              color:
+                                  _notificacionesActivas
+                                      ? colorSeleccionado
+                                      : theme.colorScheme.onSurface.withOpacity(
+                                        0.5,
+                                      ),
+                            ),
+                            SizedBox(width: 12.w),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Recordatorios de pago',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: theme.colorScheme.onSurface,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Notificación el día anterior y el día de pago',
+                                    style: GoogleFonts.lato(
+                                      fontSize: 11.sp,
+                                      color: theme.colorScheme.onSurface
+                                          .withOpacity(0.6),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Switch.adaptive(
+                              value: _notificacionesActivas,
+                              activeColor: colorSeleccionado,
+                              onChanged:
+                                  (v) => setState(
+                                    () => _notificacionesActivas = v,
+                                  ),
                             ),
                           ],
                         ),

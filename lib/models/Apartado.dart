@@ -52,6 +52,10 @@ class Apartado {
   final String frecuencia; // 'semanal', 'quincenal', 'mensual'
   final String estado; // 'activo', 'completado', 'pagado', 'vencido'
 
+  // Fechas programadas de pago
+  final List<DateTime> fechasPago;
+  final bool notificacionesActivas;
+
   // Datos de la transacción final (se recolectan al crear)
   final String categoria;
   final String? cuentaId;
@@ -76,6 +80,8 @@ class Apartado {
     this.fechaProximoPago,
     required this.frecuencia,
     this.estado = 'activo',
+    this.fechasPago = const [],
+    this.notificacionesActivas = true,
     required this.categoria,
     this.cuentaId,
     this.cuentaNombre,
@@ -144,6 +150,12 @@ class Apartado {
       fechaProximoPago: (data['fechaProximoPago'] as Timestamp?)?.toDate(),
       frecuencia: data['frecuencia'] ?? 'semanal',
       estado: data['estado'] ?? 'activo',
+      fechasPago:
+          (data['fechasPago'] as List<dynamic>?)
+              ?.map((t) => (t as Timestamp).toDate())
+              .toList() ??
+          [],
+      notificacionesActivas: data['notificacionesActivas'] ?? true,
       categoria: data['categoria'] ?? '',
       cuentaId: data['cuentaId'] as String?,
       cuentaNombre: data['cuentaNombre'] as String?,
@@ -171,6 +183,8 @@ class Apartado {
               : null,
       'frecuencia': frecuencia,
       'estado': estado,
+      'fechasPago': fechasPago.map((f) => Timestamp.fromDate(f)).toList(),
+      'notificacionesActivas': notificacionesActivas,
       'categoria': categoria,
       'cuentaId': cuentaId,
       'cuentaNombre': cuentaNombre,
@@ -200,6 +214,8 @@ class Apartado {
     DateTime? fechaProximoPago,
     String? frecuencia,
     String? estado,
+    List<DateTime>? fechasPago,
+    bool? notificacionesActivas,
     String? categoria,
     String? cuentaId,
     String? cuentaNombre,
@@ -222,6 +238,9 @@ class Apartado {
       fechaProximoPago: fechaProximoPago ?? this.fechaProximoPago,
       frecuencia: frecuencia ?? this.frecuencia,
       estado: estado ?? this.estado,
+      fechasPago: fechasPago ?? this.fechasPago,
+      notificacionesActivas:
+          notificacionesActivas ?? this.notificacionesActivas,
       categoria: categoria ?? this.categoria,
       cuentaId: cuentaId ?? this.cuentaId,
       cuentaNombre: cuentaNombre ?? this.cuentaNombre,

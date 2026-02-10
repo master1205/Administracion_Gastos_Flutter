@@ -14,6 +14,9 @@ import 'package:notificaciones/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Clave global de navegación para acceder al Navigator desde servicios estáticos.
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -74,6 +77,7 @@ class MyApp extends StatelessWidget {
       splitScreenMode: true,
       builder: (context, child) {
         return MaterialApp(
+          navigatorKey: navigatorKey,
           key: ValueKey(
             themeProvider.accentColor.value,
           ), // ✅ Fuerza reconstrucción al cambiar color

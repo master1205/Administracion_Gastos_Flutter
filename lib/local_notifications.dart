@@ -2,6 +2,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:notificaciones/services/firebase_messaging_service.dart';
 
 class LocalNotifications {
   // Singleton Pattern
@@ -64,11 +65,18 @@ class LocalNotifications {
     tz.setLocalLocation(tz.getLocation('America/Mexico_City'));
   }
 
-  // Callback cuando se toca una notificación
+  // Callback cuando se toca una notificación local
   static Future<void> _onNotificationTapped(
     NotificationResponse response,
   ) async {
     print('Notificación tocada: ${response.payload}');
+
+    final payload = response.payload;
+    if (payload != null && payload.startsWith('apartado_')) {
+      final apartadoId = payload.replaceFirst('apartado_', '');
+      // Reusar la navegación del servicio FCM
+      FirebaseMessagingService.navegarAApartado(apartadoId);
+    }
   }
 
   // ============================================================================
